@@ -13,7 +13,6 @@
 
 #include "globalincs/pstypes.h"
 #include "graphics/gropengl.h"
-#include "graphics/gropenglextension.h"
 #include "graphics/gropengltexture.h"
 
 struct opengl_texture_unit {

@@ -1,6 +1,5 @@
 
 #include "graphics/gropengl.h"
-#include "graphics/gropenglextension.h"
 #include "graphics/gropenglpostprocessing.h"
 #include "graphics/gropenglshader.h"
 #include "graphics/gropenglstate.h"
@@ -137,7 +136,7 @@ static bool opengl_post_pass_bloom()
 
 	// ------  begin bright pass ------
 
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Post_framebuffer_id[0]);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Post_framebuffer_id[0]);
 
 	// width and height are 1/2 for the bright pass
 	int width = Post_texture_width >> 1;
@@ -150,7 +149,7 @@ static bool opengl_post_pass_bloom()
 
 	opengl_shader_set_current( &GL_post_shader[3] );
 
-	vglUniform1iARB( opengl_shader_get_uniform("tex"), 0 );
+	glUniform1i( opengl_shader_get_uniform("tex"), 0 );
 
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
@@ -174,18 +173,18 @@ static bool opengl_post_pass_bloom()
 
 	glViewport(0, 0, width, height);
 
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Post_framebuffer_id[1]);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Post_framebuffer_id[1]);
 
 	for (int pass = 0; pass < 2; pass++) {
-		vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Post_bloom_texture_id[1+pass], 0);
+		glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Post_bloom_texture_id[1+pass], 0);
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		opengl_shader_set_current( &GL_post_shader[1+pass] );
 
-		vglUniform1iARB( opengl_shader_get_uniform("tex"), 0 );
-		vglUniform1fARB( opengl_shader_get_uniform("bsize"), (pass) ? (float)width : (float)height );
+		glUniform1i( opengl_shader_get_uniform("tex"), 0 );
+		glUniform1f( opengl_shader_get_uniform("bsize"), (pass) ? (float)width : (float)height );
 
 		GL_state.Texture.Enable(Post_bloom_texture_id[pass]);
 
@@ -200,7 +199,7 @@ static bool opengl_post_pass_bloom()
 	glViewport(0, 0, gr_screen.max_w, gr_screen.max_h);
 	GL_state.ScissorTest(scissor_test);
 
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, opengl_get_rtt_framebuffer());
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, opengl_get_rtt_framebuffer());
 
 	return true;
 }
@@ -219,7 +218,7 @@ void gr_opengl_post_process_begin()
 		return;
 	}
 
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Post_framebuffer_id[0]);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Post_framebuffer_id[0]);
 
 //	vglFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_RENDERBUFFER_EXT, Post_renderbuffer_id);
 
@@ -228,7 +227,7 @@ void gr_opengl_post_process_begin()
 //	Assert( !opengl_check_framebuffer() );
 
 	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
-	vglDrawBuffers(2, buffers);
+	glDrawBuffers(2, buffers);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -292,9 +291,9 @@ void opengl_post_pass_fxaa() {
 	opengl_shader_set_current( &GL_post_shader[fxaa_shader_id + 1] );
 
 	// basic/default uniforms
-	vglUniform1iARB( opengl_shader_get_uniform("tex"), 0 );
+	glUniform1i( opengl_shader_get_uniform("tex"), 0 );
 
-	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Scene_luminance_texture, 0);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Scene_luminance_texture, 0);
 
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
@@ -307,12 +306,12 @@ void opengl_post_pass_fxaa() {
 	// set and configure post shader ..
 	opengl_shader_set_current( &GL_post_shader[fxaa_shader_id] );
 
-	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Scene_color_texture, 0);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Scene_color_texture, 0);
 
 	// basic/default uniforms
-	vglUniform1iARB( opengl_shader_get_uniform("tex0"), 0 );
-	vglUniform1fARB( opengl_shader_get_uniform("rt_w"), static_cast<float>(Post_texture_width));
-	vglUniform1fARB( opengl_shader_get_uniform("rt_h"), static_cast<float>(Post_texture_height));
+	glUniform1i( opengl_shader_get_uniform("tex0"), 0 );
+	glUniform1f( opengl_shader_get_uniform("rt_w"), static_cast<float>(Post_texture_width));
+	glUniform1f( opengl_shader_get_uniform("rt_h"), static_cast<float>(Post_texture_height));
 
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
@@ -367,14 +366,14 @@ void gr_opengl_post_process_end()
 				
 				x = asin(vm_vec_dot( &light_dir, &Eye_matrix.vec.rvec ))/PI*1.5f+0.5f; //cant get the coordinates right but this works for the limited glare fov
 				y = asin(vm_vec_dot( &light_dir, &Eye_matrix.vec.uvec ))/PI*1.5f*gr_screen.clip_aspect+0.5f;
-				vglUniform2fARB( opengl_shader_get_uniform("sun_pos"), x, y);
-				vglUniform1iARB( opengl_shader_get_uniform("scene"), 0);
-				vglUniform1iARB( opengl_shader_get_uniform("cockpit"), 1);
-				vglUniform1fARB( opengl_shader_get_uniform("density"), ls_density);
-				vglUniform1fARB( opengl_shader_get_uniform("falloff"), ls_falloff);
-				vglUniform1fARB( opengl_shader_get_uniform("weight"), ls_weight);
-				vglUniform1fARB( opengl_shader_get_uniform("intensity"), Sun_spot * ls_intensity);
-				vglUniform1fARB( opengl_shader_get_uniform("cp_intensity"), Sun_spot * ls_cpintensity);
+				glUniform2f( opengl_shader_get_uniform("sun_pos"), x, y);
+				glUniform1i( opengl_shader_get_uniform("scene"), 0);
+				glUniform1i( opengl_shader_get_uniform("cockpit"), 1);
+				glUniform1f( opengl_shader_get_uniform("density"), ls_density);
+				glUniform1f( opengl_shader_get_uniform("falloff"), ls_falloff);
+				glUniform1f( opengl_shader_get_uniform("weight"), ls_weight);
+				glUniform1f( opengl_shader_get_uniform("intensity"), Sun_spot * ls_intensity);
+				glUniform1f( opengl_shader_get_uniform("cp_intensity"), Sun_spot * ls_cpintensity);
 
 				GL_state.Texture.SetActiveUnit(0);
 				GL_state.Texture.SetTarget(GL_TEXTURE_2D);
@@ -399,11 +398,11 @@ void gr_opengl_post_process_end()
 		gr_zbuffer_set(GR_ZBUFF_FULL);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		gr_zbuffer_set(GR_ZBUFF_NONE);
-		vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, Scene_depth_texture, 0);
+		glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, Scene_depth_texture, 0);
 	}
 	
 	// Bind the correct framebuffer. opengl_get_rtt_framebuffer returns 0 if not doing RTT
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, opengl_get_rtt_framebuffer());	
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, opengl_get_rtt_framebuffer());	
 
 	// do bloom, hopefully ;)
 	bool bloomed = opengl_post_pass_bloom();
@@ -418,16 +417,16 @@ void gr_opengl_post_process_end()
 	opengl_shader_set_current( &GL_post_shader[Post_active_shader_index] );
 
 	// basic/default uniforms
-	vglUniform1iARB( opengl_shader_get_uniform("tex"), 0 );
-	vglUniform1iARB( opengl_shader_get_uniform("depth_tex"), 2);
-	vglUniform1fARB( opengl_shader_get_uniform("timer"), static_cast<float>(timer_get_milliseconds() % 100 + 1) );
+	glUniform1i( opengl_shader_get_uniform("tex"), 0 );
+	glUniform1i( opengl_shader_get_uniform("depth_tex"), 2);
+	glUniform1f( opengl_shader_get_uniform("timer"), static_cast<float>(timer_get_milliseconds() % 100 + 1) );
 
 	for (size_t idx = 0; idx < Post_effects.size(); idx++) {
 		if ( GL_post_shader[Post_active_shader_index].flags2 & (1<<idx) ) {
 			const char *name = Post_effects[idx].uniform_name.c_str();
 			float value = Post_effects[idx].intensity;
 
-			vglUniform1fARB( opengl_shader_get_uniform(name), value);
+			glUniform1f( opengl_shader_get_uniform(name), value);
 		}
 	}
 
@@ -440,9 +439,9 @@ void gr_opengl_post_process_end()
 			intensity /= 3.0f;
 		}
 
-		vglUniform1fARB( opengl_shader_get_uniform("bloom_intensity"), intensity );
+		glUniform1f( opengl_shader_get_uniform("bloom_intensity"), intensity );
 
-		vglUniform1iARB( opengl_shader_get_uniform("bloomed"), 1 );
+		glUniform1i( opengl_shader_get_uniform("bloomed"), 1 );
 
 		GL_state.Texture.SetActiveUnit(1);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
@@ -656,7 +655,7 @@ void gr_opengl_post_process_set_defaults()
 		}
 
 		if (GL_post_shader[idx].program_id) {
-			vglDeleteObjectARB(GL_post_shader[idx].program_id);
+			glDeleteProgram(GL_post_shader[idx].program_id);
 		}
 
 		GL_post_shader[idx].uniforms.clear();
@@ -672,7 +671,7 @@ void gr_opengl_post_process_save_zbuffer()
 {
 	if (Post_initialized)
 	{
-		vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, Cockpit_depth_texture, 0);
+		glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, Cockpit_depth_texture, 0);
 		gr_zbuffer_clear(TRUE);
 		zbuffer_saved = true;
 	}
@@ -1057,8 +1056,8 @@ static bool opengl_post_init_framebuffer()
 
 	if (Cmdline_bloom_intensity > 0) {
 		// two more framebuffers, one each for the two different sized bloom textures
-		vglGenFramebuffersEXT(1, &Post_framebuffer_id[0]);
-		vglGenFramebuffersEXT(1, &Post_framebuffer_id[1]);
+		glGenFramebuffersEXT(1, &Post_framebuffer_id[0]);
+		glGenFramebuffersEXT(1, &Post_framebuffer_id[1]);
 
 		// need to generate textures for bloom too
 		glGenTextures(3, Post_bloom_texture_id);
@@ -1082,14 +1081,14 @@ static bool opengl_post_init_framebuffer()
 
 			if (tex == 0) {
 				// attach to our bright pass framebuffer and make sure it's ok
-				vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Post_framebuffer_id[0]);
-				vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Post_bloom_texture_id[tex], 0);
+				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Post_framebuffer_id[0]);
+				glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Post_bloom_texture_id[tex], 0);
 
 				// if not then clean up and disable bloom
 				if ( opengl_check_framebuffer() ) {
-					vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-					vglDeleteFramebuffersEXT(1, &Post_framebuffer_id[0]);
-					vglDeleteFramebuffersEXT(1, &Post_framebuffer_id[1]);
+					glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+					glDeleteFramebuffersEXT(1, &Post_framebuffer_id[0]);
+					glDeleteFramebuffersEXT(1, &Post_framebuffer_id[1]);
 					Post_framebuffer_id[0] = 0;
 					Post_framebuffer_id[1] = 0;
 
@@ -1106,14 +1105,14 @@ static bool opengl_post_init_framebuffer()
 				height >>= 1;
 			} else {
 				// attach to our blur pass framebuffer and make sure it's ok
-				vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Post_framebuffer_id[1]);
-				vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Post_bloom_texture_id[tex], 0);
+				glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Post_framebuffer_id[1]);
+				glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Post_bloom_texture_id[tex], 0);
 
 				// if not then clean up and disable bloom
 				if ( opengl_check_framebuffer() ) {
-					vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-					vglDeleteFramebuffersEXT(1, &Post_framebuffer_id[0]);
-					vglDeleteFramebuffersEXT(1, &Post_framebuffer_id[1]);
+					glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+					glDeleteFramebuffersEXT(1, &Post_framebuffer_id[0]);
+					glDeleteFramebuffersEXT(1, &Post_framebuffer_id[1]);
 					Post_framebuffer_id[0] = 0;
 					Post_framebuffer_id[1] = 0;
 
@@ -1128,7 +1127,7 @@ static bool opengl_post_init_framebuffer()
 		}
 	}
 
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 
 	GL_state.Texture.Disable();
 
@@ -1160,7 +1159,7 @@ void opengl_post_process_init()
 		return;
 	}
 
-	if ( !Use_GLSL || Cmdline_no_fbo || !Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( !Use_GLSL || Cmdline_no_fbo || !ogl_ext_EXT_framebuffer_object ) {
 		Cmdline_postprocess = 0;
 		return;
 	}
@@ -1169,7 +1168,7 @@ void opengl_post_process_init()
 	// form or another:
 	//    - the NPOT extension
 	//    - GL version 2.0+ (which should work for non-reporting ATI cards since we don't use mipmaps)
-	if ( !(Is_Extension_Enabled(OGL_ARB_TEXTURE_NON_POWER_OF_TWO) || (GL_version >= 20)) ) {
+	if ( !(ogl_ext_ARB_texture_non_power_of_two || (GL_version >= 20)) ) {
 		Cmdline_postprocess = 0;
 		return;
 	}
@@ -1197,7 +1196,7 @@ void opengl_post_process_shutdown()
 
 	for (size_t i = 0; i < GL_post_shader.size(); i++) {
 		if (GL_post_shader[i].program_id) {
-			vglDeleteObjectARB(GL_post_shader[i].program_id);
+			glDeleteProgram(GL_post_shader[i].program_id);
 			GL_post_shader[i].program_id = 0;
 		}
 
@@ -1212,11 +1211,11 @@ void opengl_post_process_shutdown()
 	}
 
 	if (Post_framebuffer_id[0]) {
-		vglDeleteFramebuffersEXT(1, &Post_framebuffer_id[0]);
+		glDeleteFramebuffersEXT(1, &Post_framebuffer_id[0]);
 		Post_framebuffer_id[0] = 0;
 
 		if (Post_framebuffer_id[1]) {
-			vglDeleteFramebuffersEXT(1, &Post_framebuffer_id[1]);
+			glDeleteFramebuffersEXT(1, &Post_framebuffer_id[1]);
 			Post_framebuffer_id[1] = 0;
 		}
 	}

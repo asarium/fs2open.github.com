@@ -13,7 +13,6 @@
 
 #include "globalincs/pstypes.h"
 #include "graphics/gropengl.h"
-#include "graphics/gropenglextension.h"
 
 
 typedef struct tcache_slot_opengl {

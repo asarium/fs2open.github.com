@@ -21,7 +21,6 @@
 #include "lighting/lighting.h"
 #include "graphics/grinternal.h"
 #include "graphics/gropengl.h"
-#include "graphics/gropenglextension.h"
 #include "graphics/gropengltexture.h"
 #include "graphics/gropengllight.h"
 #include "graphics/gropengltnl.h"
@@ -98,7 +97,7 @@ void opengl_vertex_buffer::clear()
 	}
 
 	if (vbo) {
-		vglDeleteBuffersARB(1, &vbo);
+		glDeleteBuffersARB(1, &vbo);
 		GL_vertex_data_in -= vbo_size;
 	}
 
@@ -107,7 +106,7 @@ void opengl_vertex_buffer::clear()
 	}
 
 	if (ibo) {
-		vglDeleteBuffersARB(1, &ibo);
+		glDeleteBuffersARB(1, &ibo);
 		GL_vertex_data_in -= ibo_size;
 	}
 }
@@ -136,16 +135,16 @@ static void opengl_gen_buffer(opengl_vertex_buffer *vbp)
 		// clear any existing errors
 		glGetError();
 
-		vglGenBuffersARB(1, &vbp->vbo);
+		glGenBuffersARB(1, &vbp->vbo);
 
 		// make sure we have one
 		if (vbp->vbo) {
 			GL_state.Array.BindArrayBuffer(vbp->vbo);
-			vglBufferDataARB(GL_ARRAY_BUFFER_ARB, vbp->vbo_size, vbp->array_list, GL_STATIC_DRAW_ARB);
+			glBufferDataARB(GL_ARRAY_BUFFER_ARB, vbp->vbo_size, vbp->array_list, GL_STATIC_DRAW_ARB);
 
 			// just in case
 			if ( opengl_check_for_errors() ) {
-				vglDeleteBuffersARB(1, &vbp->vbo);
+				glDeleteBuffersARB(1, &vbp->vbo);
 				vbp->vbo = 0;
 				return;
 			}
@@ -164,16 +163,16 @@ static void opengl_gen_buffer(opengl_vertex_buffer *vbp)
 		// clear any existing errors
 		glGetError();
 
-		vglGenBuffersARB(1, &vbp->ibo);
+		glGenBuffersARB(1, &vbp->ibo);
 
 		// make sure we have one
 		if (vbp->ibo) {
 			GL_state.Array.BindElementBuffer(vbp->ibo);
-			vglBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, vbp->ibo_size, vbp->index_list, GL_STATIC_DRAW_ARB);
+			glBufferDataARB(GL_ELEMENT_ARRAY_BUFFER_ARB, vbp->ibo_size, vbp->index_list, GL_STATIC_DRAW_ARB);
 
 			// just in case
 			if ( opengl_check_for_errors() ) {
-				vglDeleteBuffersARB(1, &vbp->ibo);
+				glDeleteBuffersARB(1, &vbp->ibo);
 				vbp->ibo = 0;
 				return;
 			}
@@ -192,7 +191,7 @@ int gr_opengl_create_stream_buffer()
 {
 	opengl_vertex_buffer buffer;
 
-	vglGenBuffersARB(1, &buffer.vbo);
+	glGenBuffersARB(1, &buffer.vbo);
 
 	GL_vertex_buffers.push_back(buffer);
 	GL_vertex_buffers_in_use++;
@@ -206,7 +205,7 @@ void gr_opengl_update_stream_buffer(int buffer, effect_vertex *buffer_data, uint
 
 	stream_buffer->vbo_size = size;
 
-	vglBufferDataARB(GL_ARRAY_BUFFER_ARB, stream_buffer->vbo_size, (GLvoid*)buffer_data, GL_STREAM_DRAW_ARB);
+	glBufferDataARB(GL_ARRAY_BUFFER_ARB, stream_buffer->vbo_size, (GLvoid*)buffer_data, GL_STREAM_DRAW_ARB);
 }
 
 int gr_opengl_create_buffer()
@@ -527,7 +526,7 @@ static void opengl_init_arrays(opengl_vertex_buffer *vbp, const vertex_buffer *b
 	GLint offset = (GLint)bufferp->vertex_offset;
 	GLubyte *ptr = NULL;
 
-	if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+	if ( ogl_ext_ARB_draw_elements_base_vertex ) {
 		offset = 0;
 	}
 
@@ -571,7 +570,7 @@ static void opengl_init_arrays(opengl_vertex_buffer *vbp, const vertex_buffer *b
 	if (Cmdline_drawelements) \
 		glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); \
 	else \
-		vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+		glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 
 int GL_last_shader_flags = -1;
 int GL_last_shader_index = -1;
@@ -695,29 +694,29 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 
 	if(flags & TMAP_ANIMATED_SHADER)
 	{
-		vglUniform1fARB( opengl_shader_get_uniform("anim_timer"), opengl_shader_get_animated_timer() );
-		vglUniform1iARB( opengl_shader_get_uniform("effect_num"), opengl_shader_get_animated_effect() );
-		vglUniform1fARB( opengl_shader_get_uniform("vpwidth"), 1.0f/gr_screen.max_w );
-		vglUniform1fARB( opengl_shader_get_uniform("vpheight"), 1.0f/gr_screen.max_h );
+		glUniform1f( opengl_shader_get_uniform("anim_timer"), opengl_shader_get_animated_timer() );
+		glUniform1i( opengl_shader_get_uniform("effect_num"), opengl_shader_get_animated_effect() );
+		glUniform1f( opengl_shader_get_uniform("vpwidth"), 1.0f/gr_screen.max_w );
+		glUniform1f( opengl_shader_get_uniform("vpheight"), 1.0f/gr_screen.max_h );
 	}
 	int n_lights = MIN(Num_active_gl_lights, GL_max_lights) - 1;
-	vglUniform1iARB( opengl_shader_get_uniform("n_lights"), n_lights );
+	glUniform1i( opengl_shader_get_uniform("n_lights"), n_lights );
 
 	GL_state.Texture.ResetUsed();
 
 	// base texture
 	if (shader_flags & SDR_FLAG_DIFFUSE_MAP) {
-		vglUniform1iARB( opengl_shader_get_uniform("sBasemap"), render_pass );
+		glUniform1i( opengl_shader_get_uniform("sBasemap"), render_pass );
 
 		int desaturate = 0;
 		if ( flags & TMAP_FLAG_DESATURATE ) {
 			desaturate = 1;
 		}
 
-		vglUniform1iARB( opengl_shader_get_uniform("desaturate"), desaturate);
-		vglUniform1fARB( opengl_shader_get_uniform("desaturate_r"), gr_screen.current_color.red/255.0f);
-		vglUniform1fARB( opengl_shader_get_uniform("desaturate_g"), gr_screen.current_color.green/255.0f);
-		vglUniform1fARB( opengl_shader_get_uniform("desaturate_b"), gr_screen.current_color.blue/255.0f);
+		glUniform1i( opengl_shader_get_uniform("desaturate"), desaturate);
+		glUniform1f( opengl_shader_get_uniform("desaturate_r"), gr_screen.current_color.red/255.0f);
+		glUniform1f( opengl_shader_get_uniform("desaturate_g"), gr_screen.current_color.green/255.0f);
+		glUniform1f( opengl_shader_get_uniform("desaturate_b"), gr_screen.current_color.blue/255.0f);
 
 		gr_opengl_tcache_set(gr_screen.current_bitmap, tmap_type, &u_scale, &v_scale, render_pass);
 	
@@ -725,7 +724,7 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 	}
 
 	if (shader_flags & SDR_FLAG_GLOW_MAP) {
-		vglUniform1iARB( opengl_shader_get_uniform("sGlowmap"), render_pass );
+		glUniform1i( opengl_shader_get_uniform("sGlowmap"), render_pass );
 
 		gr_opengl_tcache_set(GLOWMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -733,7 +732,7 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 	}
 
 	if (shader_flags & SDR_FLAG_SPEC_MAP) {
-		vglUniform1iARB( opengl_shader_get_uniform("sSpecmap"), render_pass );
+		glUniform1i( opengl_shader_get_uniform("sSpecmap"), render_pass );
 
 		gr_opengl_tcache_set(SPECMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -743,9 +742,9 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 			// 0 == env with non-alpha specmap, 1 == env with alpha specmap
 			int alpha_spec = bm_has_alpha_channel(SPECMAP);
 
-			vglUniform1iARB( opengl_shader_get_uniform("alpha_spec"), alpha_spec );
-			vglUniformMatrix4fvARB( opengl_shader_get_uniform("envMatrix"), 1, GL_FALSE, &GL_env_texture_matrix[0] );
-			vglUniform1iARB( opengl_shader_get_uniform("sEnvmap"), render_pass );
+			glUniform1i( opengl_shader_get_uniform("alpha_spec"), alpha_spec );
+			glUniformMatrix4fv( opengl_shader_get_uniform("envMatrix"), 1, GL_FALSE, &GL_env_texture_matrix[0] );
+			glUniform1i( opengl_shader_get_uniform("sEnvmap"), render_pass );
 	
 			gr_opengl_tcache_set(ENVMAP, TCACHE_TYPE_CUBEMAP, &u_scale, &v_scale, render_pass);
 	
@@ -754,7 +753,7 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 	}
 
 	if (shader_flags & SDR_FLAG_NORMAL_MAP) {
-		vglUniform1iARB( opengl_shader_get_uniform("sNormalmap"), render_pass );
+		glUniform1i( opengl_shader_get_uniform("sNormalmap"), render_pass );
 
 		gr_opengl_tcache_set(NORMMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -762,7 +761,7 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 	}
 
 	if (shader_flags & SDR_FLAG_HEIGHT_MAP) {
-		vglUniform1iARB( opengl_shader_get_uniform("sHeightmap"), render_pass );
+		glUniform1i( opengl_shader_get_uniform("sHeightmap"), render_pass );
 
 		gr_opengl_tcache_set(HEIGHTMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -770,7 +769,7 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 	}
 
 	if (shader_flags & SDR_FLAG_MISC_MAP) {
-		vglUniform1iARB( opengl_shader_get_uniform("sMiscmap"), render_pass );
+		glUniform1i( opengl_shader_get_uniform("sMiscmap"), render_pass );
 
 		gr_opengl_tcache_set(MISCMAP, tmap_type, &u_scale, &v_scale, render_pass);
 
@@ -788,7 +787,7 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 		}
 		else
 			GL_state.Texture.Enable(Framebuffer_fallback_texture_id);
-		vglUniform1iARB( opengl_shader_get_uniform("sFramebuffer"), render_pass );
+		glUniform1i( opengl_shader_get_uniform("sFramebuffer"), render_pass );
 		render_pass++;
 	}
 
@@ -796,28 +795,28 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 	// By default, this is handled through the r and g channels of the misc map, but this can be changed
 	// in the shader; test versions of this used the normal map r and b channels
 	if (shader_flags & SDR_FLAG_TEAMCOLOR) {
-		vglUniform3fARB( opengl_shader_get_uniform("stripe_color"), Current_team_color->stripe.r,  Current_team_color->stripe.g,  Current_team_color->stripe.b);
-		vglUniform3fARB( opengl_shader_get_uniform("base_color"), Current_team_color->base.r, Current_team_color->base.g, Current_team_color->base.b);
+		glUniform3f( opengl_shader_get_uniform("stripe_color"), Current_team_color->stripe.r,  Current_team_color->stripe.g,  Current_team_color->stripe.b);
+		glUniform3f( opengl_shader_get_uniform("base_color"), Current_team_color->base.r, Current_team_color->base.g, Current_team_color->base.b);
 	}
 
 	if (shader_flags & SDR_FLAG_THRUSTER) {
-		vglUniform1fARB( opengl_shader_get_uniform("thruster_scale"), Interp_thrust_scale);
+		glUniform1f( opengl_shader_get_uniform("thruster_scale"), Interp_thrust_scale);
 	}
 
 	// DRAW IT!!
 	//DO_RENDER();
 
-	if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+	if ( ogl_ext_ARB_draw_elements_base_vertex ) {
 		if (Cmdline_drawelements) {
-			vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+			glDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
 		} else {
-			vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+			glDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
 		}
 	} else {
 		if (Cmdline_drawelements) {
 			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
 		} else {
-			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+			glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 		}
 	}
 /*
@@ -870,7 +869,7 @@ static void opengl_render_pipeline_program(int start, const vertex_buffer *buffe
 		opengl_change_active_lights(0, 4);
 
 		int n_lights = MIN(Num_active_gl_lights, GL_max_lights) - 5;
-		vglUniform1iARB( opengl_shader_get_uniform("n_lights"), n_lights );
+		glUniform1iARB( opengl_shader_get_uniform("n_lights"), n_lights );
 
 		opengl_default_light_settings(0, 0, 0);
 
@@ -957,7 +956,7 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 
 		// base texture
 		if ( !Basemap_override ) {
-			if ( !Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+			if ( ogl_ext_ARB_draw_elements_base_vertex ) {
 				GL_state.Array.SetActiveClientUnit(render_pass);
 				GL_state.Array.EnableClientTexture();
 				GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
@@ -973,7 +972,7 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 		if (using_glow) {
 			GL_state.Array.SetActiveClientUnit(render_pass);
 			GL_state.Array.EnableClientTexture();
-			if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+			if ( ogl_ext_ARB_draw_elements_base_vertex ) {
 				GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, 0 );
 			} else {
 				GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
@@ -989,17 +988,17 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 	}
 
 	// DRAW IT!!
-	if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+	if ( ogl_ext_ARB_draw_elements_base_vertex ) {
 		if (Cmdline_drawelements) {
-			vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+			glDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
 		} else {
-			vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+			glDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
 		}
 	} else {
 		if (Cmdline_drawelements) {
 			glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
 		} else {
-			vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+			glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 		}
 	}
 
@@ -1055,7 +1054,7 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 		render_pass = 0;
 
 		// set specmap, for us to modulate against
-		if ( !Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		if ( !ogl_ext_ARB_draw_elements_base_vertex ) {
 			GL_state.Array.SetActiveClientUnit(render_pass);
 			GL_state.Array.EnableClientTexture();
 			GL_state.Array.TexPointer(2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
@@ -1088,7 +1087,7 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 		render_pass++; // bump!
 
 		// now move the to the envmap
-		if ( !Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		if ( !ogl_ext_ARB_draw_elements_base_vertex ) {
 			GL_state.Array.SetActiveClientUnit(render_pass);
 			GL_state.Array.EnableClientTexture();
 			GL_state.Array.TexPointer(2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
@@ -1136,17 +1135,17 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 		glMaterialfv( GL_FRONT, GL_AMBIENT, ambient );
 
 		// DRAW IT!!
-		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		if ( ogl_ext_ARB_draw_elements_base_vertex ) {
 			if (Cmdline_drawelements) {
-				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+				glDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
 			} else {
-				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+				glDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
 			}
 		} else {
 			if (Cmdline_drawelements) {
 				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
 			} else {
-				vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+				glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 			}
 		}
 
@@ -1187,7 +1186,7 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 
 		render_pass = 0;
 
-		if ( !Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		if (!ogl_ext_ARB_draw_elements_base_vertex) {
 			GL_state.Array.SetActiveClientUnit(0);
 			GL_state.Array.EnableClientTexture();
 			GL_state.Array.TexPointer( 2, GL_FLOAT, bufferp->stride, BUFFER_OFFSET(0) );
@@ -1212,17 +1211,17 @@ static void opengl_render_pipeline_fixed(int start, const vertex_buffer *bufferp
 		GL_state.DepthFunc(GL_LEQUAL);
 
 		// DRAW IT!!
-		if ( Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX) ) {
+		if (ogl_ext_ARB_draw_elements_base_vertex) {
 			if (Cmdline_drawelements) {
-				vglDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+				glDrawElementsBaseVertex(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
 			} else {
-				vglDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
+				glDrawRangeElementsBaseVertex(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start), (GLint)bufferp->vertex_offset/bufferp->stride);
 			}
 		} else {
 			if (Cmdline_drawelements) {
 				glDrawElements(GL_TRIANGLES, count, element_type, ibuffer + (datap->index_offset + start)); 
 			} else {
-				vglDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
+				glDrawRangeElements(GL_TRIANGLES, datap->i_first, datap->i_last, count, element_type, ibuffer + (datap->index_offset + start));
 			}
 		}
 
@@ -1355,14 +1354,14 @@ void gr_opengl_render_stream_buffer(int offset, int n_verts, int flags)
 					opengl_shader_set_current(&GL_shader[sdr_index]);
 					Stream_buffer_sdr = sdr_index;
 
-					vglUniform1iARB(opengl_shader_get_uniform("baseMap"), 0);
-					vglUniform1iARB(opengl_shader_get_uniform("depthMap"), 1);
-					vglUniform1fARB(opengl_shader_get_uniform("window_width"), (float)gr_screen.max_w);
-					vglUniform1fARB(opengl_shader_get_uniform("window_height"), (float)gr_screen.max_h);
-					vglUniform1fARB(opengl_shader_get_uniform("nearZ"), Min_draw_distance);
-					vglUniform1fARB(opengl_shader_get_uniform("farZ"), Max_draw_distance);
+					glUniform1i(opengl_shader_get_uniform("baseMap"), 0);
+					glUniform1i(opengl_shader_get_uniform("depthMap"), 1);
+					glUniform1f(opengl_shader_get_uniform("window_width"), (float)gr_screen.max_w);
+					glUniform1f(opengl_shader_get_uniform("window_height"), (float)gr_screen.max_h);
+					glUniform1f(opengl_shader_get_uniform("nearZ"), Min_draw_distance);
+					glUniform1f(opengl_shader_get_uniform("farZ"), Max_draw_distance);
 
-					vglUniform1iARB(opengl_shader_get_uniform("frameBuffer"), 2);
+					glUniform1i(opengl_shader_get_uniform("frameBuffer"), 2);
 
 					attrib_index = opengl_shader_get_attribute("offset_in");
 					GL_state.Array.EnableVertexAttrib(attrib_index);
@@ -1374,15 +1373,15 @@ void gr_opengl_render_stream_buffer(int offset, int n_verts, int flags)
 				GL_state.Texture.Enable(Scene_effect_texture);
 				
 				if(flags & TMAP_FLAG_DISTORTION_THRUSTER) {
-					vglUniform1iARB(opengl_shader_get_uniform("distMap"), 3);
+					glUniform1i(opengl_shader_get_uniform("distMap"), 3);
 
 					GL_state.Texture.SetActiveUnit(3);
 					GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 					GL_state.Texture.Enable(Distortion_texture[!Distortion_switch]);
-					vglUniform1fARB(opengl_shader_get_uniform("use_offset"), 1.0f);
+					glUniform1f(opengl_shader_get_uniform("use_offset"), 1.0f);
 				} else {
-					vglUniform1iARB(opengl_shader_get_uniform("distMap"), 0);
-					vglUniform1fARB(opengl_shader_get_uniform("use_offset"), 0.0f);
+					glUniform1i(opengl_shader_get_uniform("distMap"), 0);
+					glUniform1f(opengl_shader_get_uniform("use_offset"), 0.0f);
 				}
 
 				zbuff = gr_zbuffer_set(GR_ZBUFF_READ);
@@ -1399,12 +1398,12 @@ void gr_opengl_render_stream_buffer(int offset, int n_verts, int flags)
 					opengl_shader_set_current(&GL_shader[sdr_index]);
 					Stream_buffer_sdr = sdr_index;
 
-					vglUniform1iARB(opengl_shader_get_uniform("baseMap"), 0);
-					vglUniform1iARB(opengl_shader_get_uniform("depthMap"), 1);
-					vglUniform1fARB(opengl_shader_get_uniform("window_width"), (float)gr_screen.max_w);
-					vglUniform1fARB(opengl_shader_get_uniform("window_height"), (float)gr_screen.max_h);
-					vglUniform1fARB(opengl_shader_get_uniform("nearZ"), Min_draw_distance);
-					vglUniform1fARB(opengl_shader_get_uniform("farZ"), Max_draw_distance);
+					glUniform1i(opengl_shader_get_uniform("baseMap"), 0);
+					glUniform1i(opengl_shader_get_uniform("depthMap"), 1);
+					glUniform1f(opengl_shader_get_uniform("window_width"), (float)gr_screen.max_w);
+					glUniform1f(opengl_shader_get_uniform("window_height"), (float)gr_screen.max_h);
+					glUniform1f(opengl_shader_get_uniform("nearZ"), Min_draw_distance);
+					glUniform1f(opengl_shader_get_uniform("farZ"), Max_draw_distance);
 
 					attrib_index = opengl_shader_get_attribute("radius_in");
 					GL_state.Array.EnableVertexAttrib(attrib_index);
@@ -1465,7 +1464,7 @@ void gr_opengl_render_stream_buffer(int offset, int n_verts, int flags)
 
 	if( (flags & TMAP_FLAG_DISTORTION) || (flags & TMAP_FLAG_DISTORTION_THRUSTER) ) {
 		GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
-		vglDrawBuffers(2, buffers);
+		glDrawBuffers(2, buffers);
 	}
 	
 	GL_CHECK_FOR_ERRORS("end of render3d()");

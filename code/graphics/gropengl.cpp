@@ -22,12 +22,12 @@
 #include "io/timer.h"
 #include "ddsutils/ddsutils.h"
 #include "model/model.h"
+#include "popup/popup.h"
 #include "debugconsole/console.h"
 #include "debugconsole/timerbar.h"
 #include "graphics/gropenglbmpman.h"
 #include "graphics/gropengllight.h"
 #include "graphics/gropengltexture.h"
-#include "graphics/gropenglextension.h"
 #include "graphics/gropengltnl.h"
 #include "graphics/gropenglbmpman.h"
 #include "graphics/gropengldraw.h"
@@ -35,6 +35,13 @@
 #include "graphics/gropenglstate.h"
 #include "graphics/gropenglpostprocessing.h"
 
+#include "graphics/paths/PathRenderer.h"
+
+#ifdef WIN32
+#include "graphics/gl/wgl_2_1.h"
+#else
+#include "graphics/gl/glx_2_1.h"
+#endif
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -518,7 +525,7 @@ void gr_opengl_print_screen(const char *filename)
 	// now for the data
 	if (Use_PBOs) {
 		Assert( !pbo );
-		vglGenBuffersARB(1, &pbo);
+		glGenBuffersARB(1, &pbo);
 
 		if ( !pbo ) {
 			if (fout != NULL)
@@ -527,14 +534,14 @@ void gr_opengl_print_screen(const char *filename)
 			return;
 		}
 
-		vglBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, pbo);
-		vglBufferDataARB(GL_PIXEL_PACK_BUFFER_ARB, (gr_screen.max_w * gr_screen.max_h * 4), NULL, GL_STATIC_READ);
+		glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, pbo);
+		glBufferDataARB(GL_PIXEL_PACK_BUFFER_ARB, (gr_screen.max_w * gr_screen.max_h * 4), NULL, GL_STATIC_READ);
 
 		glReadBuffer(GL_FRONT);
 		glReadPixels(0, 0, gr_screen.max_w, gr_screen.max_h, GL_read_format, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
 		// map the image data so that we can save it to file
-		pixels = (GLubyte*) vglMapBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_READ_ONLY);
+		pixels = (GLubyte*) glMapBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_READ_ONLY);
 	} else {
 		pixels = (GLubyte*) vm_malloc_q(gr_screen.max_w * gr_screen.max_h * 4);
 
@@ -578,10 +585,10 @@ void gr_opengl_print_screen(const char *filename)
 	}
 
 	if (pbo) {
-		vglUnmapBufferARB(GL_PIXEL_PACK_BUFFER_ARB);
+		glUnmapBufferARB(GL_PIXEL_PACK_BUFFER_ARB);
 		pixels = NULL;
-		vglBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, 0);
-		vglDeleteBuffersARB(1, &pbo);
+		glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, 0);
+		glDeleteBuffersARB(1, &pbo);
 	}
 
 	// done!
@@ -962,15 +969,15 @@ void opengl_save_mouse_area(int x, int y, int w, int h)
 	if ( Use_PBOs ) {
 		// since this is used a lot, and is pretty small in size, we just create it once and leave it until exit
 		if (!GL_cursor_pbo) {
-			vglGenBuffersARB(1, &GL_cursor_pbo);
-			vglBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_cursor_pbo);
-			vglBufferDataARB(GL_PIXEL_PACK_BUFFER_ARB, cursor_size * 4, NULL, GL_STATIC_READ);
+			glGenBuffersARB(1, &GL_cursor_pbo);
+			glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_cursor_pbo);
+			glBufferDataARB(GL_PIXEL_PACK_BUFFER_ARB, cursor_size * 4, NULL, GL_STATIC_READ);
 		}
 
-		vglBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_cursor_pbo);
+		glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_cursor_pbo);
 		glReadBuffer(GL_BACK);
 		glReadPixels(x, gr_screen.max_h-y-1-h, w, h, GL_read_format, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-		vglBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, 0);
+		glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, 0);
 	} else {
 		// this should really only have to be malloc'd once
 		if (GL_saved_mouse_data == NULL)
@@ -1015,7 +1022,7 @@ int gr_opengl_save_screen()
 	if ( Use_PBOs ) {
 		GLubyte *pixels = NULL;
 
-		vglGenBuffersARB(1, &GL_screen_pbo);
+		glGenBuffersARB(1, &GL_screen_pbo);
 
 		if (!GL_screen_pbo) {
 			if (GL_saved_screen) {
@@ -1026,12 +1033,12 @@ int gr_opengl_save_screen()
 			return -1;
 		}
 
-		vglBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_screen_pbo);
-		vglBufferDataARB(GL_PIXEL_PACK_BUFFER_ARB, gr_screen.max_w * gr_screen.max_h * 4, NULL, GL_STATIC_READ);
+		glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_screen_pbo);
+		glBufferDataARB(GL_PIXEL_PACK_BUFFER_ARB, gr_screen.max_w * gr_screen.max_h * 4, NULL, GL_STATIC_READ);
 
 		glReadPixels(0, 0, gr_screen.max_w, gr_screen.max_h, GL_read_format, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
-		pixels = (GLubyte*)vglMapBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_READ_ONLY);
+		pixels = (GLubyte*)glMapBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_READ_ONLY);
 
 		width_times_pixel = (gr_screen.max_w * 4);
 		mouse_times_pixel = (Gr_cursor_size * 4);
@@ -1045,13 +1052,13 @@ int gr_opengl_save_screen()
 			sptr += width_times_pixel;
 		}
 
-		vglUnmapBufferARB(GL_PIXEL_PACK_BUFFER_ARB);
-		vglBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, 0);
+		glUnmapBufferARB(GL_PIXEL_PACK_BUFFER_ARB);
+		glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, 0);
 
 		if (GL_mouse_saved && GL_cursor_pbo) {
-			vglBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_cursor_pbo);
+			glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_cursor_pbo);
 
-			pixels = (GLubyte*)vglMapBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_READ_ONLY);
+			pixels = (GLubyte*)glMapBufferARB(GL_PIXEL_PACK_BUFFER_ARB, GL_READ_ONLY);
 
 			sptr = (ubyte *)pixels;
 			dptr = (ubyte *)&GL_saved_screen[(GL_mouse_saved_x1 + GL_mouse_saved_y2 * gr_screen.max_w) * 4];
@@ -1062,11 +1069,11 @@ int gr_opengl_save_screen()
 				dptr -= width_times_pixel;
 			}
 
-			vglUnmapBufferARB(GL_PIXEL_PACK_BUFFER_ARB);
-			vglBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, 0);
+			glUnmapBufferARB(GL_PIXEL_PACK_BUFFER_ARB);
+			glBindBufferARB(GL_PIXEL_PACK_BUFFER_ARB, 0);
 		}
 
-		vglDeleteBuffersARB(1, &GL_screen_pbo);
+		glDeleteBuffersARB(1, &GL_screen_pbo);
 		GL_screen_pbo = 0;
 
 		GL_saved_screen_id = bm_create(32, gr_screen.max_w, gr_screen.max_h, GL_saved_screen, 0);
@@ -1279,7 +1286,7 @@ void gr_opengl_push_texture_matrix(int unit)
 		return;
 
 	glGetIntegerv(GL_MATRIX_MODE, &current_matrix);
-	vglActiveTextureARB(GL_TEXTURE0_ARB+unit);
+	glActiveTextureARB(GL_TEXTURE0_ARB+unit);
 
 	glMatrixMode(GL_TEXTURE);
 	glPushMatrix();
@@ -1295,7 +1302,7 @@ void gr_opengl_pop_texture_matrix(int unit)
 		return;
 
 	glGetIntegerv(GL_MATRIX_MODE, &current_matrix);
-	vglActiveTextureARB(GL_TEXTURE0_ARB+unit);
+	glActiveTextureARB(GL_TEXTURE0_ARB+unit);
 
 	glMatrixMode(GL_TEXTURE);
 	glPopMatrix();
@@ -1313,7 +1320,7 @@ void gr_opengl_translate_texture_matrix(int unit, vec3d *shift)
 	}
 
 	glGetIntegerv(GL_MATRIX_MODE, &current_matrix);
-	vglActiveTextureARB(GL_TEXTURE0_ARB+unit);
+	glActiveTextureARB(GL_TEXTURE0_ARB+unit);
 
 	glMatrixMode(GL_TEXTURE);
 	glTranslated(shift->xyz.x, shift->xyz.y, shift->xyz.z);
@@ -1384,7 +1391,10 @@ void opengl_set_vsync(int status)
 	// This will need further testing once Snow Leopard 10.6 goes RTM
 	CGLSetParameter(CGLGetCurrentContext(), kCGLCPSwapInterval, (GLint*)&status);
 #elif defined(_WIN32)
-	vwglSwapIntervalEXT(status);
+	if (wgl_ext_EXT_swap_control)
+	{
+		wglSwapIntervalEXT(status);
+	}
 #else
 	// NOTE: this may not work well with the closed NVIDIA drivers since those use the
 	//       special "__GL_SYNC_TO_VBLANK" environment variable to manage sync
@@ -1415,8 +1425,10 @@ void opengl_setup_viewport()
 // NOTE: This should only ever be called through os_cleanup(), or when switching video APIs
 void gr_opengl_shutdown()
 {
+	graphics::paths::PathRenderer::shutdown();
+
 	if (GL_cursor_pbo) {
-		vglDeleteBuffersARB(1, &GL_cursor_pbo);
+		glDeleteBuffersARB(1, &GL_cursor_pbo);
 		GL_cursor_pbo = 0;
 	}
 
@@ -1694,6 +1706,12 @@ int opengl_init_display_device()
 		GetDeviceGammaRamp( GL_device_context, GL_original_gamma_ramp );
 	}
 
+	if (wgl_LoadFunctions(GL_device_context) == wgl_LOAD_FAILED)
+	{
+		Error(LOCATION, "Failed to load OpenGL function pointers!");
+		return false;
+	}
+
 #else
 
 	int flags = SDL_OPENGL;
@@ -1929,6 +1947,96 @@ void opengl_setup_function_pointers()
 }
 
 
+void opengl_extensions_init()
+{
+	// if S3TC compression is found, then "GL_ARB_texture_compression" must be an extension
+	Use_compressed_textures = ogl_ext_EXT_texture_compression_s3tc;
+	Texture_compression_available = ogl_ext_ARB_texture_compression;
+	// Swifty put this in, but it's not doing anything. Once he uses it, he can uncomment it.
+	//int use_base_vertex = Is_Extension_Enabled(OGL_ARB_DRAW_ELEMENTS_BASE_VERTEX);
+
+	//allow VBOs to be used
+	if (!Cmdline_nohtl && !Cmdline_novbo && ogl_ext_ARB_vertex_buffer_object) {
+		Use_VBOs = 1;
+	}
+
+	if (!Cmdline_no_pbo && ogl_ext_ARB_pixel_buffer_object) {
+		Use_PBOs = 1;
+	}
+
+	// setup the best fog function found
+	if (!Fred_running) {
+		if (ogl_ext_EXT_fog_coord) {
+			OGL_fogmode = 2;
+		}
+		else {
+			OGL_fogmode = 1;
+		}
+	}
+
+	// if we can't do cubemaps then turn off Cmdline_env
+	if (!(ogl_ext_ARB_texture_cube_map && ogl_ext_ARB_texture_env_combine)) {
+		Cmdline_env = 0;
+	}
+
+	if (!Cmdline_noglsl) {
+		int ver = 0, major = 0, minor = 0;
+		const char *glsl_ver = (const char*)glGetString(GL_SHADING_LANGUAGE_VERSION_ARB);
+
+		sscanf(glsl_ver, "%d.%d", &major, &minor);
+		ver = (major * 100) + minor;
+
+		// SM 4.0 compatible or better
+		if (ver >= 400) {
+			Use_GLSL = 4;
+		}
+		// SM 3.0 compatible
+		else if (ver >= 130) {
+			Use_GLSL = 3;
+		}
+		// SM 2.0 compatible
+		else if (ver >= 120) {
+			Use_GLSL = 2;
+		}
+		// we require GLSL 1.20 or higher
+		else if (ver < 110) {
+			Use_GLSL = 0;
+			mprintf(("  OpenGL Shading Language version %s is not sufficient to use GLSL mode in FSO. Defaulting to fixed-function renderer.\n", glGetString(GL_SHADING_LANGUAGE_VERSION_ARB)));
+#ifdef NDEBUG
+			popup(PF_USE_AFFIRMATIVE_ICON, 1, POPUP_OK, "GLSL support not available on this GPU. Disabling shader support and defaulting to fixed-function rendering.\n");
+#endif
+		}
+	}
+
+	// can't have this stuff without GLSL support
+	if (!Use_GLSL) {
+		Cmdline_normal = 0;
+		Cmdline_height = 0;
+		Cmdline_postprocess = 0;
+	}
+
+	if (Use_GLSL) {
+		GLint max_texture_units;
+		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
+
+		// we need enough texture slots for this stuff to work
+
+		if (max_texture_units < 6) {
+			mprintf(("Not enough texture units for height map support. We need at least 6, we found %d.\n", max_texture_units));
+			Cmdline_height = 0;
+		}
+		else if (max_texture_units < 5) {
+			mprintf(("Not enough texture units for height and normal map support. We need at least 5, we found %d.\n", max_texture_units));
+			Cmdline_normal = 0;
+			Cmdline_height = 0;
+		}
+		else if (max_texture_units < 4) {
+			mprintf(("Not enough texture units found for GLSL support. We need at least 4, we found %d.\n", max_texture_units));
+			Use_GLSL = 0;
+		}
+	}
+}
+
 bool gr_opengl_init()
 {
 	char *ver;
@@ -1946,6 +2054,12 @@ bool gr_opengl_init()
 
 	if ( opengl_init_display_device() ) {
 		Error(LOCATION, "Unable to initialize display device!\n");
+	}
+
+	if (ogl_LoadFunctions() == ogl_LOAD_FAILED)
+	{
+		Error(LOCATION, "Failed to load OpenGL function pointers!");
+		return false;
 	}
 
 	// version check
@@ -1986,7 +2100,7 @@ bool gr_opengl_init()
 	GLint max_texture_units = GL_supported_texture_units;
 
 	if (Use_GLSL) {
-		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &max_texture_units);
+		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &max_texture_units);
 	}
 
 	GL_state.Texture.init(max_texture_units);
@@ -2054,7 +2168,7 @@ bool gr_opengl_init()
 	mprintf(( "  Max elements indices: %i\n", GL_max_elements_indices ));
 	mprintf(( "  Max texture size: %ix%i\n", GL_max_texture_width, GL_max_texture_height ));
 
-	if ( Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) ) {
+	if (ogl_ext_EXT_framebuffer_object) {
 		mprintf(( "  Max render buffer size: %ix%i\n", GL_max_renderbuffer_size, GL_max_renderbuffer_size ));
 	}
 
@@ -2067,7 +2181,8 @@ bool gr_opengl_init()
 		mprintf(( "  OpenGL Shader Version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION_ARB) ));
 	}
 
-
+	mprintf(("Initializing path renderer...\n"));
+	graphics::paths::PathRenderer::init();
 
 	// This stops fred crashing if no textures are set
 	gr_screen.current_bitmap = -1;
@@ -2125,7 +2240,7 @@ DCF(ogl_anisotropy, "toggles anisotropic filtering")
 		return;
 	}
 
-	if ( !Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
+	if (ogl_ext_EXT_texture_filter_anisotropic) {
 		dc_printf("Error: Anisotropic filter is not settable!\n");
 		return;
 	}

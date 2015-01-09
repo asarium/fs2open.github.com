@@ -863,6 +863,7 @@ int popup_do(popup_info *pi, int flags)
 
 		// don't draw anything 
 		if(!(flags & PF_RUN_STATE)){
+			//gr_clear();
 			gr_restore_screen(screen_id);
 		}
 

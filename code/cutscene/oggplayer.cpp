@@ -14,7 +14,6 @@
 #include "cfile/cfile.h"
 #include "graphics/gropengl.h"
 #include "graphics/gropengltexture.h"
-#include "graphics/gropenglextension.h"
 #include "graphics/gropenglshader.h"
 #include "graphics/gropenglstate.h"
 #include "graphics/2d.h"
@@ -409,7 +408,7 @@ static void OGG_video_init(theora_info *tinfo)
 			Verify( frag != NULL );
 
 			shader_id = opengl_shader_create(vert, frag);
-			vglUseProgramObjectARB(shader_id);
+			glUseProgram(shader_id);
 			if (!shader_id)
 				use_shaders = false;
 		} 
@@ -532,9 +531,9 @@ static void OGG_video_init(theora_info *tinfo)
 			gl_screenU = i2fl(tinfo->frame_width-1) / i2fl(2048) ;
 			gl_screenV = i2fl(tinfo->frame_height-1) / i2fl(2048);
 			GL_state.Texture.SetShaderMode(GL_TRUE);
-			vglUniform1iARB( vglGetUniformLocationARB(shader_id, "ytex"), 0 );
-			vglUniform1iARB( vglGetUniformLocationARB(shader_id, "utex"), 1 );
-			vglUniform1iARB( vglGetUniformLocationARB(shader_id, "vtex"), 2 );
+			glUniform1i( glGetUniformLocation(shader_id, "ytex"), 0 );
+			glUniform1i( glGetUniformLocation(shader_id, "utex"), 1 );
+			glUniform1i( glGetUniformLocation(shader_id, "vtex"), 2 );
 		}
 
 		glVertices[0][0] = (GLfloat)g_screenX;

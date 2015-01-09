@@ -8,7 +8,6 @@
 
 #include "graphics/gropengl.h"
 #include "graphics/gropengltexture.h"
-#include "graphics/gropenglextension.h"
 #include "graphics/gropenglstate.h"
 
 #include "globalincs/pstypes.h"

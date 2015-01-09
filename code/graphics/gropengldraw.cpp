@@ -23,7 +23,6 @@
 #include "graphics/gropenglbmpman.h"
 #include "graphics/gropengllight.h"
 #include "graphics/gropengltexture.h"
-#include "graphics/gropenglextension.h"
 #include "graphics/gropenglstate.h"
 #include "graphics/gropengltnl.h"
 #include "graphics/gropenglbmpman.h"
@@ -1652,7 +1651,7 @@ void gr_opengl_render_effect(int nverts, vertex *verts, float *radius_list, uint
 				}
 				opengl_shader_set_current(&GL_shader[sdr_index]);
 				
-				vglUniform1iARB(opengl_shader_get_uniform("frameBuffer"), 2);
+				glUniform1i(opengl_shader_get_uniform("frameBuffer"), 2);
 				
 				GL_state.Texture.SetActiveUnit(2);
 				GL_state.Texture.SetTarget(GL_TEXTURE_2D);
@@ -1661,12 +1660,12 @@ void gr_opengl_render_effect(int nverts, vertex *verts, float *radius_list, uint
 				GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 				if(flags & TMAP_FLAG_DISTORTION_THRUSTER)
 				{
-					vglUniform1iARB(opengl_shader_get_uniform("distMap"), 3);
+					glUniform1i(opengl_shader_get_uniform("distMap"), 3);
 					GL_state.Texture.Enable(Distortion_texture[!Distortion_switch]);
 				}
 				else
 				{
-					vglUniform1iARB(opengl_shader_get_uniform("distMap"), 0);
+					glUniform1i(opengl_shader_get_uniform("distMap"), 0);
 					GL_state.Texture.Disable();
 				}
 				zbuff = gr_zbuffer_set(GR_ZBUFF_READ);
@@ -1682,13 +1681,13 @@ void gr_opengl_render_effect(int nverts, vertex *verts, float *radius_list, uint
 				zbuff = gr_zbuffer_set(GR_ZBUFF_NONE);
 			}
 
-			vglUniform1iARB(opengl_shader_get_uniform("baseMap"), 0);
-			vglUniform1iARB(opengl_shader_get_uniform("depthMap"), 1);
-			vglUniform1fARB(opengl_shader_get_uniform("window_width"), (float)gr_screen.max_w);
-			vglUniform1fARB(opengl_shader_get_uniform("window_height"), (float)gr_screen.max_h);
-			vglUniform1fARB(opengl_shader_get_uniform("nearZ"), Min_draw_distance);
-			vglUniform1fARB(opengl_shader_get_uniform("farZ"), Max_draw_distance);
-			vglUniform1fARB(opengl_shader_get_uniform("use_offset"), 0.0f);
+			glUniform1i(opengl_shader_get_uniform("baseMap"), 0);
+			glUniform1i(opengl_shader_get_uniform("depthMap"), 1);
+			glUniform1f(opengl_shader_get_uniform("window_width"), (float)gr_screen.max_w);
+			glUniform1f(opengl_shader_get_uniform("window_height"), (float)gr_screen.max_h);
+			glUniform1f(opengl_shader_get_uniform("nearZ"), Min_draw_distance);
+			glUniform1f(opengl_shader_get_uniform("farZ"), Max_draw_distance);
+			glUniform1f(opengl_shader_get_uniform("use_offset"), 0.0f);
 
 			if( !(flags & TMAP_FLAG_DISTORTION) && !(flags & TMAP_FLAG_DISTORTION_THRUSTER) ) // Only use vertex attribute with soft particles to avoid OpenGL Errors - Valathil
 			{
@@ -1702,7 +1701,7 @@ void gr_opengl_render_effect(int nverts, vertex *verts, float *radius_list, uint
 				attrib_index = opengl_shader_get_attribute("offset_in");
 				GL_state.Array.EnableVertexAttrib(attrib_index);
 				GL_state.Array.VertexAttribPointer(attrib_index, 1, GL_FLOAT, GL_FALSE, 0, radius_list);
-				vglUniform1fARB(opengl_shader_get_uniform("use_offset"), 1.0f);
+				glUniform1f(opengl_shader_get_uniform("use_offset"), 1.0f);
 			}
 			GL_state.Texture.SetActiveUnit(1);
 			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
@@ -1771,7 +1770,7 @@ void gr_opengl_render_effect(int nverts, vertex *verts, float *radius_list, uint
 
 	if( (flags & TMAP_FLAG_DISTORTION) || (flags & TMAP_FLAG_DISTORTION_THRUSTER) ) {
 		GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
-		vglDrawBuffers(2, buffers);
+		glDrawBuffers(2, buffers);
 	}
 
 	GL_CHECK_FOR_ERRORS("end of render3d()");
@@ -2317,7 +2316,7 @@ void opengl_setup_scene_textures()
 {
 	Scene_texture_initialized = 0;
 
-	if ( !Use_GLSL || Cmdline_no_fbo || !Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) ) {
+	if ( !Use_GLSL || Cmdline_no_fbo || !ogl_ext_EXT_framebuffer_object ) {
 		Cmdline_postprocess = 0;
 		Cmdline_softparticles = 0;
 		Cmdline_fb_explosions = 0;
@@ -2332,7 +2331,7 @@ void opengl_setup_scene_textures()
 	// form or another:
 	//    - the NPOT extension
 	//    - GL version 2.0+ (which should work for non-reporting ATI cards since we don't use mipmaps)
-	if ( !(Is_Extension_Enabled(OGL_ARB_TEXTURE_NON_POWER_OF_TWO) || (GL_version >= 20)) ) {
+	if ( !(ogl_ext_ARB_texture_non_power_of_two || (GL_version >= 20)) ) {
 		Cmdline_postprocess = 0;
 		Cmdline_softparticles = 0;
 
@@ -2355,8 +2354,8 @@ void opengl_setup_scene_textures()
 	}
 
 	// create framebuffer
-	vglGenFramebuffersEXT(1, &Scene_framebuffer);
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Scene_framebuffer);
+	glGenFramebuffersEXT(1, &Scene_framebuffer);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Scene_framebuffer);
 
 	// setup main render texture
 	glGenTextures(1, &Scene_color_texture);
@@ -2373,7 +2372,7 @@ void opengl_setup_scene_textures()
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
-	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Scene_color_texture, 0);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Scene_color_texture, 0);
 
 	//Set up luminance texture (used as input for FXAA)
 	glGenTextures(1, &Scene_luminance_texture);
@@ -2406,7 +2405,7 @@ void opengl_setup_scene_textures()
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
-	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_2D, Scene_effect_texture, 0);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_TEXTURE_2D, Scene_effect_texture, 0);
 	
 	// setup cockpit depth texture
 	glGenTextures(1, &Cockpit_depth_texture);
@@ -2423,7 +2422,7 @@ void opengl_setup_scene_textures()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, Scene_texture_width, Scene_texture_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, Cockpit_depth_texture, 0);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, Cockpit_depth_texture, 0);
 	gr_zbuffer_set(GR_ZBUFF_FULL);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -2442,11 +2441,11 @@ void opengl_setup_scene_textures()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, Scene_texture_width, Scene_texture_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, Scene_depth_texture, 0);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_DEPTH_ATTACHMENT_EXT, GL_TEXTURE_2D, Scene_depth_texture, 0);
 
 	if ( opengl_check_framebuffer() ) {
-		vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-		vglDeleteFramebuffersEXT(1, &Scene_framebuffer);
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+		glDeleteFramebuffersEXT(1, &Scene_framebuffer);
 		Scene_framebuffer = 0;
 
 		GL_state.Texture.Disable();
@@ -2472,8 +2471,8 @@ void opengl_setup_scene_textures()
 	}
 
 	//Setup thruster distortion framebuffer
-	vglGenFramebuffersEXT(1, &Distortion_framebuffer);
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Distortion_framebuffer);
+	glGenFramebuffersEXT(1, &Distortion_framebuffer);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Distortion_framebuffer);
 
 	glGenTextures(2, Distortion_texture);
 
@@ -2499,13 +2498,13 @@ void opengl_setup_scene_textures()
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 32, 32, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
-	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Distortion_texture[0], 0);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Distortion_texture[0], 0);
 	
 	
 	
 	if ( opengl_check_framebuffer() ) {
-		vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-		vglDeleteFramebuffersEXT(1, &Distortion_framebuffer);
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+		glDeleteFramebuffersEXT(1, &Distortion_framebuffer);
 		Distortion_framebuffer = 0;
 
 		GL_state.Texture.Disable();
@@ -2524,7 +2523,7 @@ void opengl_setup_scene_textures()
 		return;
 	}
 
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 
 	Scene_texture_initialized = 1;
 	Scene_framebuffer_in_frame = false;
@@ -2552,7 +2551,7 @@ void opengl_scene_texture_shutdown()
 	}
 
 	if ( Scene_framebuffer ) {
-		vglDeleteFramebuffersEXT(1, &Scene_framebuffer);
+		glDeleteFramebuffersEXT(1, &Scene_framebuffer);
 		Scene_framebuffer = 0;
 	}
 
@@ -2561,7 +2560,7 @@ void opengl_scene_texture_shutdown()
 	Distortion_texture[1] = 0;
 
 	if ( Distortion_framebuffer ) {
-		vglDeleteFramebuffersEXT(1, &Distortion_framebuffer);
+		glDeleteFramebuffersEXT(1, &Distortion_framebuffer);
 		Distortion_framebuffer = 0;
 	}
 
@@ -2579,7 +2578,7 @@ void gr_opengl_scene_texture_begin()
 		return;
 	}
 
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Scene_framebuffer);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Scene_framebuffer);
 
 	if (GL_rendering_to_texture)
 	{
@@ -2596,7 +2595,7 @@ void gr_opengl_scene_texture_begin()
 	}
 
 	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
-	vglDrawBuffers(2, buffers);
+	glDrawBuffers(2, buffers);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -2627,7 +2626,7 @@ void gr_opengl_scene_texture_end()
 		GLboolean blend = GL_state.Blend(GL_FALSE);
 		GLboolean cull = GL_state.CullFace(GL_FALSE);
 
-		vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, opengl_get_rtt_framebuffer());
+		glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, opengl_get_rtt_framebuffer());
 
 		GL_state.Texture.SetActiveUnit(0);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
@@ -2724,8 +2723,8 @@ void gr_opengl_update_distortion()
 	GLboolean cull = GL_state.CullFace(GL_FALSE);
 
 	opengl_shader_set_current();
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Distortion_framebuffer);
-	vglFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Distortion_texture[!Distortion_switch], 0);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Distortion_framebuffer);
+	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, Distortion_texture[!Distortion_switch], 0);
 	glDrawBuffer(GL_COLOR_ATTACHMENT0_EXT);
 
 	glViewport(0,0,32,32);
@@ -2795,12 +2794,12 @@ void gr_opengl_update_distortion()
 	Distortion_switch = !Distortion_switch;
 
 	// reset state
-	vglBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Scene_framebuffer);
+	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, Scene_framebuffer);
 
 	glViewport(0,0,gr_screen.max_w,gr_screen.max_h);
 
 	GLenum buffers[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT };
-	vglDrawBuffers(2, buffers);
+	glDrawBuffers(2, buffers);
 
 	GL_state.DepthTest(depth);
 	GL_state.DepthMask(depth_mask);

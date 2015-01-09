@@ -39,7 +39,7 @@ void opengl_texture_state::init(GLuint n_units)
 
 		default_values(unit);
 
-		vglActiveTextureARB(GL_TEXTURE0 + unit);
+		glActiveTextureARB(GL_TEXTURE0 + unit);
 		if (unit < (GLuint)GL_supported_texture_units) {
 			glDisable(GL_TEXTURE_GEN_S);
 			glDisable(GL_TEXTURE_GEN_T);
@@ -88,7 +88,7 @@ void opengl_texture_state::init(GLuint n_units)
 
 void opengl_texture_state::default_values(GLint unit, GLenum target)
 {
-	vglActiveTextureARB(GL_TEXTURE0 + unit);
+	glActiveTextureARB(GL_TEXTURE0 + unit);
 
 	if (target == GL_INVALID_ENUM) {
 		if (unit < GL_supported_texture_units) {
@@ -199,7 +199,7 @@ void opengl_texture_state::SetActiveUnit(GLuint id)
 		id = 0;
 	}
 
-	vglActiveTextureARB(GL_TEXTURE0 + id);
+	glActiveTextureARB(GL_TEXTURE0 + id);
 
 	active_texture_unit = id;
 }
@@ -858,7 +858,7 @@ void opengl_array_state::SetActiveClientUnit(GLuint id)
 		return;
 	}
 
-	vglClientActiveTextureARB(GL_TEXTURE0_ARB + id);
+	glClientActiveTextureARB(GL_TEXTURE0_ARB + id);
 
 	active_client_texture_unit = id;
 }
@@ -1059,7 +1059,7 @@ void opengl_array_state::EnableVertexAttrib(GLuint index)
 		return;
 	}
 
-	vglEnableVertexAttribArrayARB(index);
+	glEnableVertexAttribArray(index);
 	va_unit->status = GL_TRUE;
 
 	va_unit->initialized = true;
@@ -1075,7 +1075,7 @@ void opengl_array_state::DisableVertexAttrib(GLuint index)
 		return;
 	}
 
-	vglDisableVertexAttribArrayARB(index);
+	glDisableVertexAttribArray(index);
 	va_unit->status = GL_FALSE;
 }
 
@@ -1096,7 +1096,7 @@ void opengl_array_state::VertexAttribPointer(GLuint index, GLint size, GLenum ty
 		return;
 	}
 
-	vglVertexAttribPointerARB(index, size, type, normalized, stride, pointer);
+	glVertexAttribPointer(index, size, type, normalized, stride, pointer);
 
 	va_unit->normalized = normalized;
 	va_unit->pointer = pointer;
@@ -1135,7 +1135,7 @@ void opengl_array_state::BindArrayBuffer(GLuint id)
 		return;
 	}
 
-	vglBindBufferARB(GL_ARRAY_BUFFER_ARB, id);
+	glBindBufferARB(GL_ARRAY_BUFFER_ARB, id);
 
 	array_buffer = id;
 
@@ -1160,7 +1160,7 @@ void opengl_array_state::BindElementBuffer(GLuint id)
 		return;
 	}
 
-	vglBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, id);
+	glBindBufferARB(GL_ELEMENT_ARRAY_BUFFER_ARB, id);
 
 	element_array_buffer = id;
 }

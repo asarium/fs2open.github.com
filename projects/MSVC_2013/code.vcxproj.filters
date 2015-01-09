@@ -205,6 +205,15 @@
     <Filter Include="GameHelp\fs2netd">
       <UniqueIdentifier>{eaaf5609-a655-4b46-95b4-bee16c341561}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Graphics\Paths">
+      <UniqueIdentifier>{dc83672f-6461-47f5-ac0f-a83f8d05e7c0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Graphics\Paths\nanovg">
+      <UniqueIdentifier>{c85e51f7-39f0-456b-a03f-fb4211ad7a69}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Graphics\OpenGLGr\gl">
+      <UniqueIdentifier>{4370a840-cb95-4539-98d7-2587fc37986e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\code\ai\ai.cpp">
@@ -291,10 +300,10 @@
     <ClCompile Include="..\..\code\debugconsole\console.cpp">
       <Filter>DebugConsole</Filter>
     </ClCompile>
-	<ClCompile Include="..\..\code\debugconsole\consolecmds.cpp">
+    <ClCompile Include="..\..\code\debugconsole\consolecmds.cpp">
       <Filter>DebugConsole</Filter>
     </ClCompile>
-	<ClCompile Include="..\..\code\debugconsole\consoleparse.cpp">
+    <ClCompile Include="..\..\code\debugconsole\consoleparse.cpp">
       <Filter>DebugConsole</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\fireball\fireballs.cpp">
@@ -367,9 +376,6 @@
       <Filter>Graphics\OpenGLGr\OpenGL CPPs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\graphics\gropengldraw.cpp">
-      <Filter>Graphics\OpenGLGr\OpenGL CPPs</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\code\graphics\gropenglextension.cpp">
       <Filter>Graphics\OpenGLGr\OpenGL CPPs</Filter>
     </ClCompile>
     <ClCompile Include="..\..\code\graphics\gropengllight.cpp">
@@ -1062,6 +1068,18 @@
     <ClCompile Include="..\..\code\globalincs\profiling.cpp">
       <Filter>GlobalIncs</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\graphics\paths\nanovg\nanovg.c">
+      <Filter>Graphics\Paths\nanovg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\graphics\paths\PathRenderer.cpp">
+      <Filter>Graphics\Paths</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\graphics\gl\gl_2_1.c">
+      <Filter>Graphics\OpenGLGr\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\graphics\gl\wgl_2_1.c">
+      <Filter>Graphics\OpenGLGr\gl</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\ai\ai.h">
@@ -1130,10 +1148,10 @@
     <ClInclude Include="..\..\code\Debris\debris.h">
       <Filter>Debris</Filter>
     </ClInclude>
-	<ClInclude Include="..\..\code\debugconsole\console.h">
+    <ClInclude Include="..\..\code\debugconsole\console.h">
       <Filter>DebugConsole</Filter>
     </ClInclude>
-	<ClInclude Include="..\..\code\debugconsole\consoleparse.h">
+    <ClInclude Include="..\..\code\debugconsole\consoleparse.h">
       <Filter>DebugConsole</Filter>
     </ClInclude>
     <ClInclude Include="..\..\code\DirectX\vasync.h">
@@ -1233,9 +1251,6 @@
       <Filter>Graphics\OpenGLGr\OpenGL Headers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\code\graphics\gropengldraw.h">
-      <Filter>Graphics\OpenGLGr\OpenGL Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\code\graphics\gropenglextension.h">
       <Filter>Graphics\OpenGLGr\OpenGL Headers</Filter>
     </ClInclude>
     <ClInclude Include="..\..\code\graphics\gropengllight.h">
@@ -1867,6 +1882,33 @@
     </ClInclude>
     <ClInclude Include="..\..\code\PilotFile\pilotfile.h">
       <Filter>PilotFile</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\graphics\paths\nanovg\fontstash.h">
+      <Filter>Graphics\Paths\nanovg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\graphics\paths\nanovg\nanovg.h">
+      <Filter>Graphics\Paths\nanovg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\graphics\paths\nanovg\nanovg_gl.h">
+      <Filter>Graphics\Paths\nanovg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\graphics\paths\nanovg\nanovg_gl_utils.h">
+      <Filter>Graphics\Paths\nanovg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\graphics\paths\nanovg\stb_image.h">
+      <Filter>Graphics\Paths\nanovg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\graphics\paths\nanovg\stb_truetype.h">
+      <Filter>Graphics\Paths\nanovg</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\graphics\paths\PathRenderer.h">
+      <Filter>Graphics\Paths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\graphics\gl\gl_2_1.h">
+      <Filter>Graphics\OpenGLGr\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\graphics\gl\wgl_2_1.h">
+      <Filter>Graphics\OpenGLGr\gl</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

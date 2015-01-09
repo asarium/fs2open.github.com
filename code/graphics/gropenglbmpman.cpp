@@ -17,7 +17,6 @@
 #include "jpgutils/jpgutils.h"
 #include "pcxutils/pcxutils.h"
 #include "graphics/gropengltexture.h"
-#include "graphics/gropenglextension.h"
 #include "globalincs/systemvars.h"
 #include "anim/animplay.h"
 #include "anim/packunpack.h"
@@ -40,7 +39,7 @@ int get_num_mipmap_levels(int w, int h)
 	int size, levels = 0;
 
 	// make sure we can and should generate mipmaps before trying to use them
-	if ( !Cmdline_mipmap || !Is_Extension_Enabled(OGL_SGIS_GENERATE_MIPMAP) )
+	if ( !Cmdline_mipmap || !ogl_ext_SGIS_generate_mipmap )
 		return 1;
 
 	size = MAX(w, h);
@@ -547,7 +546,7 @@ void gr_opengl_bm_save_render_target(int n)
 {
 	Assert( (n >= 0) && (n < MAX_BITMAPS) );
 
-	if ( !Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) || Cmdline_no_fbo ) {
+	if ( !ogl_ext_EXT_framebuffer_object || Cmdline_no_fbo ) {
 		return;
 	}
 
@@ -570,11 +569,11 @@ int gr_opengl_bm_make_render_target(int n, int *width, int *height, ubyte *bpp, 
 {
 	Assert( (n >= 0) && (n < MAX_BITMAPS) );
 
-	if ( !Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) || Cmdline_no_fbo ) {
+	if ( !ogl_ext_EXT_framebuffer_object || Cmdline_no_fbo ) {
 		return 0;
 	}
 
-	if ( (flags & BMP_FLAG_CUBEMAP) && !Is_Extension_Enabled(OGL_ARB_TEXTURE_CUBE_MAP) ) {
+	if ( (flags & BMP_FLAG_CUBEMAP) && !ogl_ext_ARB_texture_cube_map ) {
 		return 0;
 	}
 
@@ -583,7 +582,7 @@ int gr_opengl_bm_make_render_target(int n, int *width, int *height, ubyte *bpp, 
 	}
 
 	// Only enforce power of two size if not supported
-	if (!(Is_Extension_Enabled(OGL_ARB_TEXTURE_NON_POWER_OF_TWO)))
+	if (!ogl_ext_ARB_texture_non_power_of_two)
 	{
 		Assert( is_power_of_two(*width, *height) );
 	}
@@ -597,7 +596,7 @@ int gr_opengl_bm_make_render_target(int n, int *width, int *height, ubyte *bpp, 
 
 int gr_opengl_bm_set_render_target(int n, int face)
 {
-	if ( !Is_Extension_Enabled(OGL_EXT_FRAMEBUFFER_OBJECT) || Cmdline_no_fbo ) {
+	if ( !ogl_ext_EXT_framebuffer_object || Cmdline_no_fbo ) {
 		return 0;
 	}
 

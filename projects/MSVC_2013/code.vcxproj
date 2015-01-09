@@ -528,8 +528,8 @@
     <ClCompile Include="..\..\code\cutscene\oggplayer.cpp" />
     <ClCompile Include="..\..\code\Debris\debris.cpp" />
     <ClCompile Include="..\..\code\debugconsole\console.cpp" />
-	<ClCompile Include="..\..\code\debugconsole\consolecmds.cpp" />
-	<ClCompile Include="..\..\code\debugconsole\consoleparse.cpp" />
+    <ClCompile Include="..\..\code\debugconsole\consolecmds.cpp" />
+    <ClCompile Include="..\..\code\debugconsole\consoleparse.cpp" />
     <ClCompile Include="..\..\code\fireball\fireballs.cpp" />
     <ClCompile Include="..\..\code\fireball\warpineffect.cpp" />
     <ClCompile Include="..\..\code\gamehelp\contexthelp.cpp" />
@@ -548,6 +548,8 @@
     <ClCompile Include="..\..\code\globalincs\version.cpp" />
     <ClCompile Include="..\..\code\globalincs\windebug.cpp" />
     <ClCompile Include="..\..\code\graphics\2d.cpp" />
+    <ClCompile Include="..\..\code\graphics\gl\gl_2_1.c" />
+    <ClCompile Include="..\..\code\graphics\gl\wgl_2_1.c" />
     <ClCompile Include="..\..\code\graphics\grbatch.cpp" />
     <ClCompile Include="..\..\code\Graphics\font.cpp" />
     <ClCompile Include="..\..\code\graphics\generic.cpp" />
@@ -555,13 +557,18 @@
     <ClCompile Include="..\..\code\graphics\gropengl.cpp" />
     <ClCompile Include="..\..\code\graphics\gropenglbmpman.cpp" />
     <ClCompile Include="..\..\code\graphics\gropengldraw.cpp" />
-    <ClCompile Include="..\..\code\graphics\gropenglextension.cpp" />
     <ClCompile Include="..\..\code\graphics\gropengllight.cpp" />
     <ClCompile Include="..\..\code\graphics\gropenglpostprocessing.cpp" />
     <ClCompile Include="..\..\code\graphics\gropenglshader.cpp" />
     <ClCompile Include="..\..\code\graphics\gropenglstate.cpp" />
     <ClCompile Include="..\..\code\graphics\gropengltexture.cpp" />
     <ClCompile Include="..\..\code\graphics\gropengltnl.cpp" />
+    <ClCompile Include="..\..\code\graphics\paths\nanovg\nanovg.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug SSE2|Win32'">false</ExcludedFromBuild>
+    </ClCompile>
+    <ClCompile Include="..\..\code\graphics\paths\PathRenderer.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug SSE2|Win32'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\..\code\hud\hud.cpp" />
     <ClCompile Include="..\..\code\hud\hudartillery.cpp" />
     <ClCompile Include="..\..\code\hud\hudbrackets.cpp" />
@@ -809,8 +816,8 @@
     <ClInclude Include="..\..\code\cutscene\mvelib.h" />
     <ClInclude Include="..\..\code\cutscene\oggplayer.h" />
     <ClInclude Include="..\..\code\debugconsole\console.h" />
-	<ClInclude Include="..\..\code\debugconsole\consoleparse.h" />
-	<ClInclude Include="..\..\code\Debris\debris.h" />
+    <ClInclude Include="..\..\code\debugconsole\consoleparse.h" />
+    <ClInclude Include="..\..\code\Debris\debris.h" />
     <ClInclude Include="..\..\code\DirectX\vasync.h" />
     <ClInclude Include="..\..\code\DirectX\vdinput.h" />
     <ClInclude Include="..\..\code\DirectX\vdplay.h" />
@@ -835,8 +842,17 @@
     <ClInclude Include="..\..\code\globalincs\version.h" />
     <ClInclude Include="..\..\code\globalincs\vmallocator.h" />
     <ClInclude Include="..\..\code\Graphics\2d.h" />
+    <ClInclude Include="..\..\code\graphics\gl\gl_2_1.h" />
+    <ClInclude Include="..\..\code\graphics\gl\wgl_2_1.h" />
     <ClInclude Include="..\..\code\graphics\grbatch.h" />
     <ClInclude Include="..\..\code\graphics\grinternal.h" />
+    <ClInclude Include="..\..\code\graphics\paths\nanovg\fontstash.h" />
+    <ClInclude Include="..\..\code\graphics\paths\nanovg\nanovg.h" />
+    <ClInclude Include="..\..\code\graphics\paths\nanovg\nanovg_gl.h" />
+    <ClInclude Include="..\..\code\graphics\paths\nanovg\nanovg_gl_utils.h" />
+    <ClInclude Include="..\..\code\graphics\paths\nanovg\stb_image.h" />
+    <ClInclude Include="..\..\code\graphics\paths\nanovg\stb_truetype.h" />
+    <ClInclude Include="..\..\code\graphics\paths\PathRenderer.h" />
     <ClInclude Include="..\..\code\graphics\tmapper.h" />
     <ClInclude Include="..\..\code\Graphics\font.h" />
     <ClInclude Include="..\..\code\graphics\generic.h" />
@@ -845,7 +861,6 @@
     <ClInclude Include="..\..\code\graphics\gropengl.h" />
     <ClInclude Include="..\..\code\graphics\gropenglbmpman.h" />
     <ClInclude Include="..\..\code\graphics\gropengldraw.h" />
-    <ClInclude Include="..\..\code\graphics\gropenglextension.h" />
     <ClInclude Include="..\..\code\graphics\gropengllight.h" />
     <ClInclude Include="..\..\code\graphics\gropenglpostprocessing.h" />
     <ClInclude Include="..\..\code\graphics\gropenglshader.h" />
