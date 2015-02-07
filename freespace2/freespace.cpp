@@ -31,6 +31,7 @@
 #include "cmdline/cmdline.h"
 #include "cmeasure/cmeasure.h"
 #include "cutscene/cutscenes.h"
+#include "cutscene/player.h"
 #include "cutscene/movie.h"
 #include "debris/debris.h"
 #include "exceptionhandler/exceptionhandler.h"
@@ -1684,6 +1685,9 @@ char full_path[1024];
 #	include "SDL_syswm.h" // For SDL_SysWMinfo
 #endif
 
+#include "cutscene/ogg/OggDecoder.h"
+#include <memory>
+
 /**
  * Game initialisation
  */
@@ -2033,7 +2037,7 @@ void game_init()
 	// if we are done initializing, start showing the cursor
 	io::mouse::CursorManager::get()->showCursor(true);
 
-	mouse_set_pos(gr_screen.max_w / 2, gr_screen.max_h / 2);
+    mouse_set_pos(gr_screen.max_w / 2, gr_screen.max_h / 2);
 }
 
 char transfer_text[128];
@@ -7007,8 +7011,11 @@ int game_main(int argc, char *argv[])
 		return 0;
 	}
 
-	if (!Is_standalone) {
-		movie_play( NOX("intro.mve") );
+    if (!Is_standalone) {
+        auto player = cutscene::Player::newPlayer("intro.mve");
+        player->startPlayback();
+
+        //movie_play("intro.mve");
 	}
 
 	if (Is_standalone){

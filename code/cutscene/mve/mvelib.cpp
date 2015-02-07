@@ -1,7 +1,7 @@
 
 
 #include "globalincs/pstypes.h"
-#include "cutscene/mvelib.h"
+#include "cutscene/mve/mvelib.h"
 #include "cfile/cfile.h"
 
 

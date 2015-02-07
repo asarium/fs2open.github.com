@@ -83,18 +83,36 @@ set (file_root_controlconfig
 
 # Cutscene files
 set (file_root_cutscene
+	cutscene/Decoder.cpp
+	cutscene/Decoder.h
 	cutscene/cutscenes.cpp
 	cutscene/cutscenes.h
-	cutscene/decoder16.cpp
-	cutscene/decoder8.cpp
 	cutscene/movie.cpp
 	cutscene/movie.h
-	cutscene/mve_audio.cpp
-	cutscene/mvelib.cpp
-	cutscene/mvelib.h
-	cutscene/mveplayer.cpp
-	cutscene/oggplayer.cpp
-	cutscene/oggplayer.h
+	cutscene/player.cpp
+	cutscene/player.h
+)
+
+# Cutscene\MVE files
+set (file_root_cutscene_mve
+	cutscene/mve/decoder16.cpp
+	cutscene/mve/decoder8.cpp
+	cutscene/mve/mve_audio.cpp
+	cutscene/mve/mvelib.cpp
+	cutscene/mve/mvelib.h
+	cutscene/mve/mveplayer.cpp
+)
+
+# Cutscene\OGG files
+set (file_root_cutscene_ogg
+	cutscene/ogg/oggplayer.cpp
+	cutscene/ogg/oggplayer.h
+	cutscene/ogg/OggDecoder.cpp
+	cutscene/ogg/OggDecoder.h
+)
+
+# Cutscene\ffmpeg files
+set (file_root_cutscene_ffmpeg
 )
 
 # ddsutils files
@@ -363,7 +381,7 @@ set (file_root_io
 	io/timer.h
 	io/joy.h
 	io/joy_ff.h
-)	
+)
 
 IF(WIN32)
 	set (file_root_io
@@ -922,6 +940,9 @@ source_group("Cmdline"                            FILES ${file_root_cmdline})
 source_group("CMeasure"                           FILES ${file_root_cmeasure})
 source_group("ControlConfig"                      FILES ${file_root_controlconfig})
 source_group("Cutscene"                           FILES ${file_root_cutscene})
+source_group("Cutscene\\MVE"                      FILES ${file_root_cutscene_mve})
+source_group("Cutscene\\OGG"                      FILES ${file_root_cutscene_ogg})
+source_group("Cutscene\\ffmpeg"                   FILES ${file_root_cutscene_ffmpeg})
 source_group("ddsutils"                           FILES ${file_root_ddsutils})
 source_group("Debris"                             FILES ${file_root_debris})
 source_group("DebugConsole"                       FILES ${file_root_debugconsole})
@@ -1001,6 +1022,9 @@ set (file_root
 	${file_root_cmeasure}
 	${file_root_controlconfig}
 	${file_root_cutscene}
+	${file_root_cutscene_mve}
+	${file_root_cutscene_ogg}
+	${file_root_cutscene_ffmpeg}
 	${file_root_ddsutils}
 	${file_root_debris}
 	${file_root_debugconsole}

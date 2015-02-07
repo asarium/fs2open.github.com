@@ -12,7 +12,7 @@
 #include "graphics/gropenglstate.h"
 
 #include "globalincs/pstypes.h"
-#include "cutscene/mvelib.h"
+#include "cutscene/mve/mvelib.h"
 #include "cutscene/movie.h"
 #include "graphics/2d.h"
 #include "io/key.h"

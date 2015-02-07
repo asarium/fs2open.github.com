@@ -23,7 +23,7 @@
 #include "sound/sound.h"
 #include "sound/openal.h"
 #include "bmpman/bmpman.h"
-#include "cutscene/oggplayer.h"
+#include "cutscene/ogg/oggplayer.h"
 #include "io/timer.h"
 
 #include "theora/theora.h"

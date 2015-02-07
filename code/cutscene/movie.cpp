@@ -20,8 +20,8 @@
 #include "cmdline/cmdline.h"	
 #include "cfile/cfile.h"
 #include "cutscene/cutscenes.h" // cutscene_mark_viewable()
-#include "cutscene/mvelib.h"
-#include "cutscene/oggplayer.h"
+#include "cutscene/mve/mvelib.h"
+#include "cutscene/ogg/oggplayer.h"
 
 extern int Game_mode;
 
