@@ -9,7 +9,7 @@
 
 namespace
 {
-    void copyYUVData(cutscene::VideoFrame* frame, const yuv_buffer& buffer)
+    void copyYUVData(cutscene::ogg::OggVideoFrame* frame, const yuv_buffer& buffer)
     {
         /*
         frame->yData.resize(buffer.y_height * buffer.y_stride);
@@ -286,7 +286,7 @@ namespace cutscene
             int frameId = 0;
 
             std::shared_ptr<AudioData> audioData;
-            std::shared_ptr<VideoFrame> videoData;
+            std::shared_ptr<OggVideoFrame> videoData;
 
             if (!movie.theora_p)
             {
@@ -372,7 +372,7 @@ namespace cutscene
                     auto videobuf_time = theora_granule_time(&movie.tstate, movie.tstate.granulepos);
 
                     videobuf_ready = true;
-                    videoData = std::make_shared<VideoFrame>();
+                    videoData = std::make_shared<OggVideoFrame>();
                     videoData->frameTime = videobuf_time;
                     videoData->id = ++frameId;
 

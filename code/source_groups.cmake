@@ -113,6 +113,8 @@ set (file_root_cutscene_ogg
 
 # Cutscene\ffmpeg files
 set (file_root_cutscene_ffmpeg
+	cutscene/ffmpeg/FFMPEGDecoder.cpp
+	cutscene/ffmpeg/FFMPEGDecoder.h
 )
 
 # ddsutils files

@@ -33,6 +33,27 @@ namespace cutscene
             vorbis_comment		vcomment;
         };
 
+        class OggVideoFrame : public VideoFrame
+        {
+        public:
+            OggVideoFrame() {}
+            virtual ~OggVideoFrame() {}
+
+            virtual DataPointers getDataPointers()
+            {
+                DataPointers ptrs;
+                ptrs.y = yData.get();
+                ptrs.u = uData.get();
+                ptrs.v = vData.get();
+
+                return ptrs;
+            }
+
+            std::unique_ptr<ubyte[]> yData;
+            std::unique_ptr<ubyte[]> uData;
+            std::unique_ptr<ubyte[]> vData;
+        };
+
         class OggDecoder : public Decoder
         {
         private:

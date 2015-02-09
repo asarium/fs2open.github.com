@@ -17,17 +17,28 @@ namespace cutscene
         int stride;
     };
 
-    struct VideoFrame
+    class VideoFrame
     {
+    protected:
+        VideoFrame() {}
+
+    public:
+        virtual ~VideoFrame() {}
+
         double frameTime;
         int id;
 
-        std::unique_ptr<ubyte[]> yData;
-        std::unique_ptr<ubyte[]> uData;
-        std::unique_ptr<ubyte[]> vData;
-
         FrameSize ySize;
         FrameSize uvSize;
+
+        struct DataPointers
+        {
+            ubyte* y;
+            ubyte* u;
+            ubyte* v;
+        };
+
+        virtual DataPointers getDataPointers() = 0;
     };
 
     struct MovieProperties

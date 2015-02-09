@@ -3,6 +3,7 @@
 
 #include "cutscene/Decoder.h"
 #include "cutscene/ogg/OggDecoder.h"
+#include "cutscene/ffmpeg/FFMPEGDecoder.h"
 
 #include "osapi/osapi.h"
 
@@ -31,7 +32,7 @@ namespace cutscene
 
         bool playing = true;
 
-        bool doSleep = false;
+        bool doSleep = true;
 
         bool playbackHasBegun = false;
 
@@ -88,11 +89,20 @@ namespace
     Decoder* findDecoder(const SCP_string& name)
     {
         {
+            auto ffmpeg = new ffmpeg::FFMPEGDecoder();
+            if (ffmpeg->initialize(name))
+            {
+                return ffmpeg;
+            }
+            delete ffmpeg;
+        }
+        {
             auto ogg = new ogg::OggDecoder();
             if (ogg->initialize(name))
             {
                 return ogg;
             }
+            delete ogg;
         }
 
         return nullptr;
@@ -517,9 +527,10 @@ namespace
 
         ubyte *pix = &state->pixelbuf[0];
 
-        ubyte *y_ptr = state->currentFrame->yData.get();
-        ubyte *u_ptr = state->currentFrame->uData.get();
-        ubyte *v_ptr = state->currentFrame->vData.get();
+        auto ptrs = state->currentFrame->getDataPointers();
+        ubyte *y_ptr = ptrs.y;
+        ubyte *u_ptr = ptrs.u;
+        ubyte *v_ptr = ptrs.v;
 
         for (y = 0; y < (uint) state->props.size.height; y++) {
             for (x = 0; x < width_2; x++) {
@@ -586,20 +597,27 @@ namespace
         {
             if (state->useShaders)
             {
+                auto ptrs = state->currentFrame->getDataPointers();
+
                 GL_state.Texture.SetActiveUnit(0);
+                glPixelStorei(GL_UNPACK_ROW_LENGTH, state->currentFrame->ySize.stride);
                 glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, 
-                    state->currentFrame->ySize.stride, state->currentFrame->ySize.height,
-                    GL_LUMINANCE, GL_UNSIGNED_BYTE, state->currentFrame->yData.get());
+                    state->currentFrame->ySize.width, state->currentFrame->ySize.height,
+                    GL_LUMINANCE, GL_UNSIGNED_BYTE, ptrs.y);
 
                 GL_state.Texture.SetActiveUnit(1);
+                glPixelStorei(GL_UNPACK_ROW_LENGTH, state->currentFrame->uvSize.stride);
                 glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, 
-                    state->currentFrame->uvSize.stride, state->currentFrame->uvSize.height,
-                    GL_LUMINANCE, GL_UNSIGNED_BYTE, state->currentFrame->uData.get());
+                    state->currentFrame->uvSize.width / 2, state->currentFrame->uvSize.height / 2,
+                    GL_LUMINANCE, GL_UNSIGNED_BYTE, ptrs.u);
 
                 GL_state.Texture.SetActiveUnit(2);
                 glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, 
-                    state->currentFrame->uvSize.stride, state->currentFrame->uvSize.height,
-                    GL_LUMINANCE, GL_UNSIGNED_BYTE, state->currentFrame->vData.get());
+                    state->currentFrame->uvSize.width / 2, state->currentFrame->uvSize.height / 2,
+                    GL_LUMINANCE, GL_UNSIGNED_BYTE, ptrs.v);
+
+                // Reset this back to default
+                glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
             }
             else
             {
@@ -684,7 +702,11 @@ namespace cutscene
             while (currentTime > state->currentFrame->frameTime && m_decoder->videoFrameAvailable())
             {
                 // Get the next frame
-                state->currentFrame = m_decoder->popVideoFrame();
+                auto frame = m_decoder->popVideoFrame();
+
+                mprintf(("Frame time diff: %.5f\n", frame->frameTime - state->currentFrame->frameTime));
+
+                state->currentFrame = frame;
                 newFrame = true;
             }
 
@@ -693,6 +715,10 @@ namespace cutscene
                 // Avoid multiple frame uploads
                 uploadVideoFrameData(state);
             }
+        }
+        else
+        {
+            mprintf(("No video frame available at time %.3fs!\n", playbackGetTime(state)));
         }
 
         processAudioData(state, m_decoder.get());
