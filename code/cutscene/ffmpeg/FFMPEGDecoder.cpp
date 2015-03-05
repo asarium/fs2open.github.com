@@ -12,9 +12,11 @@ extern "C" {
 #include <avcodec.h>
 #include <avformat.h>
 #include <swscale.h>
+#include <swresample.h>
 
 #include <libavutil/imgutils.h>
 #include <libavutil/error.h>
+#include <libavutil/opt.h>
 }
 
 #pragma warning(pop)
@@ -82,6 +84,28 @@ namespace
     {
         return static_cast<float>(pts * av_q2d(time_base));
     }
+
+    SwsContext* getSWSContext(int width, int height, AVPixelFormat fmt)
+    {
+        return sws_getContext(width, height, fmt, width, height, PIX_FMT_YUV420P,
+            SWS_BILINEAR, nullptr, nullptr, nullptr);
+    }
+
+    SwrContext* getSWRContext(uint64_t layout, int rate, AVSampleFormat inFmt)
+    {
+        auto swr = swr_alloc();
+
+        av_opt_set_int(swr, "in_channel_layout", layout, 0);
+        av_opt_set_int(swr, "out_channel_layout", layout, 0);
+        av_opt_set_int(swr, "in_sample_rate", rate, 0);
+        av_opt_set_int(swr, "out_sample_rate", rate, 0);
+        av_opt_set_sample_fmt(swr, "in_sample_fmt", inFmt, 0);
+        av_opt_set_sample_fmt(swr, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+
+        swr_init(swr);
+
+        return swr;
+    }
 }
 
 namespace cutscene
@@ -135,10 +159,13 @@ namespace cutscene
         {
             int videoStreamIndex = -1;
             AVStream* videoStream = nullptr;
+            AVCodecContext* videoCodecCtx = nullptr;
+            AVCodec* videoCodec = nullptr;
 
-            AVCodecContext* codecCtx = nullptr;
-
-            AVCodec* codec = nullptr;
+            int audioStreamIndex = -1;
+            AVStream* audioStream = nullptr;
+            AVCodecContext* audioCodecCtx = nullptr;
+            AVCodec* audioCodec = nullptr;
         };
 
         class FFMPEGVideoFrame : public VideoFrame
@@ -264,13 +291,17 @@ namespace cutscene
             auto ctx = stream->context;
 
             auto videoStream = -1;
+            auto audioStream = -1;
             for (uint i = 0; i < ctx->nb_streams; ++i)
             {
-                if (ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+                if (videoStream == -1 && ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
                 {
                     // Found the video stream (we only support one)
                     videoStream = i;
-                    break;
+                }
+                else if (audioStream == -1 && ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
+                {
+                    audioStream = i;
                 }
             }
 
@@ -282,23 +313,60 @@ namespace cutscene
             status->videoStreamIndex = videoStream;
             status->videoStream = ctx->streams[videoStream];
 
-            status->codecCtx = ctx->streams[videoStream]->codec;
-            
-            status->codec = avcodec_find_decoder(status->codecCtx->codec_id);
-            if (!status->codec)
+            if (audioStream >= 0)
             {
-                mprintf(("FFMPEG: Codec isn't supported!\n"));
+                status->audioStreamIndex = audioStream;
+                status->audioStream = ctx->streams[audioStream];
+            }
+
+            status->videoCodecCtx = ctx->streams[videoStream]->codec;
+            status->videoCodec = avcodec_find_decoder(status->videoCodecCtx->codec_id);
+
+            if (!status->videoCodec)
+            {
+                mprintf(("FFMPEG: Video codec isn't supported!\n"));
                 return nullptr;
             }
 
             AVDictionary *optionsDict = nullptr;
-            auto err = avcodec_open2(status->codecCtx, status->codec, &optionsDict);
+            auto err = avcodec_open2(status->videoCodecCtx, status->videoCodec, &optionsDict);
             if (err < 0)
             {
                 char errorStr[512];
                 av_strerror(err, errorStr, sizeof(errorStr));
-                mprintf(("FFMPEG: Failed to open codec! Error: %s\n", errorStr));
+                mprintf(("FFMPEG: Failed to open video codec! Error: %s\n", errorStr));
                 return nullptr;
+            }
+
+            // Now initialize audio, if this fails it's not a fatal error
+            if (audioStream >= 0)
+            {
+                status->audioCodecCtx = status->audioStream->codec;
+                status->audioCodec = avcodec_find_decoder(status->audioCodecCtx->codec_id);
+
+                if (!status->audioCodec)
+                {
+                    mprintf(("FFMPEG: No compatible audio decoder found!\n"));
+                    status->audioStreamIndex = -1;
+                    status->audioStream = nullptr;
+                    status->audioCodecCtx = nullptr;
+                    status->audioCodec = nullptr;
+                }
+                else
+                {
+                    AVDictionary* audioOpts = nullptr;
+                    err = avcodec_open2(status->audioCodecCtx, status->audioCodec, &audioOpts);
+                    if (err < 0)
+                    {
+                        char errorStr[512];
+                        av_strerror(err, errorStr, sizeof(errorStr));
+                        mprintf(("FFMPEG: Failed to open audio codec! Error: %s\n", errorStr));
+                        status->audioStreamIndex = -1;
+                        status->audioStream = nullptr;
+                        status->audioCodecCtx = nullptr;
+                        status->audioCodec = nullptr;
+                    }
+                }
             }
 
             return status;
@@ -339,8 +407,8 @@ namespace cutscene
         MovieProperties FFMPEGDecoder::getProperties()
         {
             MovieProperties props;
-            props.size.width = m_status->codecCtx->width;
-            props.size.height = m_status->codecCtx->height;
+            props.size.width = m_status->videoCodecCtx->width;
+            props.size.height = m_status->videoCodecCtx->height;
 
             props.fps = static_cast<float>(av_q2d(m_status->videoStream->avg_frame_rate));
 
@@ -350,21 +418,21 @@ namespace cutscene
         void FFMPEGDecoder::startDecoding()
         {
             AVFrame* frame = av_frame_alloc();
-            auto swsCtx =
-                sws_getContext
-                (
-                m_status->codecCtx->width,
-                m_status->codecCtx->height,
-                m_status->codecCtx->pix_fmt,
-                m_status->codecCtx->width,
-                m_status->codecCtx->height,
-                PIX_FMT_YUV420P,
-                SWS_BILINEAR,
-                nullptr,
-                nullptr,
-                nullptr
-                );
+
+            // Get the scaling context to convert the frame to YUV
+            auto swsCtx = getSWSContext(m_status->videoCodecCtx->width, m_status->videoCodecCtx->height,
+                m_status->videoCodecCtx->pix_fmt);
+
+            // Get a resampling context used for resampling the data to a format we can use
+            auto swrCtx = getSWRContext(m_status->audioCodecCtx->channel_layout, m_status->audioCodecCtx->sample_rate,
+                m_status->audioCodecCtx->sample_fmt);
+            auto bla = swr_get_delay(swrCtx, m_status->audioCodecCtx->sample_rate);
+
+            auto audioPlanes = av_sample_fmt_is_planar(m_status->audioCodecCtx->sample_fmt) ? m_status->audioCodecCtx->channels : 1;
             
+            std::shared_ptr<FFMPEGVideoFrame> videoFramePtr;
+            std::shared_ptr<AudioData> audioDataPtr;
+
             int frameId = 0;
 
             AVPacket packet;
@@ -373,20 +441,18 @@ namespace cutscene
                 if (packet.stream_index == m_status->videoStreamIndex)
                 {
                     int finishedFrame = 0;
-                    avcodec_decode_video2(m_status->codecCtx, frame, &finishedFrame, &packet);
+                    auto result = avcodec_decode_video2(m_status->videoCodecCtx, frame, &finishedFrame, &packet);
+
+                    if (result < 0)
+                    {
+                        mprintf(("FFMPEG: Decoding frame failed!\n"));
+                    }
 
                     if (finishedFrame)
                     {
                         // Allocate a picture to hold the YUV data
                         AVPicture yuvPicture;
-                        auto err = avpicture_alloc(&yuvPicture, PIX_FMT_YUV420P, m_status->codecCtx->width, m_status->codecCtx->height);
-                        if (err < 0)
-                        {
-                            char errorStr[512];
-                            av_strerror(err, errorStr, sizeof(errorStr));
-                            mprintf(("FFMPEG: Failed to allocate yuv frame! Error: %s\n", errorStr));
-                            return;
-                        }
+                        avpicture_alloc(&yuvPicture, PIX_FMT_YUV420P, m_status->videoCodecCtx->width, m_status->videoCodecCtx->height);
 
                         // Convert frame to YUV
                         sws_scale(
@@ -394,45 +460,74 @@ namespace cutscene
                             (uint8_t const * const *)frame->data,
                             frame->linesize,
                             0,
-                            m_status->codecCtx->height,
+                            m_status->videoCodecCtx->height,
                             yuvPicture.data,
                             yuvPicture.linesize
                             );
 
-                        auto videoFrame = std::make_shared<FFMPEGVideoFrame>();
-                        videoFrame->id = ++frameId;
-                        videoFrame->frameTime = getFrameTime(av_frame_get_best_effort_timestamp(frame), m_status->videoStream->time_base);
-                        videoFrame->picture = yuvPicture; // The class handles deallocating the memory
+                        videoFramePtr = std::make_shared<FFMPEGVideoFrame>();
+                        videoFramePtr->id = ++frameId;
+                        videoFramePtr->frameTime = getFrameTime(av_frame_get_best_effort_timestamp(frame), m_status->videoStream->time_base);
+                        videoFramePtr->picture = yuvPicture; // The class handles deallocating the memory
 
-                        videoFrame->ySize.height = m_status->codecCtx->height;
-                        videoFrame->ySize.width = m_status->codecCtx->width;
-                        videoFrame->ySize.stride = yuvPicture.linesize[0];
+                        videoFramePtr->ySize.height = m_status->videoCodecCtx->height;
+                        videoFramePtr->ySize.width = m_status->videoCodecCtx->width;
+                        videoFramePtr->ySize.stride = yuvPicture.linesize[0];
 
-                        videoFrame->uvSize.height = m_status->codecCtx->height;
-                        videoFrame->uvSize.width = m_status->codecCtx->width;
-                        videoFrame->uvSize.stride = yuvPicture.linesize[1];
-
-                        lockQueue();
-
-                        waitForQueueSignal();
-
-                        pushFrameData(videoFrame);
-
-                        unlockQueue();
+                        videoFramePtr->uvSize.height = m_status->videoCodecCtx->height;
+                        videoFramePtr->uvSize.width = m_status->videoCodecCtx->width;
+                        videoFramePtr->uvSize.stride = yuvPicture.linesize[1];
                     }
                 }
+                else if (packet.stream_index == m_status->audioStreamIndex)
+                {
+                    int finishedFrame = 0;
+                    //avcodec_decode_audio4(m_status->audioCodecCtx, frame, &finishedFrame, &packet);
+
+                    if (finishedFrame)
+                    {
+                        /*uint8_t *output;
+                        int out_samples = av_rescale_rnd(swr_get_delay(swr, 48000) +
+                            in_samples, 44100, 48000, AV_ROUND_UP);
+                        av_samples_alloc(&output, NULL, 2, out_samples,
+                            AV_SAMPLE_FMT_S16, 0);
+                        out_samples = swr_convert(swr, &output, out_samples,
+                            input, in_samples);
+                        handle_output(output, out_samples);
+                        av_freep(&output);*/
+                    }
+                }
+
+                lockQueue();
+
+                waitForQueueSignal();
+
+                if (canPushVideoData() && videoFramePtr)
+                {
+                    pushFrameData(videoFramePtr);
+                    videoFramePtr = nullptr;
+                }
+
+                if (canPushAudioData() && audioDataPtr)
+                {
+                    pushAudioData(audioDataPtr);
+                    audioDataPtr = nullptr;
+                }
+
+                unlockQueue();
 
                 av_free_packet(&packet);
             }
             stopDecoder();
 
+            swr_free(&swrCtx);
             sws_freeContext(swsCtx);
             av_frame_free(&frame);
         }
 
         bool FFMPEGDecoder::hasAudio()
         {
-            return false;
+            return m_status->audioStreamIndex >= 0;
         }
 
         void FFMPEGDecoder::close()

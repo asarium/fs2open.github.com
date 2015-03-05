@@ -42,15 +42,7 @@ IF(WIN32)
         add_av_lib(avformat avformat-56)
         add_av_lib(avutil avutil-54)
         add_av_lib(swscale swscale-3)
-
-        set(COPY_DLLS
-            "${FFMPEG_ROOT_DIR}/bin/swresample-1.dll"
-        )
-
-        SET(TARGET_COPY_FILES ${TARGET_COPY_FILES} ${COPY_DLLS} CACHE INTERNAL "" FORCE)
-    	INSTALL(FILES ${COPY_DLLS}
-    			DESTINATION ${BINARY_DESTINATION}
-    	)
+        add_av_lib(swresample swresample-1)
     else(IS_DIRECTORY "${FFMPEG_ROOT_DIR}")
         message("ffmpeg root directory \"${FFMPEG_ROOT_DIR}\" does not exist")
     endif(IS_DIRECTORY "${FFMPEG_ROOT_DIR}")
