@@ -32,6 +32,23 @@ set (file_root_asteroid
 	asteroid/asteroid.h
 )
 
+set(file_root_api
+)
+
+set(file_root_api_libs
+	api/libs/base.cpp
+	api/libs/base.h
+	api/libs/libs.cpp
+	api/libs/libs.h
+)
+
+set(file_root_api_types
+	api/libs/types.cpp
+	api/libs/types.h
+	api/libs/vector.cpp
+	api/libs/vector.h
+)
+
 # Autopilot files
 set (file_root_autopilot
 	autopilot/autopilot.cpp
@@ -363,7 +380,7 @@ set (file_root_io
 	io/timer.h
 	io/joy.h
 	io/joy_ff.h
-)	
+)
 
 IF(WIN32)
 	set (file_root_io
@@ -914,6 +931,9 @@ source_group(""                                   FILES ${file_root})
 source_group("AI"                                 FILES ${file_root_ai})
 source_group("Anim"                               FILES ${file_root_anim})
 source_group("Asteroid"                           FILES ${file_root_asteroid})
+source_group("API"                                FILES ${file_root_api})
+source_group("API\\Libs"                          FILES ${file_root_api_libs})
+source_group("API\\Types"                         FILES ${file_root_api_types})
 source_group("Autopilot"                          FILES ${file_root_autopilot})
 source_group("Bmpman"                             FILES ${file_root_bmpman})
 source_group("Camera"                             FILES ${file_root_camera})
@@ -994,6 +1014,9 @@ set (file_root
 	${file_root_anim}
 	${file_root_asteroid}
 	${file_root_autopilot}
+	${file_root_api}
+	${file_root_api_libs}
+	${file_root_api_types}
 	${file_root_bmpman}
 	${file_root_camera}
 	${file_root_cfile}
