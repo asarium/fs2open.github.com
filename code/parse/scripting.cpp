@@ -543,6 +543,8 @@ void script_state::SetHookObject(char *name, object *objp)
 
 void script_state::SetHookObjects(int num, ...)
 {
+    return;
+
 	va_list vl;
 	va_start(vl, num);
 	if(this->OpenHookVarTable())
@@ -637,6 +639,8 @@ bool script_state::CloseHookVarTable()
 
 void script_state::SetHookVar(char *name, char format, void *data)
 {
+    return;
+
 	if(format == '\0')
 		return;
 
@@ -697,6 +701,8 @@ void script_state::SetHookVar(char *name, char format, void *data)
 //WMC - data can be NULL, if we just want to know if it exists
 bool script_state::GetHookVar(char *name, char format, void *data)
 {
+    return false;
+
 	bool got_global = false;
 	if(LuaState != NULL)
 	{
@@ -739,6 +745,8 @@ void script_state::RemHookVar(char *name)
 
 void script_state::RemHookVars(unsigned int num, ...)
 {
+    return;
+
 	if(LuaState != NULL)
 	{
 		//WMC - Quick and clean. :)
@@ -770,6 +778,8 @@ void script_state::RemHookVars(unsigned int num, ...)
 //WMC - data can be NULL, if we just want to know if it exists
 bool script_state::GetGlobal(char *name, char format, void *data)
 {
+    return false;
+
 	bool got_global = false;
 	if(LuaState != NULL)
 	{
@@ -793,6 +803,8 @@ bool script_state::GetGlobal(char *name, char format, void *data)
 
 void script_state::RemGlobal(char *name)
 {
+    return;
+
 	if(LuaState != NULL)
 	{
 		//WMC - Quick and clean. :)
