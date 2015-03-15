@@ -281,7 +281,7 @@ float vm_vec_dotprod(vec3d *v0,vec3d *v1);
 #ifdef _INLINE_VECMAT
 #define vm_vec_dot3( x1, y1, z1, v ) (((x1)*(v)->xyz.x)+((y1)*(v)->xyz.y)+((z1)*(v)->xyz.z))
 #else
-float vm_vec_dot3(float x,float y,float z,vec3d *v);
+float vm_vec_dot3(float x,float y,float z,const vec3d *v);
 #endif
 
 //computes cross product of two vectors. returns ptr to dest
@@ -335,7 +335,7 @@ matrix *vm_vector_2_matrix_norm(matrix *m,vec3d *fvec,vec3d *uvec = NULL,vec3d *
 
 //rotates a vector through a matrix. returns ptr to dest vector
 //dest CANNOT equal either source
-vec3d *vm_vec_rotate(vec3d *dest,vec3d *src,matrix *m);
+vec3d *vm_vec_rotate(vec3d *dest,const vec3d *src,const matrix *m);
 
 //rotates a vector through the transpose of the given matrix. 
 //returns ptr to dest vector
@@ -362,7 +362,7 @@ matrix *vm_copy_transpose_matrix(matrix *dest,matrix *src);
 
 //mulitply 2 matrices, fill in dest.  returns ptr to dest
 //dest CANNOT equal either source
-matrix *vm_matrix_x_matrix(matrix *dest,matrix *src0,matrix *src1);
+matrix *vm_matrix_x_matrix(matrix *dest,const matrix *src0,const matrix *src1);
 
 //extract angles from a matrix
 angles *vm_extract_angles_matrix(angles *a,matrix *m);

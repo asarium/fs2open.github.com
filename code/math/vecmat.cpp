@@ -312,7 +312,7 @@ float vm_vec_dotprod(vec3d *v0,vec3d *v1)
 
 //returns dot product of <x,y,z> and vector
 #ifndef _INLINE_VECMAT
-float vm_vec_dot3(float x,float y,float z,vec3d *v)
+float vm_vec_dot3(float x,float y,float z,const vec3d *v)
 {
 	return (x*v->xyz.x)+(y*v->xyz.y)+(z*v->xyz.z);
 }
@@ -929,7 +929,7 @@ matrix *vm_vector_2_matrix_norm(matrix *m,vec3d *fvec,vec3d *uvec,vec3d *rvec)
 //
 // Goober5000: FYI, the result of rotating a normalized vector through a rotation matrix will
 // also be a normalized vector.  It took me awhile to verify online that this was true. ;)
-vec3d *vm_vec_rotate(vec3d *dest,vec3d *src,matrix *m)
+vec3d *vm_vec_rotate(vec3d *dest,const vec3d *src,const matrix *m)
 {
 	Assert(dest != src);
 
@@ -1002,7 +1002,7 @@ matrix *vm_copy_transpose_matrix(matrix *dest,matrix *src)
 
 //mulitply 2 matrices, fill in dest.  returns ptr to dest
 //dest CANNOT equal either source
-matrix *vm_matrix_x_matrix(matrix *dest,matrix *src0,matrix *src1)
+matrix *vm_matrix_x_matrix(matrix *dest,const matrix *src0,const matrix *src1)
 {
 	Assert(dest!=src0 && dest!=src1);
 
