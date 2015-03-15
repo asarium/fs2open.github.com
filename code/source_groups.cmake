@@ -43,10 +43,12 @@ set(file_root_api_libs
 )
 
 set(file_root_api_types
-	api/libs/types.cpp
-	api/libs/types.h
-	api/libs/vector.cpp
-	api/libs/vector.h
+	api/types/matrix.cpp
+	api/types/matrix.h
+	api/types/types.cpp
+	api/types/types.h
+	api/types/vector.cpp
+	api/types/vector.h
 )
 
 # Autopilot files

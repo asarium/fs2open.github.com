@@ -1,4 +1,6 @@
 
+include(boost.cmake)
+
 IF(APPLE)
 	ADD_SUBDIRECTORY(mac)
 ENDIF(APPLE)
@@ -10,6 +12,8 @@ ADD_SUBDIRECTORY(zlib)
 ADD_SUBDIRECTORY(libpng)
 
 ADD_SUBDIRECTORY(lua)
+
+include(luabind.cmake)
 
 ADD_SUBDIRECTORY(oggvorbis)
 

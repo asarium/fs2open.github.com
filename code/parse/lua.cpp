@@ -54,6 +54,10 @@
 #define BMPMAN_INTERNAL
 #include "bmpman/bm_internal.h"
 
+#include <luabind/luabind.hpp>
+#include "api/libs/libs.h"
+#include "api/types/types.h"
+
 //*************************Lua globals*************************
 SCP_vector<ade_table_entry> Ade_table_entries;
 
@@ -15056,6 +15060,11 @@ int script_state::CreateLuaState()
 	lua_sethook(L, ade_debug_ret, LUA_MASKRET, 0);
 #endif
 
+    luabind::open(L);
+    api::types::registerTypes(L);
+    api::libs::registerLibraries(L);
+
+    /*
 	//*****INITIALIZE ADE
 	uint i;
 	mprintf(("LUA: Beginning ADE initialization\n"));
@@ -15083,6 +15092,7 @@ int script_state::CreateLuaState()
 		ade_set_args(L, "o", l_Enum.Set(eh));
 		lua_setglobal(L, Enumerations[i].name);
 	}
+    */
 
 	//*****ASSIGN LUA SESSION
 	mprintf(("ADE: Assigning Lua session...\n"));

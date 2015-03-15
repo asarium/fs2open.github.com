@@ -3,7 +3,9 @@
 #include <string>
 
 #include "api/libs/libs.h"
+
 #include "api/types/vector.h"
+#include "api/types/matrix.h"
 
 namespace api
 {
@@ -19,6 +21,8 @@ namespace api
             static void error(const char* msg);
 
             static types::vector createVector(float a, float b, float c);
+
+            static types::matrix createOrientation(float, float, float, float, float, float, float, float, float);
 
             static luabind::scope registerScope();
         };
