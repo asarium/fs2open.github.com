@@ -85,7 +85,7 @@ typedef struct plane {
 	(dst)->xyz.z = (src0)->xyz.z + (src1)->xyz.z;					\
 } while(0) 
 #else
-void vm_vec_add(vec3d *dest,vec3d *src0,vec3d *src1);
+void vm_vec_add(vec3d *dest,const vec3d *src0,const vec3d *src1);
 #endif
 
 //adds src onto dest vector, returns ptr to dest
@@ -122,7 +122,7 @@ void vm_vec_scale_sub2(vec3d *dest,vec3d *src, float k);
 	(dst)->xyz.z = (src0)->xyz.z - (src1)->xyz.z;					\
 } while(0) 
 #else
-void vm_vec_sub(vec3d *dest,vec3d *src0,vec3d *src1);
+void vm_vec_sub(vec3d *dest,const vec3d *src0,const vec3d *src1);
 #endif
 
 

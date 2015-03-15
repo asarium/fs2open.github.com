@@ -131,7 +131,7 @@ void vm_set_identity(matrix *m)
 //adds two vectors, fills in dest, returns ptr to dest
 //ok for dest to equal either source, but should use vm_vec_add2() if so
 #ifndef _INLINE_VECMAT
-void vm_vec_add(vec3d *dest,vec3d *src0,vec3d *src1)
+void vm_vec_add(vec3d *dest,const vec3d *src0,const vec3d *src1)
 {
 	dest->xyz.x = src0->xyz.x + src1->xyz.x;
 	dest->xyz.y = src0->xyz.y + src1->xyz.y;
@@ -142,7 +142,7 @@ void vm_vec_add(vec3d *dest,vec3d *src0,vec3d *src1)
 //subs two vectors, fills in dest, returns ptr to dest
 //ok for dest to equal either source, but should use vm_vec_sub2() if so
 #ifndef _INLINE_VECMAT
-void vm_vec_sub(vec3d *dest,vec3d *src0,vec3d *src1)
+void vm_vec_sub(vec3d *dest,const vec3d *src0,const vec3d *src1)
 {
 	dest->xyz.x = src0->xyz.x - src1->xyz.x;
 	dest->xyz.y = src0->xyz.y - src1->xyz.y;
