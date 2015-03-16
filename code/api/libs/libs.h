@@ -14,7 +14,7 @@ namespace api
 
         class library
         {
-        private:
+        protected:
             library() = delete;
             library(const library&) = delete;
 
