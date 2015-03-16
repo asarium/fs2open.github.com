@@ -11,12 +11,8 @@ namespace api
 {
     namespace libs
     {
-        class base
+        class base : public library
         {
-        private:
-            base() = delete;
-            base(const base&) = delete;
-
         public:
             ~base() {}
 
