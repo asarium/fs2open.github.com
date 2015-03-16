@@ -1023,7 +1023,7 @@ matrix *vm_matrix_x_matrix(matrix *dest,const matrix *src0,const matrix *src1)
 
 
 //extract angles from a matrix
-angles *vm_extract_angles_matrix(angles *a,matrix *m)
+angles *vm_extract_angles_matrix(angles *a,const matrix *m)
 {
 	float sinh,cosh,cosp;
 
