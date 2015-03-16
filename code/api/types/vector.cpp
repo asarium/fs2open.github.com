@@ -3,6 +3,7 @@
 #include <exception>
 
 #include "api/types/vector.h"
+#include "api/types/matrix.h"
 #include "math/vecmat.h"
 
 #include <luabind/luabind.hpp>
@@ -92,6 +93,40 @@ namespace api
             res.xyz.z += x;
 
             return vector(res);
+        }
+
+        matrix vector::getOrientation() const
+        {
+            ::matrix mt = vmd_identity_matrix;
+            vec3d v3 = content;
+
+            vm_vec_normalize_safe(&v3);
+            vm_vector_2_matrix_norm(&mt, &v3);
+
+            return types::matrix(mt);
+        }
+
+        float vector::getMagnitude() const
+        {
+            return vm_vec_mag(&content);
+        }
+
+        float vector::getDistance(const vector& other) const
+        {
+            return vm_vec_dist(&content, &other.content);
+        }
+
+        float vector::getDotProduct(const vector& other) const
+        {
+            return vm_vec_dotprod(&content, &other.content);
+        }
+
+        vector vector::getCrossProduct(const vector& other) const
+        {
+            vec3d out;
+            vm_vec_crossprod(&out, &content, &other.content);
+
+            return vector(out);
         }
 
         vector vector::operator-(const vector& other) const
@@ -185,6 +220,13 @@ namespace api
 
                 .defaultSet(&setVectorInt)
                 .defaultSet(&setVectorStr)
+
+                // Normal operations
+                .def("getOrientation", &vector::getOrientation)
+                .def("getMagnitude", &vector::getMagnitude)
+                .def("getDistance", &vector::getDistance)
+                .def("getDotProduct", &vector::getDotProduct)
+                .def("getCrossProduct", &vector::getCrossProduct)
 
                 // Operators
                 .def(const_self + other<vector>())

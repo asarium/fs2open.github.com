@@ -7,29 +7,40 @@ namespace api
 {
     namespace types
     {
+        class matrix;
         class vector
         {
         public:
             explicit vector(const vec3d& vec);
             vector(float x, float y, float z);
 
-            vector operator+(const vector&) const;
-            vector operator+(float) const;
+            matrix getOrientation() const;
 
-            vector operator-(const vector&) const;
-            vector operator-(float) const;
+            float getMagnitude() const;
 
-            vector operator*(const vector&) const;
-            vector operator*(float) const;
+            float getDistance(const vector& other) const;
 
-            vector operator/(const vector&) const;
-            vector operator/(float) const;
+            float getDotProduct(const vector& other) const;
 
-            float operator[](const char*) const;
-            float& operator[](const char*);
+            vector getCrossProduct(const vector& other) const;
 
-            float operator[](int) const;
-            float& operator[](int);
+            vector operator+(const vector& other) const;
+            vector operator+(float val) const;
+
+            vector operator-(const vector& other) const;
+            vector operator-(float val) const;
+
+            vector operator*(const vector& other) const;
+            vector operator*(float val) const;
+
+            vector operator/(const vector& other) const;
+            vector operator/(float val) const;
+
+            float operator[](const char* axis) const;
+            float& operator[](const char* axis);
+
+            float operator[](int axis) const;
+            float& operator[](int axis);
 
             vec3d content;
 
