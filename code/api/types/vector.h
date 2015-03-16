@@ -9,20 +9,9 @@ namespace api
     {
         class vector
         {
-            vec3d content;
-
         public:
-            vector(const vec3d& vec);
+            explicit vector(const vec3d& vec);
             vector(float x, float y, float z);
-
-            float getX() const { return content.xyz.x; }
-            void setX(float x) { content.xyz.x = x; }
-
-            float getY() const { return content.xyz.y; }
-            void setY(float y) { content.xyz.y = y; }
-
-            float getZ() const { return content.xyz.z; }
-            void setZ(float z) { content.xyz.z = z; }
 
             vector operator+(const vector&) const;
             vector operator+(float) const;
@@ -35,6 +24,14 @@ namespace api
 
             vector operator/(const vector&) const;
             vector operator/(float) const;
+
+            float operator[](const char*) const;
+            float& operator[](const char*);
+
+            float operator[](int) const;
+            float& operator[](int);
+
+            vec3d content;
 
             static luabind::scope registerScope();
         };
