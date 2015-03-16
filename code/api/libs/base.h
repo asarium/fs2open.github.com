@@ -13,14 +13,20 @@ namespace api
     {
         class base
         {
+        private:
+            base() = delete;
+            base(const base&) = delete;
+
         public:
+            ~base() {}
+
             static void print(const char* msg);
 
             static void warning(const char* msg);
 
             static void error(const char* msg);
 
-            static types::vector createVector(float a, float b, float c);
+            static types::vector createVector(float, float, float);
 
             static types::matrix createOrientation(float, float, float, float, float, float, float, float, float);
 
