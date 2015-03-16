@@ -1,3 +1,4 @@
 [submodule "lib/luabind"]
 	path = lib/luabind
-	url = https://github.com/rpavlik/luabind.git
+	url = https://github.com/asarium/luabind.git
+	branch = indexHandling
