@@ -303,7 +303,7 @@ void vm_vec_scale2(vec3d *dest,float n,float d)
 
 //returns dot product of 2 vectors
 #ifndef _INLINE_VECMAT
-float vm_vec_dotprod(vec3d *v0,vec3d *v1)
+float vm_vec_dotprod(const vec3d *v0, const vec3d *v1)
 {
 	return (v1->xyz.x*v0->xyz.x)+(v1->xyz.y*v0->xyz.y)+(v1->xyz.z*v0->xyz.z);
 }
@@ -319,7 +319,7 @@ float vm_vec_dot3(float x,float y,float z,const vec3d *v)
 #endif
 
 //returns magnitude of a vector
-float vm_vec_mag(vec3d *v)
+float vm_vec_mag(const vec3d *v)
 {
 	float x,y,z,mag1, mag2;
 	x = v->xyz.x*v->xyz.x;
@@ -343,7 +343,7 @@ float vm_vec_mag_squared(vec3d *v)
 	return mag1;
 }
 
-float vm_vec_dist_squared(vec3d *v0, vec3d *v1)
+float vm_vec_dist_squared(const vec3d *v0, const vec3d *v1)
 {
 	float dx, dy, dz;
 
@@ -354,7 +354,7 @@ float vm_vec_dist_squared(vec3d *v0, vec3d *v1)
 }
 
 //computes the distance between two points. (does sub and mag)
-float vm_vec_dist(vec3d *v0,vec3d *v1)
+float vm_vec_dist(const vec3d *v0,const vec3d *v1)
 {
 	float t1;
 	vec3d t;
@@ -638,7 +638,7 @@ vec3d *vm_vec_normal(vec3d *dest,vec3d *p0,vec3d *p1,vec3d *p2)
 //product of the magnitudes of the two source vectors.  This means it is
 //quite easy for this routine to overflow and underflow.  Be careful that
 //your inputs are ok.
-vec3d *vm_vec_crossprod(vec3d *dest,vec3d *src0,vec3d *src1)
+vec3d *vm_vec_crossprod(vec3d *dest,const vec3d *src0,const vec3d *src1)
 {
 	dest->xyz.x = (src0->xyz.y * src1->xyz.z) - (src0->xyz.z * src1->xyz.y);
 	dest->xyz.y = (src0->xyz.z * src1->xyz.x) - (src0->xyz.x * src1->xyz.z);
