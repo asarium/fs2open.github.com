@@ -2,6 +2,7 @@
 #include "api/types/types.h"
 
 #include "vector.h"
+#include "matrix.h"
 
 namespace api
 {
@@ -9,8 +10,9 @@ namespace api
     {
         void registerTypes(lua_State* L)
         {
-            return luabind::module(L)[
-                vector::registerScope()
+            return luabind::module(L, "fso")[
+                vector::registerScope(),
+                matrix::registerScope()
             ];
         }
     }
