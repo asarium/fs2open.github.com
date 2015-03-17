@@ -5,6 +5,7 @@ set(file_root
 
 set(file_root_api
     api/apiTest.hpp
+    api/apiTest.cpp
 )
 
 set(file_root_api_types
@@ -12,7 +13,7 @@ set(file_root_api_types
 )
 
 set(file_root_api_lua
-    api/lua/vector_tests.lua
+    api/lua/vector_index_tests.lua
 )
 
 source_group(""            FILES ${file_root})

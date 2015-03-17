@@ -26,6 +26,6 @@ FOREACH(file ${file_root_api_lua})
 		)
 
 	LIST(APPEND TEST_OUT_FILES ${OUTPUT})
-ENDFOREACH(file ${file_root_def_files})
+ENDFOREACH(file ${file_root_api_lua})
 
 SOURCE_GROUP("Generated Files\\Test Files" FILES ${TEST_OUT_FILES})

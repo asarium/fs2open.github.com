@@ -10,18 +10,28 @@ namespace api
     class LuaStateTest : public testing::Test
     {
     public:
+        script_state* state;
         lua_State* L;
 
-        virtual void SetUp() override
-        {
-            Script_system.CreateLuaState();
-            L = Script_system.GetLuaSession();
-        }
+        virtual void SetUp() override;
 
-        virtual void TearDown() override
-        {
-            lua_close(L);
-        }
+        virtual void TearDown() override;
+    };
+
+    class LuaFileTest : public LuaStateTest
+    {
+    private:
+        const char* content;
+
+    public:
+        LuaFileTest(const char* c) : content(c)
+        {}
+
+        virtual void SetUp() override;
+
+        void executeScript();
+
+        virtual void TearDown() override;
     };
 
     class ScopedLuaStackTest
