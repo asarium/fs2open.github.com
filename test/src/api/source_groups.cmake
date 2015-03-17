@@ -14,6 +14,7 @@ set(file_root_lua
 
 set(file_root_lua_types
     lua/types/vector_index_tests.lua
+    lua/types/vector_operator_tests.lua
 )
 
 source_group(""              FILES ${file_root})
