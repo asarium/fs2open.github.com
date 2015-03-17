@@ -17,7 +17,7 @@ function(generateTestFiles name listVar outVar)
 
     	ADD_CUSTOM_COMMAND(
     		OUTPUT ${OUTPUT}
-    		COMMAND embedfile -text "${INPUT_NAME}" "${OUTPUT}" "test_${FILE_NAME}"
+    		COMMAND embedfile -text "${INPUT_NAME}" "${OUTPUT}" "${name}_${FILE_NAME}"
     		DEPENDS ${INPUT_NAME}
     		COMMENT "Generating string file for ${INPUT_NAME}"
     		)
