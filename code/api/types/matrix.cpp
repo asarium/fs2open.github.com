@@ -74,7 +74,9 @@ namespace api
         vector matrix::operator*(const vector& vec) const
         {
             vec3d dest;
-            vm_vec_rotate(&dest, &vec.content, &content);
+            // As noted in the forums (http://www.hard-light.net/forums/index.php?topic=89247.0), FSO apparently switched
+            // rotate and unrotate. To make sure new scripts use the correct function, this operator switched the two functions
+            vm_vec_unrotate(&dest, &vec.content, &content);
 
             return vector(dest);
         }
@@ -109,6 +111,55 @@ namespace api
             default:
                 throw std::runtime_error("Invalid axis name!");
             }
+        }
+
+        matrix matrix::getInterpolated(const matrix& final, float factor) const
+        {
+            ::matrix out;
+
+            //matrix subtraction & scaling
+            for (int i = 0; i < 9; i++)
+            {
+                out.a1d[i] = content.a1d[i] + (final.content.a1d[i] - content.a1d[i])*factor;
+            }
+
+            return api::types::matrix(final);
+        }
+
+        matrix matrix::getTranspose() const
+        {
+            ::matrix out = content;
+            vm_transpose_matrix(&out);
+
+            return api::types::matrix(out);
+        }
+
+        vector matrix::rotateVector(const vector& v) const
+        {
+            vec3d out;
+            vm_vec_rotate(&out, &v.content, &content);
+
+            return vector(out);
+        }
+        vector matrix::unrotateVector(const vector& v) const
+        {
+            vec3d out;
+            vm_vec_unrotate(&out, &v.content, &content);
+
+            return vector(out);
+        }
+
+        vector matrix::getUvec() const
+        {
+            return vector(content.vec.uvec);
+        }
+        vector matrix::getFvec() const
+        {
+            return vector(content.vec.fvec);
+        }
+        vector matrix::getRvec() const
+        {
+            return vector(content.vec.rvec);
         }
 
         void matrix::setValue(int i, float val)
@@ -163,6 +214,14 @@ namespace api
 
                 .defaultSet(&matrix::setValue)
                 .defaultSet(&matrix::setAngle)
+
+                .def("getInterpolated", &matrix::getInterpolated)
+                .def("getTranspose", &matrix::getTranspose)
+                .def("rotateVector", &matrix::rotateVector)
+                .def("unrotateVector", &matrix::unrotateVector)
+                .def("getUvec", &matrix::getUvec)
+                .def("getFvec", &matrix::getFvec)
+                .def("getRvec", &matrix::getRvec)
 
                 .def(const_self * other<matrix>())
                 .def(const_self * other<vector>())

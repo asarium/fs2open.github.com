@@ -31,6 +31,17 @@ namespace api
             void setValue(int, float);
             void setAngle(const char*, float);
 
+            matrix getInterpolated(const matrix& final, float factor) const;
+
+            matrix getTranspose() const;
+
+            vector rotateVector(const vector& v) const;
+            vector unrotateVector(const vector& v) const;
+
+            vector getUvec() const;
+            vector getFvec() const;
+            vector getRvec() const;
+
             ::matrix content;
 
             static luabind::scope registerScope();
