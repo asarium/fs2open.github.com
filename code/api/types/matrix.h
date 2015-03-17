@@ -3,6 +3,7 @@
 #include "globalincs/pstypes.h"
 
 #include "api/types/types.h"
+#include "api/types/vector.h"
 
 namespace api
 {

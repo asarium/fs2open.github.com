@@ -5,12 +5,14 @@
 #include "globalincs/pstypes.h"
 
 #include "api/types/types.h"
+#include "api/types/matrix.h"
 
 namespace api
 {
     namespace types
     {
         class matrix;
+
         class vector
         {
         public:
