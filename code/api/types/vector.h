@@ -1,3 +1,4 @@
+#pragma once
 
 #include <luabind/object.hpp>
 #include <luabind/lua_state_fwd.hpp>
