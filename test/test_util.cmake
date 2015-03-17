@@ -7,10 +7,6 @@ function(generateTestFiles name listVar outVar)
         set(INPUT_NAME "${CMAKE_CURRENT_SOURCE_DIR}/${file}")
     	SET(OUTPUT "${GENERATED_SOURCE_DIR}/test/${name}/${file}.h")
 
-        message("${FILE_NAME}")
-        message("${INPUT_NAME}")
-        message("${OUTPUT}")
-
     	# For some reason this is needed...
     	GET_FILENAME_COMPONENT(DIRECTORY_PATH ${OUTPUT} PATH)
     	FILE(MAKE_DIRECTORY ${DIRECTORY_PATH})
