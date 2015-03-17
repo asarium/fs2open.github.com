@@ -148,7 +148,7 @@ ccodes g3_check_codes(int nv,vertex **pointlist);
 /**
  * Rotates a point. returns codes.  does not check if already rotated
  */
-ubyte g3_rotate_vertex(vertex *dest,vec3d *src);
+ubyte g3_rotate_vertex(vertex *dest,const vec3d *src);
 
 /**
  * Same as above, only ignores the current instancing

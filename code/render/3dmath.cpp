@@ -94,7 +94,7 @@ ubyte g3_transfer_vertex(vertex *dest,vec3d *src)
 
 MONITOR( NumRotations )
 
-ubyte g3_rotate_vertex(vertex *dest,vec3d *src)
+ubyte g3_rotate_vertex(vertex *dest,const vec3d *src)
 {
 #if 0
 	vec3d tempv;
