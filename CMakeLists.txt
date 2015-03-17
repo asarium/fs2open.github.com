@@ -94,6 +94,8 @@ OPTION(FSO_USE_LUAJIT "Use LuaJIT for Lua scripting, needs a working internet co
 
 OPTION(FSO_USE_OPENALSOFT "Download and build OpenAL Soft instead of using the system libraries" OFF)
 
+OPTION(FSO_BUILD_TESTS "Build unit tests")
+
 SET(FSO_FREESPACE_PATH "${CMAKE_INSTALL_PREFIX}" CACHE FILEPATH "The path of the FreeSpace directory you want to use. Please note that you will have to change CMAKE_INSTALL_PREFIX if you change this at some point.")
 
 SET(FSO_RUN_ARGUMENTS "" CACHE STRING "Additional arguments passed to a generated executable when run with the generated build files.")
@@ -149,6 +151,10 @@ ENDIF(FSO_BUILD_FRED2)
 IF(FSO_BUILD_WXFRED2)
 	ADD_SUBDIRECTORY(wxfred2)
 ENDIF(FSO_BUILD_WXFRED2)
+
+IF(FSO_BUILD_TESTS)
+	ADD_SUBDIRECTORY(test)
+ENDIF(FSO_BUILD_TESTS)
 
 IF(MSVC_USE_RUNTIME_DLL)
 	SET(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${BINARY_DESTINATION}")
