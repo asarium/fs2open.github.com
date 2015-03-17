@@ -1,17 +1,16 @@
 
-#include "api/apiTest.hpp"
+#include "apiTest.hpp"
 
 #include "api/lua/vector_index_tests.lua.h"
 
-using namespace api;
-
-class VectorTest : public LuaFileTest
+namespace types
 {
-public:
-    VectorTest() : LuaFileTest(test_vector_index_tests_lua) {}
-};
+    class VectorTest : public LuaFileTest
+    {
+    };
 
-TEST_F(VectorTest, IndexTests)
-{
-    executeScript();
+    TEST_F(VectorTest, IndexTests)
+    {
+        executeScript(test_vector_index_tests_lua);
+    }
 }

@@ -1,42 +1,29 @@
 
-#include "api/apiTest.hpp"
+#include "apiTest.hpp"
 
-namespace api
+void LuaStateTest::SetUp()
 {
-    void LuaStateTest::SetUp()
+    state = new script_state("Test state");
+
+    state->CreateLuaState();
+    L = state->GetLuaSession();
+}
+
+void LuaStateTest::TearDown()
+{
+    delete state;
+    state = nullptr;
+}
+
+void LuaFileTest::executeScript(const char* script)
+{
+    luaL_loadstring(L, script);
+
+    int err = lua_pcall(L, 0, 0, 0);
+
+    if (err)
     {
-        state = new script_state("Test state");
-
-        state->CreateLuaState();
-        L = state->GetLuaSession();
-    }
-
-    void LuaStateTest::TearDown()
-    {
-        delete state;
-        state = nullptr;
-    }
-
-    void LuaFileTest::SetUp()
-    {
-        LuaStateTest::SetUp();
-    }
-
-    void LuaFileTest::executeScript()
-    {
-        luaL_loadstring(L, content);
-
-        int err = lua_pcall(L, 0, 0, 0);
-
-        if (err)
-        {
-            const char* error = lua_tostring(L, -1);
-            FAIL() << error << "\n";
-        }
-    }
-
-    void LuaFileTest::TearDown()
-    {
-        LuaStateTest::TearDown();
+        const char* error = lua_tostring(L, -1);
+        FAIL() << error << "\n";
     }
 }
