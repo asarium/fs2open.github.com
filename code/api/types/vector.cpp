@@ -2,12 +2,17 @@
 #include <ostream>
 #include <exception>
 
-#include "api/types/vector.h"
-#include "api/types/matrix.h"
-#include "math/vecmat.h"
-
+#include <luabind/lua_include.hpp>
 #include <luabind/luabind.hpp>
 #include <luabind/operator.hpp>
+#include <luabind/out_value_policy.hpp>
+
+#include "api/types/vector.h"
+#include "api/types/matrix.h"
+
+#include "math/vecmat.h"
+#include "render/3d.h"
+#include "render/3dinternal.h"
 
 namespace
 {
@@ -67,6 +72,8 @@ namespace api
 {
     namespace types
     {
+        using namespace luabind;
+
         vector::vector(const vec3d& vec) : content(vec)
         {
         }
@@ -125,6 +132,42 @@ namespace api
         {
             vec3d out;
             vm_vec_crossprod(&out, &content, &other.content);
+
+            return vector(out);
+        }
+
+        void vector::getScreenCoords(lua_State* L, luabind::object* outX, luabind::object* outY) const
+        {            
+            vertex vtx;
+            bool do_g3 = G3_count < 1;
+            if (do_g3)
+                g3_start_frame(1);
+
+            g3_rotate_vertex(&vtx, &content);
+            g3_project_vertex(&vtx);
+
+            if (do_g3)
+                g3_end_frame();
+
+            if (vtx.flags & PF_OVERFLOW)
+            {
+                *outX = luabind::object(L, false);
+
+                lua_pushnil(L);
+                *outY = luabind::object(handle(L, -1));
+                lua_pop(L, 1);
+            }
+            else
+            {
+                *outX = luabind::object(L, vtx.screen.xyw.x);
+                *outY = luabind::object(L, vtx.screen.xyw.y);
+            }
+        }
+
+        vector vector::getNormalized() const
+        {
+            vec3d out = content;
+            vm_vec_normalize(&out);
 
             return vector(out);
         }
@@ -210,8 +253,6 @@ namespace api
 
         luabind::scope vector::registerScope()
         {
-            using namespace luabind;
-
             return class_<vector>("vector")
                 .def(constructor<float, float, float>())
 
@@ -227,6 +268,8 @@ namespace api
                 .def("getDistance", &vector::getDistance)
                 .def("getDotProduct", &vector::getDotProduct)
                 .def("getCrossProduct", &vector::getCrossProduct)
+                .def("getScreenCoords", &vector::getScreenCoords, pure_out_value(_3) + pure_out_value(_4))
+                .def("getNormalized", &vector::getNormalized)
 
                 // Operators
                 .def(const_self + other<vector>())

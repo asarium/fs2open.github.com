@@ -1,4 +1,7 @@
 
+#include <luabind/object.hpp>
+#include <luabind/lua_state_fwd.hpp>
+
 #include "globalincs/pstypes.h"
 
 #include "api/types/types.h"
@@ -23,6 +26,10 @@ namespace api
             float getDotProduct(const vector& other) const;
 
             vector getCrossProduct(const vector& other) const;
+
+            void getScreenCoords(lua_State* L, luabind::object* outX, luabind::object* outY) const;
+
+            vector getNormalized() const;
 
             vector operator+(const vector& other) const;
             vector operator+(float val) const;
