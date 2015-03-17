@@ -955,7 +955,7 @@ vec3d *vm_vec_rotate(vec3d *dest,const vec3d *src,const matrix *m)
 //
 // Goober5000: FYI, the result of rotating a normalized vector through a rotation matrix will
 // also be a normalized vector.  It took me awhile to verify online that this was true. ;)
-vec3d *vm_vec_unrotate(vec3d *dest,vec3d *src,matrix *m)
+vec3d *vm_vec_unrotate(vec3d *dest,const vec3d *src,const matrix *m)
 {
 	Assert(dest != src);
 

@@ -349,7 +349,7 @@ vec3d *vm_vec_rotate(vec3d *dest,const vec3d *src,const matrix *m);
 // THIS DOES NOT ACTUALLY TRANSPOSE THE SOURCE MATRIX!!! So if
 // you need it transposed later on, you should use the 
 // vm_vec_transpose() / vm_vec_rotate() technique.
-vec3d *vm_vec_unrotate(vec3d *dest,vec3d *src,matrix *m);
+vec3d *vm_vec_unrotate(vec3d *dest,const vec3d *src,const matrix *m);
 
 //transpose a matrix in place. returns ptr to matrix
 matrix *vm_transpose_matrix(matrix *m);
