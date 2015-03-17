@@ -3,6 +3,7 @@
 
 #include "vector.h"
 #include "matrix.h"
+#include "enum.h"
 
 namespace api
 {
@@ -12,7 +13,8 @@ namespace api
         {
             return luabind::module(L, "fso")[
                 vector::registerScope(),
-                matrix::registerScope()
+                matrix::registerScope(),
+                luaenum::registerScope()
             ];
         }
     }

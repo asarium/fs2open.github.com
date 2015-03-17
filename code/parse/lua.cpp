@@ -1,3 +1,13 @@
+
+#include "globalincs/pstypes.h"
+#include "parse/lua.h"
+
+// Include this before everything else
+#include <luabind/luabind.hpp>
+#include "api/libs/libs.h"
+#include "api/types/types.h"
+#include "api/types/enum.h"
+
 #include "ai/ai.h"
 #include "ai/aigoals.h"
 #include "asteroid/asteroid.h"
@@ -11,7 +21,6 @@
 #include "graphics/font.h"
 #include "graphics/gropenglpostprocessing.h"
 #include "globalincs/linklist.h"
-#include "globalincs/pstypes.h"
 #include "hud/hudbrackets.h"
 #include "hud/hudescort.h"
 #include "hud/hudconfig.h"
@@ -37,7 +46,6 @@
 #include "object/object.h"
 #include "object/objectshield.h"
 #include "object/waypoint.h"
-#include "parse/lua.h"
 #include "parse/parselo.h"
 #include "parse/scripting.h"
 #include "particle/particle.h"
@@ -53,10 +61,6 @@
 #include "weapon/beam.h"
 #define BMPMAN_INTERNAL
 #include "bmpman/bm_internal.h"
-
-#include <luabind/luabind.hpp>
-#include "api/libs/libs.h"
-#include "api/types/types.h"
 
 //*************************Lua globals*************************
 SCP_vector<ade_table_entry> Ade_table_entries;
@@ -341,185 +345,12 @@ public:
 		status = n_status;
 	}
 
-	//LOOK LOOK LOOK LOOK LOOK LOOK 
+	//LOOK LOOK LOOK LOOK LOOK LOOK
 	//IMPORTANT!!!:
-	//LOOK LOOK LOOK LOOK LOOK LOOK 
+	//LOOK LOOK LOOK LOOK LOOK LOOK
 	//Don't forget to set status appropriately when you change ang or mtx.
 };
 ade_obj<matrix_h> l_Matrix("orientation", "Orientation matrix object");
-
-ADE_INDEXER(l_Matrix, "p,b,h or 1-9", "Orientation component - pitch, bank, heading, or index into 3x3 matrix (1-9)", "number", "Number at the specified index, or 0 if index is invalid.")
-{
-	matrix_h *mh;
-	char *s = NULL;
-	float newval = 0.0f;
-	int numargs = ade_get_args(L, "os|f", l_Matrix.GetPtr(&mh), &s, &newval);
-
-	if(!numargs || s[1] != '\0')
-		return ade_set_error(L, "f", 0.0f);
-
-	int idx=0;
-	if(s[0]=='p')
-		idx = -1;
-	else if(s[0]=='b')
-		idx = -2;
-	else if(s[0]=='h')
-		idx = -3;
-	else if(atoi(s))
-		idx = atoi(s);
-
-	if(idx < -3 || idx==0 || idx > 9)
-		return ade_set_error(L, "f", 0.0f);
-
-	//Handle out of date stuff.
-	float *val = NULL;
-	if(idx < 0)
-	{
-		angles *ang = mh->GetAngles();
-
-		if(idx == -1)
-			val = &ang->p;
-		if(idx == -2)
-			val = &ang->b;
-		if(idx == -3)
-			val = &ang->h;
-	}
-	else
-	{
-		idx--;	//Lua->FS2
-		val = &mh->GetMatrix()->a1d[idx];
-	}
-
-	if(ADE_SETTING_VAR && *val != newval)
-	{
-		//WMC - I figure this is quicker
-		//than just assuming matrix or angles is diff
-		//and recalculating every time.
-
-		if(idx < 0)
-			mh->SetStatus(MH_MATRIX_OUTOFDATE);
-		else
-			mh->SetStatus(MH_ANGLES_OUTOFDATE);
-
-		//Might as well put this here
-		*val = newval;
-	}
-
-	return ade_set_args(L, "f", *val);
-}
-
-ADE_FUNC(__mul, l_Matrix, "orientation", "Multiplies two matrix objects)", "orientation", "matrix, or empty matrix if unsuccessful")
-{
-	matrix_h *mha=NULL, *mhb=NULL;
-	if(!ade_get_args(L, "oo", l_Matrix.GetPtr(&mha), l_Matrix.GetPtr(&mhb)))
-		return ade_set_error(L, "o", l_Matrix.Set(matrix_h()));
-
-	matrix mr;
-
-	vm_matrix_x_matrix(&mr, mha->GetMatrix(), mhb->GetMatrix());
-
-	return ade_set_args(L, "o", l_Matrix.Set(matrix_h(&mr)));
-}
-
-ADE_FUNC(__tostring, l_Matrix, NULL, "Converts a matrix to a string with format \"[r1c1 r2c1 r3c1 | r1c2 r2c2 r3c2| r1c3 r2c3 r3c3]\"", "string", "Formatted string or \"<NULL\"")
-{
-	matrix_h *mh;
-	if(!ade_get_args(L, "o", l_Matrix.GetPtr(&mh)))
-		return ade_set_error(L, "s", "<NULL>");
-
-	char buf[128];
-	float *a = &mh->GetMatrix()->a1d[0];
-	sprintf(buf, "[%f %f %f | %f %f %f | %f %f %f]", a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
-
-	return ade_set_args(L, "s", buf);
-}
-
-ADE_FUNC(getInterpolated, l_Matrix, "orientation Final, number Factor", "Returns orientation that has been interpolated to Final by Factor (0.0-1.0)", "orientation", "Interpolated orientation, or null orientation on failure")
-{
-	matrix_h *oriA = NULL;
-	matrix_h *oriB = NULL;
-	float factor = 0.0f;
-	if(!ade_get_args(L, "oof", l_Matrix.GetPtr(&oriA), l_Matrix.GetPtr(&oriB), &factor))
-		return ade_set_error(L, "o", l_Matrix.Set(matrix_h()));
-
-	matrix *A = oriA->GetMatrix();
-	matrix *B = oriB->GetMatrix();
-	matrix final = vmd_identity_matrix;
-
-	//matrix subtraction & scaling
-	for(int i = 0; i < 9; i++)
-	{
-		final.a1d[i] = A->a1d[i] + (B->a1d[i] - A->a1d[i])*factor;
-	}
-
-	return ade_set_args(L, "o", l_Matrix.Set(matrix_h(&final)));
-}
-
-ADE_FUNC(getTranspose, l_Matrix, NULL, "Returns a transpose version of the specified orientation", "orientation", "Transpose matrix, or null orientation on failure")
-{
-	matrix_h *mh = NULL;
-	if(!ade_get_args(L, "o", l_Matrix.GetPtr(&mh)))
-		return ade_set_error(L, "o", l_Matrix.Set(matrix_h()));
-
-	matrix final = *mh->GetMatrix();
-	vm_transpose_matrix(&final);
-
-	return ade_set_args(L, "o", l_Matrix.Set(matrix_h(&final)));
-}
-
-
-ADE_FUNC(rotateVector, l_Matrix, "vector Input", "Returns rotated version of given vector", "vector", "Rotated vector, or empty vector on error")
-{
-	matrix_h *mh;
-	vec3d *v3;
-	if(!ade_get_args(L, "oo", l_Matrix.GetPtr(&mh), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
-
-	vec3d v3r;
-	vm_vec_rotate(&v3r, v3, mh->GetMatrix());
-
-	return ade_set_args(L, "o", l_Vector.Set(v3r));
-}
-
-ADE_FUNC(unrotateVector, l_Matrix, "vector Input", "Returns unrotated version of given vector", "vector", "Unrotated vector, or empty vector on error")
-{
-	matrix_h *mh;
-	vec3d *v3;
-	if(!ade_get_args(L, "oo", l_Matrix.GetPtr(&mh), l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
-
-	vec3d v3r;
-	vm_vec_unrotate(&v3r, v3, mh->GetMatrix());
-
-	return ade_set_args(L, "o", l_Vector.Set(v3r));
-}
-
-ADE_FUNC(getUvec, l_Matrix, NULL, "Returns the vector that points up (0,1,0 unrotated by this matrix)", "vector", "Vector or null vector on error")
-{
-	matrix_h *mh = NULL;
-	if(!ade_get_args(L, "o", l_Matrix.GetPtr(&mh)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
-
-	return ade_set_args(L, "o", l_Vector.Set(mh->GetMatrix()->vec.uvec));
-}
-
-ADE_FUNC(getFvec, l_Matrix, NULL, "Returns the vector that points to the front (0,0,1 unrotated by this matrix)", "vector", "Vector or null vector on error")
-{
-	matrix_h *mh = NULL;
-	if(!ade_get_args(L, "o", l_Matrix.GetPtr(&mh)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
-
-	return ade_set_args(L, "o", l_Vector.Set(mh->GetMatrix()->vec.fvec));
-}
-
-ADE_FUNC(getRvec, l_Matrix, NULL, "Returns the vector that points to the right (1,0,0 unrotated by this matrix)", "vector", "Vector or null vector on error")
-{
-	matrix_h *mh = NULL;
-	if(!ade_get_args(L, "o", l_Matrix.GetPtr(&mh)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
-
-	return ade_set_args(L, "o", l_Vector.Set(mh->GetMatrix()->vec.rvec));
-}
 
 //**********OBJECT: constant class
 //WMC NOTE -
@@ -912,7 +743,7 @@ ADE_FUNC(__tostring, l_Enum, NULL, "Returns enumeration name", "string", "Enumer
 
 ADE_FUNC(__eq, l_Enum, "enumeration", "Compares the two enumerations for equality", "boolean", "true if equal, false otherwise")
 {
-	enum_h *e1 = NULL; 
+	enum_h *e1 = NULL;
 	enum_h *e2 = NULL;
 
 	if(!ade_get_args(L, "oo", l_Enum.GetPtr(&e1), l_Enum.GetPtr(&e2)))
@@ -1618,7 +1449,7 @@ protected:
 public:
 	polymodel *Get(){
 		if(!this->IsValid())
-			return NULL; 
+			return NULL;
 
 		return model;
 	}
@@ -1674,7 +1505,7 @@ public:
 ade_obj<eyepoints_h> l_Eyepoints("eyepoints", "Array of model eye points");
 
 // Thrusters:
-class thrusters_h : public model_h 
+class thrusters_h : public model_h
 {
 	public:
 	thrusters_h(polymodel *pm) : model_h(pm){}
@@ -1703,7 +1534,7 @@ struct thrusterbank_h
 		if (!isValid())
 			return NULL;
 
-		return bank;	
+		return bank;
 	}
 
 	bool isValid()
@@ -1715,11 +1546,11 @@ struct thrusterbank_h
 ade_obj<thrusterbank_h> l_Thrusterbank("thrusterbank", "A model thrusterbank");
 
 // Glowpoint:
-struct glowpoint_h 
+struct glowpoint_h
 {
 	glow_point *point;
 
-	glowpoint_h() 
+	glowpoint_h()
 	{
 	}
 
@@ -1746,7 +1577,7 @@ struct glowpoint_h
 ade_obj<glowpoint_h> l_Glowpoint("glowpoint", "A model glowpoint");
 
 // Glowbanks:
-class dockingbays_h : public model_h 
+class dockingbays_h : public model_h
 {
 	public:
 	dockingbays_h(polymodel *pm) : model_h(pm){}
@@ -1843,7 +1674,7 @@ ADE_VIRTVAR(BoundingBoxMax, l_Model, "vector", "Model bounding box maximum", "ve
 
 	if(ADE_SETTING_VAR && v != NULL) {
 		pm->maxs = *v;
-		
+
 		//Recalculate this, so it stays valid
 		model_calc_bound_box(pm->bounding_box, &pm->mins, &pm->maxs);
 	}
@@ -1865,7 +1696,7 @@ ADE_VIRTVAR(BoundingBoxMin, l_Model, "vector", "Model bounding box minimum", "ve
 
 	if(ADE_SETTING_VAR && v != NULL) {
 		pm->mins = *v;
-		
+
 		//Recalculate this, so it stays valid
 		model_calc_bound_box(pm->bounding_box, &pm->mins, &pm->maxs);
 	}
@@ -2061,15 +1892,15 @@ ADE_INDEXER(l_Thrusters, "number Index", "Array of all thrusterbanks on this thr
 
 	if (!trh->IsValid() || s == NULL || pm == NULL)
 		return ade_set_error(L, "o", l_Thrusterbank.Set(thrusterbank_h()));
-	
+
 	//Determine index
 	int idx = atoi(s) - 1;	//Lua->FS2
 
 	if (idx < 0 || idx >= pm->n_thrusters)
 		return ade_set_error(L, "o", l_Thrusterbank.Set(thrusterbank_h()));
-	
+
 	thruster_bank* bank = &pm->thrusters[idx];
-	
+
 	if (ADE_SETTING_VAR && trh != NULL)
 	{
 		if (newThr.isValid())
@@ -2099,7 +1930,7 @@ ADE_FUNC(__len, l_Thrusterbank, NULL, "Number of thrusters on this thrusterbank"
 
 	if(!tbh->isValid())
 		return ade_set_error(L, "i", -1);
-	
+
 	thruster_bank* bank = tbh->Get();
 
 	return ade_set_args(L, "i", bank->num_points);
@@ -2116,7 +1947,7 @@ ADE_INDEXER(l_Thrusterbank, "number Index", "Array of glowpoint", "glowpoint", "
 
 	if (!tbh->isValid() || s==NULL)
 		return ade_set_error(L, "o", l_Glowpoint.Set(glowpoint_h()));
-	
+
 	thruster_bank* bank = tbh->Get();
 
 	//Determine index
@@ -2124,9 +1955,9 @@ ADE_INDEXER(l_Thrusterbank, "number Index", "Array of glowpoint", "glowpoint", "
 
 	if (idx < 0 || idx >= bank->num_points)
 		return ade_set_error(L, "o", l_Glowpoint.Set(glowpoint_h()));
-	
+
 	glow_point* glp = &bank->points[idx];
-	
+
 	if (ADE_SETTING_VAR && glh != NULL)
 	{
 		if (glh->isValid())
@@ -2161,7 +1992,7 @@ ADE_VIRTVAR(Position, l_Glowpoint, NULL, "The (local) vector to the position of 
 
 	if (!glh->isValid())
 		return ADE_RETURN_NIL;
-	
+
 	vec3d vec = glh->point->pnt;
 
 	if (ADE_SETTING_VAR)
@@ -2199,7 +2030,7 @@ ADE_FUNC(isValid, l_Glowpoint, NULL, "Returns wether this handle is valid or not
 
 	if(!ade_get_args(L, "o", l_Glowpoint.Get(&glh)))
 		return ADE_RETURN_FALSE;
-	
+
 	return ade_set_args(L, "b", glh.isValid());
 }
 
@@ -2264,7 +2095,7 @@ ADE_INDEXER(l_Dockingbays, "dockingbay", "Gets a dockingbay handle from this mod
 
 		if (!dbhp->IsValid() && name != NULL)
 			return ade_set_error(L, "o", l_Dockingbay.Set(dockingbay_h()));
-		
+
 		index = model_find_dock_name_index(dbhp->GetID(), name);
 	}
 
@@ -2441,7 +2272,7 @@ ADE_FUNC(isValid, l_Dockingbay, NULL, "Detects whether is valid or not", "number
 	{
 		return ADE_RETURN_FALSE;
 	}
-	
+
 	return ade_set_args(L, "b", dbh->IsValid());
 }
 
@@ -2803,7 +2634,7 @@ ADE_VIRTVAR(AfterburnerActive, l_Physics, "boolean", "Specifies if the afterburn
 
 	if(!pih->IsValid())
 		return ade_set_error(L, "b", false);
-	
+
 	if (ADE_SETTING_VAR)
 	{
 		if(set)
@@ -3448,7 +3279,7 @@ ADE_FUNC(getHeight, l_Texture, NULL, "Gets texture height", "number", "Texture h
 
 	if(bm_get_info(idx, NULL, &h) < 0)
 		return ade_set_error(L, "i", 0);
-	
+
 	return ade_set_args(L, "i", h);
 }
 
@@ -3484,248 +3315,6 @@ ADE_FUNC(getFramesLeft, l_Texture, NULL, "Gets number of frames left, from handl
 		return ade_set_error(L, "i", 0);
 
 	return ade_set_args(L, "i", num);
-}
-
-//**********OBJECT: vector
-//WMC - see matrix for ade_obj def
-
-ADE_INDEXER(l_Vector, "x,y,z or 1-3", "Vector component", "number", "Value at index, or 0 if vector handle is invalid")
-{
-	vec3d *v3;
-	char *s = NULL;
-	float newval = 0.0f;
-	int numargs = ade_get_args(L, "os|f", l_Vector.GetPtr(&v3), &s, &newval);
-
-	if(!numargs || s[1] != '\0')
-		return ade_set_error(L, "f", 0.0f);
-
-	int idx=-1;
-	if(s[0]=='x' || s[0] == '1')
-		idx = 0;
-	else if(s[0]=='y' || s[0] == '2')
-		idx = 1;
-	else if(s[0]=='z' || s[0] == '3')
-		idx = 2;
-
-	if(idx < 0 || idx > 3)
-		return ade_set_error(L, "f", 0.0f);
-
-	if(ADE_SETTING_VAR) {
-		v3->a1d[idx] = newval;
-	}
-
-	return ade_set_args(L, "f", v3->a1d[idx]);
-}
-
-ADE_FUNC(__add, l_Vector, "number/vector", "Adds vector by another vector, or adds all axes by value", "vector", "Final vector, or null vector if error occurs")
-{
-	vec3d v3 = vmd_zero_vector;
-	if(lua_isnumber(L, 1) || lua_isnumber(L, 2))
-	{
-		float f;
-		if((lua_isnumber(L, 1) && ade_get_args(L, "fo", &f, l_Vector.Get(&v3)))
-			|| (lua_isnumber(L, 2) && ade_get_args(L, "of", l_Vector.Get(&v3), &f)))
-		{
-			v3.xyz.x += f;
-			v3.xyz.y += f;
-			v3.xyz.z += f;
-		}
-	}
-	else
-	{
-		vec3d v3b;
-		//WMC - doesn't really matter which is which
-		if(ade_get_args(L, "oo", l_Vector.Get(&v3), l_Vector.Get(&v3b)))
-		{
-			vm_vec_add2(&v3, &v3b);
-		}
-	}
-	return ade_set_args(L, "o", l_Vector.Set(v3));
-}
-
-ADE_FUNC(__sub, l_Vector, "number/vector", "Subtracts vector from another vector, or subtracts all axes by value", "vector", "Final vector, or null vector if error occurs")
-{
-	vec3d v3 = vmd_zero_vector;
-	if(lua_isnumber(L, 1) || lua_isnumber(L, 2))
-	{
-		float f;
-		if((lua_isnumber(L, 1) && ade_get_args(L, "fo", &f, l_Vector.Get(&v3)))
-			|| (lua_isnumber(L, 2) && ade_get_args(L, "of", l_Vector.Get(&v3), &f)))
-		{
-			v3.xyz.x += f;
-			v3.xyz.y += f;
-			v3.xyz.z += f;
-		}
-	}
-	else
-	{
-		vec3d v3b;
-		//WMC - doesn't really matter which is which
-		if(ade_get_args(L, "oo", l_Vector.Get(&v3), l_Vector.Get(&v3b)))
-		{
-			vm_vec_sub2(&v3, &v3b);
-		}
-	}
-
-	return ade_set_args(L, "o", l_Vector.Set(v3));
-}
-
-ADE_FUNC(__mul, l_Vector, "number/vector", "Scales vector object (Multiplies all axes by number), or multiplies each axes by the other vector's axes.", "vector", "Final vector, or null vector if error occurs")
-{
-	vec3d v3 = vmd_zero_vector;
-	if(lua_isnumber(L, 1) || lua_isnumber(L, 2))
-	{
-		float f;
-		if((lua_isnumber(L, 1) && ade_get_args(L, "fo", &f, l_Vector.Get(&v3)))
-			|| (lua_isnumber(L, 2) && ade_get_args(L, "of", l_Vector.Get(&v3), &f)))
-		{
-			vm_vec_scale(&v3, f);
-		}
-	}
-	else
-	{
-		vec3d *v1 = NULL;
-		vec3d *v2 = NULL;
-		if(!ade_get_args(L, "oo", l_Vector.GetPtr(&v1), l_Vector.GetPtr(&v2)))
-			return ade_set_args(L, "o", l_Vector.Set(vmd_zero_vector));
-
-		v3.xyz.x = v1->xyz.x * v2->xyz.x;
-		v3.xyz.y = v1->xyz.y * v2->xyz.y;
-		v3.xyz.z = v1->xyz.z * v2->xyz.z;
-	}
-
-	return ade_set_args(L, "o", l_Vector.Set(v3));
-}
-
-ADE_FUNC(__div, l_Vector, "number/vector", "Scales vector object (Divide all axes by number), or divides each axes by the dividing vector's axes.", "vector", "Final vector, or null vector if error occurs")
-{
-	vec3d v3 = vmd_zero_vector;
-	if(lua_isnumber(L, 1) || lua_isnumber(L, 2))
-	{
-		float f;
-		if((lua_isnumber(L, 1) && ade_get_args(L, "fo", &f, l_Vector.Get(&v3)))
-			|| (lua_isnumber(L, 2) && ade_get_args(L, "of", l_Vector.Get(&v3), &f)))
-		{
-			vm_vec_scale(&v3, 1.0f/f);
-		}
-	}
-	else
-	{
-		vec3d *v1 = NULL;
-		vec3d *v2 = NULL;
-		if(!ade_get_args(L, "oo", l_Vector.GetPtr(&v1), l_Vector.GetPtr(&v2)))
-			return ade_set_args(L, "o", l_Vector.Set(vmd_zero_vector));
-
-		v3.xyz.x = v1->xyz.x / v2->xyz.x;
-		v3.xyz.y = v1->xyz.y / v2->xyz.y;
-		v3.xyz.z = v1->xyz.z / v2->xyz.z;
-	}
-
-	return ade_set_args(L, "o", l_Vector.Set(v3));
-}
-
-
-ADE_FUNC(__tostring, l_Vector, NULL, "Converts a vector to string with format \"(x,y,z)\"", "string", "Vector as string, or empty string if handle is invalid")
-{
-	vec3d *v3;
-	if(!ade_get_args(L, "o", l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "s", "");
-
-	char buf[128];
-	sprintf(buf, "(%f,%f,%f)", v3->xyz.x, v3->xyz.y, v3->xyz.z);
-
-	return ade_set_args(L, "s", buf);
-}
-
-ADE_FUNC(getOrientation, l_Vector, NULL,
-		 "Returns orientation object representing the direction of the vector. Does not require vector to be normalized.",
-		 "orientation",
-		 "Orientation object, or null orientation object if handle is invalid")
-{
-	vec3d v3;
-	if(!ade_get_args(L, "o", l_Vector.Get(&v3)))
-		return ade_set_error(L, "o", l_Matrix.Set(matrix_h()));
-
-	matrix mt = vmd_identity_matrix;
-
-	vm_vec_normalize_safe(&v3);
-	vm_vector_2_matrix_norm(&mt, &v3);
-	matrix_h mh(&mt);
-	
-	return ade_set_args(L, "o", l_Matrix.Set(mh));
-}
-
-ADE_FUNC(getMagnitude, l_Vector, NULL, "Returns the magnitude of a vector (Total regardless of direction)", "number", "Magnitude of vector, or 0 if handle is invalid")
-{
-	vec3d *v3;
-	if(!ade_get_args(L, "o", l_Vector.GetPtr(&v3)))
-		return ade_set_error(L, "f", 0.0f);
-
-	return ade_set_args(L, "f", vm_vec_mag(v3));
-}
-
-ADE_FUNC(getDistance, l_Vector, "Vector", "Distance", "number", "Returns distance from another vector")
-{
-	vec3d *v3a, *v3b;
-	if(!ade_get_args(L, "oo", l_Vector.GetPtr(&v3a), l_Vector.GetPtr(&v3b)))
-		return ade_set_error(L, "f", 0.0f);
-
-	return ade_set_args(L, "f",vm_vec_dist(v3a, v3b));
-}
-
-ADE_FUNC(getDotProduct, l_Vector, "vector OtherVector", "Returns dot product of vector object with vector argument", "number", "Dot product, or 0 if a handle is invalid")
-{
-	vec3d *v3a, *v3b;
-	if(!ade_get_args(L, "oo", l_Vector.GetPtr(&v3a), l_Vector.GetPtr(&v3b)))
-		return ade_set_error(L, "f", 0.0f);
-
-	return ade_set_args(L, "f", vm_vec_dotprod(v3a, v3b));
-}
-
-ADE_FUNC(getCrossProduct, l_Vector, "vector OtherVector", "Returns cross product of vector object with vector argument", "vector", "Cross product, or null vector if a handle is invalid")
-{
-	vec3d *v3a, *v3b;
-	if(!ade_get_args(L, "oo", l_Vector.GetPtr(&v3a), l_Vector.GetPtr(&v3b)))
-		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
-
-	vec3d v3r;
-	vm_vec_crossprod(&v3r, v3a, v3b);
-
-	return ade_set_args(L, "o",l_Vector.Set(v3r));
-}
-
-ADE_FUNC(getScreenCoords, l_Vector, NULL, "Gets screen cordinates of a world vector", "number,number", "X (number), Y (number), or false if off-screen")
-{
-	vec3d v3;
-	if(!ade_get_args(L, "o", l_Vector.Get(&v3)))
-		return ADE_RETURN_NIL;
-
-	vertex vtx;
-	bool do_g3 = G3_count < 1;
-	if(do_g3)
-		g3_start_frame(1);
-	
-	g3_rotate_vertex(&vtx,&v3);
-	g3_project_vertex(&vtx);
-
-	if(do_g3)
-		g3_end_frame();
-
-	if(vtx.flags & PF_OVERFLOW)
-		return ADE_RETURN_FALSE;
-
-	return ade_set_args(L, "ff", vtx.screen.xyw.x, vtx.screen.xyw.y);
-}
-
-ADE_FUNC(getNormalized, l_Vector, NULL, "Returns a normalized version of the vector", "vector", "Normalized Vector, or NIL if invalid")
-{
-	vec3d v3;
-	if(!ade_get_args(L, "o", l_Vector.Get(&v3)))
-		return ADE_RETURN_NIL;
-
-	vm_vec_normalize(&v3);
-
-	return ade_set_args(L, "o", l_Vector.Set(v3));
 }
 
 //**********HANDLE: material
@@ -4236,7 +3825,7 @@ ADE_VIRTVAR(Bomb, l_Weaponclass, "boolean", "Is weapon class flagged as bomb", "
 
 	if(idx < 0 || idx > Num_weapon_types)
 		return ADE_RETURN_FALSE;
-	
+
 	weapon_info *info = &Weapon_info[idx];
 
 	if(ADE_SETTING_VAR)
@@ -4250,7 +3839,7 @@ ADE_VIRTVAR(Bomb, l_Weaponclass, "boolean", "Is weapon class flagged as bomb", "
 			info->wi_flags &= ~WIF_BOMB;
 		}
 	}
-		
+
 
 	if (info->wi_flags & WIF_BOMB)
 		return ADE_RETURN_TRUE;
@@ -4267,7 +3856,7 @@ ADE_VIRTVAR(CargoSize, l_Weaponclass, "number", "The cargo size of this weapon c
 
 	if(idx < 0 || idx > Num_weapon_types)
 		return ade_set_args(L, "f", -1.0f);
-	
+
 	weapon_info *info = &Weapon_info[idx];
 
 	if(ADE_SETTING_VAR)
@@ -4431,7 +4020,7 @@ ADE_FUNC(__gc, l_ColInfo, NULL, "Removes the allocated reference of this handle"
 }
 
 ADE_VIRTVAR(Model, l_ColInfo, "model", "The model this collision info is about", "model", "The model")
-{	
+{
 	mc_info_h* info;
 	model_h * mh;
 
@@ -4468,7 +4057,7 @@ ADE_FUNC(getCollisionDistance, l_ColInfo, NULL, "The distance to the closest col
 
 	mc_info *collide = info->Get();
 
-	if (collide->num_hits <= 0) 
+	if (collide->num_hits <= 0)
 	{
 		return ade_set_args(L, "f", -1.0f);;
 	}
@@ -4490,8 +4079,8 @@ ADE_FUNC(getCollisionPoint, l_ColInfo, "[boolean local]", "The collision point o
 		return ADE_RETURN_NIL;
 
 	mc_info *collide = info->Get();
-	
-	if (collide->num_hits <= 0) 
+
+	if (collide->num_hits <= 0)
 	{
 		return ADE_RETURN_NIL;
 	}
@@ -4517,7 +4106,7 @@ ADE_FUNC(getCollisionNormal, l_ColInfo, "[boolean local]", "The collision normal
 
 	mc_info *collide = info->Get();
 
-	if (collide->num_hits <= 0) 
+	if (collide->num_hits <= 0)
 	{
 		return ADE_RETURN_NIL;
 	}
@@ -4609,7 +4198,7 @@ ADE_INDEXER(l_ModelTextures, "texture", "number Index/string TextureName", "text
 				tinfo = &tmap->textures[tnum];
 		}
 	}
-	
+
 	if(tinfo == NULL)
 		return ade_set_error(L, "o", l_Texture.Set(-1));
 
@@ -4840,7 +4429,7 @@ ADE_FUNC(getSignature, l_Object, NULL, "Gets the object's unique signature", "nu
 
 	if(!oh->IsValid())
 		return ade_set_error(L, "i", -1);
- 
+
 	// this shouldn't be possible, added here to trap the offending object
 	Assert(oh->sig > 0);
 
@@ -4891,7 +4480,7 @@ ADE_FUNC(getfvec, l_Object, "[boolean normalize]", "Returns the objects' current
 	object_h *objh = NULL;
 	object *obj = NULL;
 	bool normalize = false;
-	
+
 	if (!ade_get_args(L, "o|b", l_Object.GetPtr(&objh), &normalize)) {
 		return ADE_RETURN_NIL;
 	}
@@ -4912,7 +4501,7 @@ ADE_FUNC(getuvec, l_Object, "[boolean normalize]", "Returns the objects' current
 	object_h *objh = NULL;
 	object *obj = NULL;
 	bool normalize = false;
-	
+
 	if (!ade_get_args(L, "o|b", l_Object.GetPtr(&objh), &normalize)) {
 		return ADE_RETURN_NIL;
 	}
@@ -4933,7 +4522,7 @@ ADE_FUNC(getrvec, l_Object, "[boolean normalize]", "Returns the objects' current
 	object_h *objh = NULL;
 	object *obj = NULL;
 	bool normalize = false;
-	
+
 	if (!ade_get_args(L, "o|b", l_Object.GetPtr(&objh), &normalize)) {
 		return ADE_RETURN_NIL;
 	}
@@ -5504,7 +5093,7 @@ ADE_INDEXER(l_CockpitDisplayInfos, "number/string", "Returns the handle at the r
 		}
 
 		index--; // Lua -> C/C++
-		
+
 		return ade_set_args(L, "o", l_DisplayInfo.Set(cockpit_disp_info_h(cdih->Get(), index)));
 	}
 	else
@@ -6052,7 +5641,7 @@ ADE_FUNC(renderTechModel, l_Shipclass, "X1, Y1, X2, Y2, [Rotation %, Pitch %, Ba
 	//Handle light
 	light_reset();
 	vec3d light_dir = vmd_zero_vector;
-	light_dir.xyz.y = 1.0f;	
+	light_dir.xyz.y = 1.0f;
 	light_add_directional(&light_dir, 0.65f, 1.0f, 1.0f, 1.0f);
 	light_rotate_all();
 
@@ -6123,7 +5712,7 @@ ADE_FUNC(renderTechModel2, l_Shipclass, "X1, Y1, X2, Y2, orientation Orientation
 	//Handle light
 	light_reset();
 	vec3d light_dir = vmd_zero_vector;
-	light_dir.xyz.y = 1.0f;	
+	light_dir.xyz.y = 1.0f;
 	light_add_directional(&light_dir, 0.65f, 1.0f, 1.0f, 1.0f);
 	light_rotate_all();
 
@@ -6150,7 +5739,7 @@ ADE_FUNC(renderTechModel2, l_Shipclass, "X1, Y1, X2, Y2, orientation Orientation
 	return ade_set_args(L, "b", true);
 }
 
-ADE_FUNC(isModelLoaded, l_Shipclass, "[boolean Load = false]", "Checks if the model used for this shipclass is loaded or not and optionally loads the model, which might be a slow operation.", "boolean", "If the model is loaded or not") 
+ADE_FUNC(isModelLoaded, l_Shipclass, "[boolean Load = false]", "Checks if the model used for this shipclass is loaded or not and optionally loads the model, which might be a slow operation.", "boolean", "If the model is loaded or not")
 {
 	int idx;
 	bool load_check = false;
@@ -6163,7 +5752,7 @@ ADE_FUNC(isModelLoaded, l_Shipclass, "[boolean Load = false]", "Checks if the mo
 		return ADE_RETURN_FALSE;
 
 	if(load_check){
-		sip->model_num = model_load(sip->pof_file, sip->n_subsystems, &sip->subsystems[0]);	
+		sip->model_num = model_load(sip->pof_file, sip->n_subsystems, &sip->subsystems[0]);
 	}
 
 	if (sip->model_num > -1)
@@ -6655,7 +6244,7 @@ ADE_VIRTVAR(Capacity, l_WeaponBank, "number", "The actual capacity of a weapon b
 			}
 			return ade_set_args(L, "i", bh->sw->tertiary_bank_capacity);
 	}
-	
+
 	return ade_set_error(L, "i", -1);
 }
 
@@ -6858,7 +6447,7 @@ ADE_VIRTVAR(ArmorClass, l_Subsystem, "string", "Current Armor class", "string", 
 	ship_subsys_h *sso;
 	char *s = NULL;
 	char *name = NULL;
-	
+
 	if(!ade_get_args(L, "o|s", l_Subsystem.GetPtr(&sso), &s))
 		return ade_set_error(L, "s", "");
 
@@ -7245,7 +6834,7 @@ ADE_VIRTVAR(Radius, l_Subsystem, "number", "The radius of this subsystem", "numb
 	ship_subsys_h *sso;
 	if (!ade_get_args(L, "o", l_Subsystem.GetPtr(&sso)))
 		return ade_set_error(L, "f", 0.0f);
-	
+
 	if (!sso->IsValid())
 		return ade_set_error(L, "f", 0.0f);
 
@@ -7378,12 +6967,12 @@ ADE_FUNC(fireWeapon, l_Subsystem, "[Turret weapon index = 1, Flak range = 100]",
 	{
 		return ADE_RETURN_FALSE;
 	}
-	
+
 	wnum--;	//Lua->FS2
 
 	//Get default turret info
 	vec3d gpos, gvec;
-	
+
 	ship_get_global_turret_gun_info(sso->objp, sso->ss, &gpos, &gvec, 1, NULL);
 
 	bool rtn = turret_fire_weapon(wnum, sso->ss, OBJ_INDEX(sso->objp), &gpos, &gvec, NULL, flak_range);
@@ -7414,7 +7003,7 @@ ADE_FUNC(rotateTurret, l_Subsystem, "vector Pos[, boolean reset=false", "Rotates
 
 	// Find direction of turret
 	model_instance_find_world_dir(&gvec, &tp->turret_norm, tp->model_num, Ships[objp->instance].model_instance_num, tp->turret_gun_sobj, &objp->orient, &objp->pos );
-		
+
 	int ret_val = model_rotate_gun(Ship_info[(&Ships[sso->objp->instance])->ship_info_index].model_num, tp, &Objects[sso->objp->instance].orient, &sso->ss->submodel_info_1.angs, &sso->ss->submodel_info_2.angs, &Objects[sso->objp->instance].pos, &pos, (&Ships[sso->objp->instance])->objnum, reset);
 
 	if (ret_val)
@@ -7431,7 +7020,7 @@ ADE_FUNC(getTurretHeading, l_Subsystem, NULL, "Returns the turrets forward vecto
 
 	if(!sso->IsValid())
 		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
-	
+
 	vec3d gvec;
 	object *objp = sso->objp;
 
@@ -7467,7 +7056,7 @@ ADE_FUNC(getNextFiringPosition, l_Subsystem, NULL, "Retrieves the next position 
 	ship_subsys_h *sso;
 	if(!ade_get_args(L, "o", l_Subsystem.GetPtr(&sso)))
 		return ade_set_error(L, "oo", l_Vector.Set(vmd_zero_vector), l_Vector.Set(vmd_zero_vector));
-	
+
 	if(!sso->IsValid())
 		return ade_set_error(L, "oo", l_Vector.Set(vmd_zero_vector), l_Vector.Set(vmd_zero_vector));
 
@@ -7484,7 +7073,7 @@ ADE_FUNC(getTurretMatrix, l_Subsystem, NULL, "Returns current subsystems turret 
 	matrix m;
 	if(!ade_get_args(L, "o", l_Subsystem.GetPtr(&sso)))
 		return ADE_RETURN_NIL;
-	
+
 	if(!sso->IsValid())
 		return ADE_RETURN_NIL;
 
@@ -8243,7 +7832,7 @@ ADE_VIRTVAR(ShieldArmorClass, l_Ship, "string", "Current Armor class of the ship
 	object_h *objh;
 	char *s = NULL;
 	char *name = NULL;
-	
+
 	if(!ade_get_args(L, "o|s", l_Ship.GetPtr(&objh), &s))
 		return ade_set_error(L, "s", "");
 
@@ -8270,7 +7859,7 @@ ADE_VIRTVAR(ArmorClass, l_Ship, "string", "Current Armor class", "string", "Armo
 	object_h *objh;
 	char *s = NULL;
 	char *name = NULL;
-	
+
 	if(!ade_get_args(L, "o|s", l_Ship.GetPtr(&objh), &s))
 		return ade_set_error(L, "s", "");
 
@@ -8746,7 +8335,7 @@ ADE_VIRTVAR(Textures, l_Ship, "shiptextures", "Gets ship textures", "shiptexture
 	if(ADE_SETTING_VAR && sh != NULL && sh->IsValid()) {
 		ship *src = &Ships[sh->objp->instance];
 		ship *dest = &Ships[dh->objp->instance];
-		
+
 		if (src->ship_replacement_textures != NULL)
 		{
 			if (dest->ship_replacement_textures == NULL)
@@ -8759,7 +8348,7 @@ ADE_VIRTVAR(Textures, l_Ship, "shiptextures", "Gets ship textures", "shiptexture
 	return ade_set_args(L, "o", l_ShipTextures.Set(object_h(dh->objp)));
 }
 
-ADE_VIRTVAR(FlagAffectedByGravity, l_Ship, "boolean", "Checks for the \"affected-by-gravity\" flag", "boolean", "True if flag is set, false if flag is not set and nil on error") 
+ADE_VIRTVAR(FlagAffectedByGravity, l_Ship, "boolean", "Checks for the \"affected-by-gravity\" flag", "boolean", "True if flag is set, false if flag is not set and nil on error")
 {
 	object_h *objh=NULL;
 	bool set = false;
@@ -8769,7 +8358,7 @@ ADE_VIRTVAR(FlagAffectedByGravity, l_Ship, "boolean", "Checks for the \"affected
 
 	if (!objh->IsValid())
 		return ADE_RETURN_NIL;
-	
+
 	ship *shipp = &Ships[objh->objp->instance];
 
 	if(ADE_SETTING_VAR)
@@ -9041,7 +8630,7 @@ ADE_FUNC(hasShipExploded, l_Ship, NULL, "Checks if the ship explosion event has 
 	if (shipp->flags & SF_DYING) {
 		if (shipp->final_death_time == 0) {
 			return ade_set_args(L, "i", 2);
-		}		
+		}
 		if (shipp->pre_death_explosion_happened == 1) {
 			return ade_set_args(L, "i", 1);
 		}
@@ -9412,15 +9001,15 @@ ADE_FUNC(doManeuver, l_Ship, "number Duration, number Heading, number Pitch, num
 		if (arr[0] != 0) {
 			cip->heading = arr[0];
 			aip->ai_override_flags |= AIORF_HEADING;
-		} 
+		}
 		if (arr[1] != 0) {
 			cip->pitch = arr[1];
 			aip->ai_override_flags |= AIORF_PITCH;
-		} 
+		}
 		if (arr[2] != 0) {
 			cip->bank = arr[2];
 			aip->ai_override_flags |= AIORF_ROLL;
-		} 
+		}
 	}
 	if(f_move) {
 		aip->ai_override_flags = AIORF_FULL_LAT;
@@ -9431,15 +9020,15 @@ ADE_FUNC(doManeuver, l_Ship, "number Duration, number Heading, number Pitch, num
 		if (arr[3] != 0) {
 			cip->vertical = arr[3];
 			aip->ai_override_flags |= AIORF_UP;
-		} 
+		}
 		if (arr[4] != 0) {
 			cip->sideways = arr[4];
 			aip->ai_override_flags |= AIORF_SIDEWAYS;
-		} 
+		}
 		if (arr[5] != 0) {
 			cip->forward = arr[5];
 			aip->ai_override_flags |= AIORF_FORWARD;
-		} 
+		}
 	}
 	return ADE_RETURN_TRUE;
 }
@@ -9594,9 +9183,9 @@ ADE_FUNC(getCallsign, l_Ship, NULL, "Gets the callsign of the ship in the curren
 
 	if (shipp->callsign_index < 0)
 		return ade_set_args(L, "s", "");
-	
+
 	char temp_callsign[NAME_LENGTH];
-	
+
 	*temp_callsign = 0;
 	mission_parse_lookup_callsign_index(shipp->callsign_index, temp_callsign);
 
@@ -9621,9 +9210,9 @@ ADE_FUNC(getAltClassName, l_Ship, NULL, "Gets the alternate class name of the sh
 
 	if (shipp->alt_type_index < 0)
 		return ade_set_args(L, "s", "");
-	
+
 	char temp[NAME_LENGTH];
-	
+
 	*temp = 0;
 	mission_parse_lookup_alt_index(shipp->alt_type_index, temp);
 
@@ -9727,7 +9316,7 @@ ADE_VIRTVAR(DestroyedByWeapon, l_Weapon, "boolean", "Whether weapon was destroye
 	bool b = false;
 
 	int numargs = ade_get_args(L, "o|b", l_Weapon.GetPtr(&oh), &b);
-	
+
 	if(!numargs)
 		return ade_set_error(L, "b", false);
 
@@ -10001,10 +9590,10 @@ ADE_FUNC(isArmed, l_Weapon, "[boolean Hit target]", "Checks if the weapon is arm
 		return ADE_RETURN_FALSE;
 
 	weapon *wp = &Weapons[oh->objp->instance];
-	
+
 	if(weapon_armed(wp, hit_target))
 		return ADE_RETURN_TRUE;
-	
+
 	return ADE_RETURN_FALSE;
 }
 
@@ -10018,7 +9607,7 @@ ADE_FUNC(getCollisionInformation, l_Weapon, NULL, "Returns the collision informa
 		return ADE_RETURN_NIL;
 
 	weapon *wp = &Weapons[oh->objp->instance];
-	
+
 	if (wp->collisionOccured)
 		return ade_set_args(L, "o", l_ColInfo.Set(mc_info_h(new mc_info(wp->collisionInfo))));
 	else
@@ -10333,7 +9922,7 @@ ADE_FUNC(isExitCollision, l_Beam, "number", "Checks if the defined collision was
 	// so we have valid beam and valid indexer
 	if (bp->f_collisions[idx].is_exit_collision)
 		return ADE_RETURN_TRUE;
-	
+
 	return ADE_RETURN_FALSE;
 }
 
@@ -10342,7 +9931,7 @@ ADE_FUNC(getStartDirectionInfo, l_Beam, NULL, "Gets the start information about 
 	object_h *objh;
 	if(!ade_get_args(L, "o", l_Beam.GetPtr(&objh)))
 		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
-	
+
 	beam *bp = NULL;
 	if(objh->objp->instance > -1)
 		bp = &Beams[objh->objp->instance];
@@ -10350,7 +9939,7 @@ ADE_FUNC(getStartDirectionInfo, l_Beam, NULL, "Gets the start information about 
 		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
 
 	beam_info inf = bp->binfo;
-		
+
 	return ade_set_args(L, "o", l_Vector.Set(inf.dir_a));
 }
 
@@ -10359,7 +9948,7 @@ ADE_FUNC(getEndDirectionInfo, l_Beam, NULL, "Gets the end information about the 
 	object_h *objh;
 	if(!ade_get_args(L, "o", l_Beam.GetPtr(&objh)))
 		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
-	
+
 	beam *bp = NULL;
 	if(objh->objp->instance > -1)
 		bp = &Beams[objh->objp->instance];
@@ -10367,7 +9956,7 @@ ADE_FUNC(getEndDirectionInfo, l_Beam, NULL, "Gets the end information about the 
 		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
 
 	beam_info inf = bp->binfo;
-		
+
 	return ade_set_args(L, "o", l_Vector.Set(inf.dir_b));
 }
 
@@ -10630,7 +10219,7 @@ ADE_VIRTVAR(SelfSubsystem, l_Camera, "subsystem", "New mount object subsystem", 
 	bsp_info *sm = &pm->submodel[submodel];
 
 	ship_subsys *ss = ship_get_subsys(shipp, sm->name);
-	
+
 	if(ss == NULL)
 		return ade_set_error(L, "o", l_Subsystem.Set(ship_subsys_h()));
 
@@ -10685,7 +10274,7 @@ ADE_VIRTVAR(TargetSubsystem, l_Camera, "subsystem", "New target subsystem", "sub
 	bsp_info *sm = &pm->submodel[submodel];
 
 	ship_subsys *ss = ship_get_subsys(shipp, sm->name);
-	
+
 	if(ss == NULL)
 		return ade_set_error(L, "o", l_Subsystem.Set(ship_subsys_h()));
 
@@ -10707,7 +10296,7 @@ ADE_FUNC(setFOV, l_Camera, "[number FOV, number Zoom Time, number Zoom Accelerat
 	float dec_time=0.0f;
 	if(!ade_get_args(L, "o|ffff", l_Camera.Get(&cid), &n_fov, &time, &acc_time, &dec_time))
 		return ADE_RETURN_NIL;
-	
+
 	if(!cid.isValid())
 		return ADE_RETURN_NIL;
 
@@ -10731,7 +10320,7 @@ ADE_FUNC(setOrientation, l_Camera, "[world orientation Orientation, number Rotat
 	float dec_time=0.0f;
 	if(!ade_get_args(L, "o|offf", l_Camera.Get(&cid), l_Matrix.GetPtr(&mh), &time, &acc_time, &dec_time))
 		return ADE_RETURN_NIL;
-	
+
 	if(!cid.isValid())
 		return ADE_RETURN_NIL;
 
@@ -10764,7 +10353,7 @@ ADE_FUNC(setPosition, l_Camera, "[wvector Position, number Translation Time, num
 	float dec_time=0.0f;
 	if(!ade_get_args(L, "o|offf", l_Camera.Get(&cid), l_Vector.GetPtr(&pos), &time, &acc_time, &dec_time))
 		return ADE_RETURN_NIL;
-	
+
 	if(!cid.isValid())
 		return ADE_RETURN_NIL;
 
@@ -10807,7 +10396,7 @@ struct sound_entry_h
 		return true;
 	}
 
-	int getId() 
+	int getId()
 	{
 		if (!IsValid())
 			return -1;
@@ -11305,7 +10894,7 @@ ADE_FUNC(accessButtonInfo, l_Control_Info, "number, number, number, number", "Ac
 {
 	int i;
 	int bi_status[4];
-	
+
 	for(i=0;i<4;i++)
 		bi_status[i] = 0;
 
@@ -11488,7 +11077,7 @@ ADE_VIRTVAR(Velocity, l_Particle, "vector", "The current velocity of the particl
 	vec3d newVec = vmd_zero_vector;
 	if (!ade_get_args(L, "o|o", l_Particle.GetPtr(&ph), l_Vector.Get(&newVec)))
 		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
-	
+
 	if (ph == NULL)
 		return ade_set_error(L, "o", l_Vector.Set(vmd_zero_vector));
 
@@ -11509,7 +11098,7 @@ ADE_VIRTVAR(Age, l_Particle, "number", "The time this particle already lives", "
 	float newAge = -1.0f;
 	if (!ade_get_args(L, "o|f", l_Particle.GetPtr(&ph), &newAge))
 		return ade_set_error(L, "f", -1.0f);
-	
+
 	if (ph == NULL)
 		return ade_set_error(L, "f", -1.0f);
 
@@ -11531,7 +11120,7 @@ ADE_VIRTVAR(MaximumLife, l_Particle, "number", "The time this particle can live"
 	float newLife = -1.0f;
 	if (!ade_get_args(L, "o|f", l_Particle.GetPtr(&ph), &newLife))
 		return ade_set_error(L, "f", -1.0f);
-	
+
 	if (ph == NULL)
 		return ade_set_error(L, "f", -1.0f);
 
@@ -11553,7 +11142,7 @@ ADE_VIRTVAR(Radius, l_Particle, "number", "The radius of the particle", "number"
 	float newRadius = -1.0f;
 	if (!ade_get_args(L, "o|f", l_Particle.GetPtr(&ph), &newRadius))
 		return ade_set_error(L, "f", -1.0f);
-	
+
 	if (ph == NULL)
 		return ade_set_error(L, "f", -1.0f);
 
@@ -11575,7 +11164,7 @@ ADE_VIRTVAR(TracerLength, l_Particle, "number", "The tracer legth of the particl
 	float newTracer = -1.0f;
 	if (!ade_get_args(L, "o|f", l_Particle.GetPtr(&ph), &newTracer))
 		return ade_set_error(L, "f", -1.0f);
-	
+
 	if (ph == NULL)
 		return ade_set_error(L, "f", -1.0f);
 
@@ -11584,7 +11173,7 @@ ADE_VIRTVAR(TracerLength, l_Particle, "number", "The tracer legth of the particl
 
 	if (ADE_SETTING_VAR)
 	{
-		if (newTracer >= 0) 
+		if (newTracer >= 0)
 			ph->Get()->tracer_length = newTracer;
 	}
 
@@ -11597,7 +11186,7 @@ ADE_VIRTVAR(AttachedObject, l_Particle, "object", "The object this particle is a
 	object_h *newObj;
 	if (!ade_get_args(L, "o|o", l_Particle.GetPtr(&ph), l_Object.GetPtr(&newObj)))
 		return ade_set_error(L, "o", l_Object.Set(object_h()));
-	
+
 	if (ph == NULL)
 		return ade_set_error(L, "o", l_Object.Set(object_h()));
 
@@ -11618,7 +11207,7 @@ ADE_FUNC(isValid, l_Particle, NULL, "Detects whether this handle is valid", "boo
 	particle_h *ph = NULL;
 	if (!ade_get_args(L, "o", l_Particle.GetPtr(&ph)))
 		return ADE_RETURN_FALSE;
-	
+
 	if (ph == NULL)
 		return ADE_RETURN_FALSE;
 
@@ -11637,7 +11226,7 @@ ADE_FUNC(getSoundentry, l_Audio, "string/number", "Return a sound entry matching
 		int idx = -1;
 		if(!ade_get_args(L, "i", &idx))
 			return ade_set_error(L, "o", l_SoundEntry.Set(sound_entry_h()));
-		
+
 		index = gamesnd_get_by_tbl_index(idx);
 	}
 	else
@@ -11739,7 +11328,7 @@ ADE_FUNC(playGameSound, l_Audio, "Sound index, [Panning (-1.0 left to 1.0 right)
 	bool voice_msg = false;
 	if(!ade_get_args(L, "i|ffib", &idx, &pan, &vol, &pri, &voice_msg))
 		return ADE_RETURN_NIL;
-	
+
 	if(idx < 0)
 		return ADE_RETURN_FALSE;
 
@@ -11792,12 +11381,12 @@ ADE_FUNC(stopMusic, l_Audio, "int audiohandle, [bool fade = false]", "Stops a pl
 	if(!ade_get_args(L, "i|b", &ah, &fade))
 		return ADE_RETURN_NIL;
 
-	if (ah >= MAX_AUDIO_STREAMS || ah < 0 ) 
+	if (ah >= MAX_AUDIO_STREAMS || ah < 0 )
 		return ADE_RETURN_NIL;
 
 	audiostream_close_file(ah, fade);
 	return ADE_RETURN_NIL;
-	
+
 }
 
 //**********LIBRARY: Base
@@ -11989,10 +11578,10 @@ ADE_FUNC(postGameEvent, l_Base, "gameevent Event", "Sets current game event. Not
 	if(!gh->IsValid())
 		return ade_set_error(L, "b", false);
 
-	if (Om_tracker_flag) 
+	if (Om_tracker_flag)
 		Multi_options_g.protocol = NET_TCP;
 	psnet_use_protocol(Multi_options_g.protocol);
-	
+
 	gameseq_post_event(gh->Get());
 
 	return ADE_RETURN_TRUE;
@@ -12070,10 +11659,10 @@ int l_cf_get_path_id(char* n_path)
 
 	size_t path_len = strlen(n_path);
 	char *buf = (char*) vm_malloc((strlen(n_path)+1) * sizeof(char));
-	
-	if (!buf) 
+
+	if (!buf)
 		return CF_TYPE_INVALID;
-		
+
 	strcpy(buf, n_path);
 
 	//Remove trailing slashes
@@ -12166,7 +11755,7 @@ ADE_FUNC(openFile, l_CFile, "string Filename, [string Mode=\"r\", string Path = 
 		return ade_set_error(L, "o", l_File.Set(NULL));
 
 	CFILE *cfp = cfopen(n_filename, n_mode, type, path);
-	
+
 	if(!cf_is_valid(cfp))
 		return ade_set_error(L, "o", l_File.Set(NULL));
 
@@ -12429,7 +12018,7 @@ ADE_VIRTVAR(HUDDrawn, l_HUD, "boolean", "Current HUD draw status", "boolean", "I
 
 ADE_FUNC(setHUDGaugeColor, l_HUD, "number (index number of the gauge), [number red, number green, number blue, number alpha]", "Color used to draw the gauge", "boolean", "If the operation was successful")
 {
-	int idx = -1; 
+	int idx = -1;
 	int r = 0;
 	int g = 0;
 	int b = 0;
@@ -12457,8 +12046,8 @@ ADE_FUNC(getHUDGaugeColor, l_HUD, "number (index number of the gauge)", "Color u
 		return ADE_RETURN_NIL;
 
 	color c = HUD_config.clr[idx];
-	
-	return ade_set_args(L, "iiii", (int) c.red, (int) c.green, (int) c.blue, (int) c.alpha);	
+
+	return ade_set_args(L, "iiii", (int) c.red, (int) c.green, (int) c.blue, (int) c.alpha);
 }
 
 ADE_FUNC(getHUDGaugeHandle, l_HUD, "string Name", "Returns a handle to a specified HUD gauge", "HudGauge", "HUD Gauge handle, or nil if invalid")
@@ -12756,7 +12345,7 @@ ADE_FUNC(getVectorFromCoords, l_Graphics,
 	int x = gr_screen.max_w/2;
 	int y = gr_screen.max_h/2;
 	float depth = 0.0f;
-	bool normalize = false; 
+	bool normalize = false;
 	ade_get_args(L, "|iifb", &x, &y, &depth, &normalize);
 
 	vec3d pos = vmd_zero_vector;
@@ -13048,7 +12637,7 @@ ADE_FUNC(drawSphere, l_Graphics, "[number Radius = 1.0, vector Position]", "Draw
 		matrix cam_orient;
 
 		camid cid;
-		
+
 		if (Viewer_mode & VM_FREECAMERA)
 			cid = cam_get_current();
 		else
@@ -13208,7 +12797,7 @@ ADE_FUNC(drawTargetingBrackets, l_Graphics, "object Object, [boolean draw=true, 
 	int modelnum;
 	bool entered_frame = false;
 	SCP_list<CJumpNode>::iterator jnp;
-	
+
 	if ( !(g3_in_frame( ) > 0 ) )
 	{
 		g3_start_frame( 0 );
@@ -13250,7 +12839,7 @@ ADE_FUNC(drawTargetingBrackets, l_Graphics, "object Object, [boolean draw=true, 
 				if(jnp->GetSCPObject() == targetp)
 					break;
 			}
-			
+
 			modelnum = jnp->GetModelNumber();
 			bound_rc = model_find_2d_bound_min( modelnum, &targetp->orient, &targetp->pos,&x1,&y1,&x2,&y2 );
 			break;
@@ -13297,7 +12886,7 @@ ADE_FUNC(drawSubsystemTargetingBrackets, l_Graphics, "subsystem subsys, [boolean
 	}
 
 	bool entered_frame = false;
-	
+
 	if ( !(g3_in_frame( ) > 0 ) )
 	{
 		g3_start_frame( 0 );
@@ -13330,11 +12919,11 @@ ADE_FUNC(drawOffscreenIndicator, l_Graphics, "object Object, [boolean draw=true,
 	bool draw = false;
 	bool setcolor = false;
 	vec2d outpoint = { -1.0f, -1.0f };
-	
+
 	if(!Gr_inited) {
 		return ADE_RETURN_NIL;
 	}
-	
+
 	if( !ade_get_args(L, "o|bb", l_Object.GetPtr(&objh), &draw, &setcolor) ) {
 		return ADE_RETURN_NIL;
 	}
@@ -13368,7 +12957,7 @@ ADE_FUNC(drawOffscreenIndicator, l_Graphics, "object Object, [boolean draw=true,
 	for(j = 0; j < num_gauges; j++) {
 		if (default_hud_gauges[j]->getObjectType() == HUD_OBJECT_OFFSCREEN) {
 			HudGaugeOffscreen *offscreengauge = static_cast<HudGaugeOffscreen*>(default_hud_gauges[j]);
-			
+
 			offscreengauge->preprocess();
 			offscreengauge->onFrame(flFrametime);
 
@@ -13506,7 +13095,7 @@ ADE_FUNC(getStringWidth, l_Graphics, "string String", "Gets string width", "numb
 	int w;
 
 	gr_get_string_size(&w, NULL, s);
-	
+
 	return ade_set_args(L, "i", w);
 }
 
@@ -13668,7 +13257,7 @@ ADE_FUNC(drawMonochromeImage, l_Graphics, "string Filename/texture Texture, numb
 
 	if(sy < 0)
 		sy = h + sy;
-	
+
 	if(x2!=INT_MAX)
 		w = x2-x;
 
@@ -13688,7 +13277,7 @@ ADE_FUNC(getImageWidth, l_Graphics, "string Filename", "Gets image width", "numb
 		return ade_set_error(L, "i", 0);
 
 	int w;
-	
+
 	int idx = bm_load(s);
 
 	if(idx < 0)
@@ -13705,7 +13294,7 @@ ADE_FUNC(getImageHeight, l_Graphics, "Image name", "Gets image height", "number"
 		return ade_set_error(L, "i", 0);
 
 	int h;
-	
+
 	int idx = bm_load(s);
 
 	if(idx < 0)
@@ -14062,7 +13651,7 @@ ADE_INDEXER(l_Mission_Debris, "number Index", "Array of debris in the current mi
 	return ade_set_error(L, "o", l_Debris.Set(object_h()));
 }
 
-ADE_FUNC(__len, l_Mission_Debris, NULL, 
+ADE_FUNC(__len, l_Mission_Debris, NULL,
 		 "Number of debris pieces in the mission. "
 		 "Note that the value returned is only good until a piece of debris is destroyed, and so cannot be relied on for more than one frame.",
 		 "number",
@@ -14087,7 +13676,7 @@ ADE_INDEXER(l_Mission_EscortShips, "number Index", "Gets escort ship at specifie
 	idx--;
 
 	idx = hud_escort_return_objnum(idx);
-	
+
 	if(idx < 0)
 		return ade_set_error(L, "o", l_Ship.Set(object_h()));
 
@@ -14373,7 +13962,7 @@ ADE_INDEXER(l_Mission_Wings, "number Index/string WingName", "Wings in the missi
 		return ade_set_error(L, "o", l_Wing.Set(-1));
 
 	int idx = wing_name_lookup(name);
-	
+
 	if(idx < 0)
 	{
 		idx = atoi(name);
@@ -14404,7 +13993,7 @@ ADE_FUNC(createShip, l_Mission, "[string Name, shipclass Class=Shipclass[1], ori
 	{
 		real_orient = orient->GetMatrix();
 	}
-	
+
 	int obj_idx = ship_create(real_orient, &pos, sclass, name);
 
 	if(obj_idx > -1) {
@@ -14525,7 +14114,7 @@ ADE_FUNC(startMission, l_Mission, "[Filename or MISSION_* enumeration, Briefing 
 	if (Game_mode & GM_IN_MISSION) {
 		// TO DO... All the things needed if this function is called in any state of the game while mission is running.
 		//    most likely all require 'stricmp(str, Game_current_mission_filename)' to make sure missions arent mixed
-		//    but after that it might be possible to imprement method for jumping directly into already running 
+		//    but after that it might be possible to imprement method for jumping directly into already running
 		//    missions.
 		return ade_set_args(L, "b", false);
 	// if mission is not running
@@ -14727,7 +14316,7 @@ ADE_INDEXER(l_Tables_ShipClasses, "number Index/string Name", "Array of ship cla
 		return ade_set_error(L, "o", l_Shipclass.Set(-1));
 
 	int idx = ship_info_lookup(name);
-	
+
 	if(idx < 0) {
 		idx = atoi(name);
 		if(idx < 1 || idx > Num_ship_classes)
@@ -14762,7 +14351,7 @@ ADE_INDEXER(l_Tables_WeaponClasses, "number Index/string WeaponName", "Array of 
 		return 0;
 
 	int idx = weapon_info_lookup(name);
-	
+
 	if(idx < 0) {
 		idx = atoi(name);
 
@@ -15063,6 +14652,9 @@ int script_state::CreateLuaState()
     luabind::open(L);
     api::types::registerTypes(L);
     api::libs::registerLibraries(L);
+
+    // The enums need to be registered after the types have been registered
+    api::types::luaenum::initializeEnumValues(L);
 
     /*
 	//*****INITIALIZE ADE
@@ -15398,11 +14990,11 @@ int ade_get_args(lua_State *L, char *fmt, ...)
 						lua_getmetatable(L, nargs);
 						int mtb_ldx = lua_gettop(L);
 						Assert(!lua_isnil(L, -1));
-	
+
 						//Get ID
 						lua_pushstring(L, "__adeid");
 						lua_rawget(L, mtb_ldx);
-	
+
 						if(lua_tonumber(L, -1) != od.idx)
 						{
 							lua_pushstring(L, "__adederivid");
@@ -15640,7 +15232,7 @@ static int ade_index_handler(lua_State *L)
 		lua_pushcfunction(L, ade_friendly_error);
 		int err_ldx = lua_gettop(L);
 		int i;
-		
+
 		//*****WMC - go for the type name
 		lua_pushstring(L, "__adeid");
 		lua_rawget(L, mtb_ldx);
@@ -15857,7 +15449,7 @@ int ade_table_entry::SetTable(lua_State *L, int p_amt_ldx, int p_mtb_ldx)
 				nset = ade_set_args(L, typestr, Value);
 				break;
 		}
-				
+
 		if (nset)
 		{
 			data_ldx = lua_gettop(L);
@@ -16246,7 +15838,7 @@ void ade_output_toc(FILE *fp, ade_table_entry *ate)
 {
 	Assert(fp != NULL);
 	Assert(ate != NULL);
-		
+
 	//WMC - sanity checking
 	if(ate->Name == NULL && ate->ShortName == NULL) {
 		Warning(LOCATION, "Found ade_table_entry with no name or shortname");
