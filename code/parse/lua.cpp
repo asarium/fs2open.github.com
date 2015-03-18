@@ -710,51 +710,6 @@ struct enum_h {
 };
 ade_obj<enum_h> l_Enum("enumeration", "Enumeration object");
 
-ADE_FUNC(__newindex, l_Enum, "enumeration", "Sets enumeration to specified value (if it is not a global", "enumeration", "enumeration")
-{
-	enum_h *e1=NULL, *e2=NULL;
-	if(!ade_get_args(L, "oo", l_Enum.GetPtr(&e1), l_Enum.GetPtr(&e2)))
-		return ade_set_error(L, "o", l_Enum.Set(enum_h()));
-
-	if(!e1->is_constant)
-		e1->index = e2->index;
-
-	return ade_set_args(L, "o", l_Enum.Set(*e1));
-}
-
-ADE_FUNC(__tostring, l_Enum, NULL, "Returns enumeration name", "string", "Enumeration name, or \"<INVALID>\" if invalid")
-{
-	enum_h *e = NULL;
-	if(!ade_get_args(L, "o", l_Enum.GetPtr(&e)))
-		return ade_set_args(L, "s", "<INVALID>");
-
-	if(e->index < 1 || e->index >= ENUM_NEXT_INDEX)
-		return ade_set_args(L, "s", "<INVALID>");
-
-	uint i;
-	for(i = 0; i < Num_enumerations; i++)
-	{
-		if(Enumerations[i].def == e->index)
-			return ade_set_args(L, "s", Enumerations[i].name);
-	}
-
-	return ade_set_args(L, "s", "<INVALID>");
-}
-
-ADE_FUNC(__eq, l_Enum, "enumeration", "Compares the two enumerations for equality", "boolean", "true if equal, false otherwise")
-{
-	enum_h *e1 = NULL;
-	enum_h *e2 = NULL;
-
-	if(!ade_get_args(L, "oo", l_Enum.GetPtr(&e1), l_Enum.GetPtr(&e2)))
-		return ade_set_error(L, "o", l_Enum.Set(enum_h()));
-
-	if (e1 == NULL || e2 == NULL)
-		return ADE_RETURN_FALSE;
-
-	return ade_set_args(L, "b", e1->index == e2->index);
-}
-
 //**********HANDLE: event
 ade_obj<int> l_Event("event", "Mission event handle");
 
