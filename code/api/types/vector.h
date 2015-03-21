@@ -1,12 +1,11 @@
 #pragma once
 
-#include <luabind/object.hpp>
-#include <luabind/lua_state_fwd.hpp>
-
 #include "globalincs/pstypes.h"
 
 #include "api/types/types.h"
-#include "api/types/matrix.h"
+
+#include <luabind/object.hpp>
+#include <luabind/luabind.hpp>
 
 namespace api
 {

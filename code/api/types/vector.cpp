@@ -268,7 +268,7 @@ namespace api
                 .def("getDistance", &vector::getDistance)
                 .def("getDotProduct", &vector::getDotProduct)
                 .def("getCrossProduct", &vector::getCrossProduct)
-                .def("getScreenCoords", &vector::getScreenCoords, pure_out_value(_3) + pure_out_value(_4))
+                .def("getScreenCoords", &vector::getScreenCoords, pure_out_value(_3) | pure_out_value(_4))
                 .def("getNormalized", &vector::getNormalized)
 
                 // Operators
