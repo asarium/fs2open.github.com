@@ -2,8 +2,9 @@
 
 #include "globalincs/pstypes.h"
 
-#include "api/types/types.h"
 #include "api/types/vector.h"
+
+#include <luabind/luabind.hpp>
 
 namespace api
 {
@@ -14,7 +15,7 @@ namespace api
         class matrix
         {
         public:
-            matrix(const ::matrix&);
+            explicit matrix(const ::matrix&);
 
             matrix();
             matrix(float, float, float);
