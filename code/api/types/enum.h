@@ -4,6 +4,10 @@
 
 #include "api/types/types.h"
 
+namespace luabind{
+    struct scope;
+}
+
 namespace api
 {
     namespace types
@@ -86,7 +90,7 @@ namespace api
                 NUM_VALUES
             };
 
-            luaenum(Values val);
+            explicit luaenum(Values val);
 
             const char* tostring() const;
 

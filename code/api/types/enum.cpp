@@ -5,6 +5,7 @@
 
 #include <luabind/object.hpp>
 #include <luabind/operator.hpp>
+#include <luabind/class.hpp>
 
 namespace
 {
