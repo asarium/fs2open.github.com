@@ -3,7 +3,6 @@
 extern "C" {
 #include <lua.h>
 }
-#include <luabind/luabind.hpp>
 
 namespace api
 {
