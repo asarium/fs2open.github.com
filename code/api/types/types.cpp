@@ -5,6 +5,8 @@
 #include "matrix.h"
 #include "enum.h"
 
+#include <luabind/luabind.hpp>
+
 namespace api
 {
     namespace types
