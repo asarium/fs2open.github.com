@@ -5,19 +5,16 @@
 #include "api/lua/types/vector/vector_operator_tests.lua.h"
 #include "api/lua/types/vector/vector_getScreenCoords.lua.h"
 
-namespace types
+class VectorTests : public LuaFileTest
 {
-    class VectorTest : public LuaFileTest
-    {
-    };
+};
 
-    TEST_F(VectorTest, IndexTests)
-    {
-        executeScript(api_vector_index_tests_lua);
-    }
+TEST_F(VectorTests, IndexTests)
+{
+    executeScript(api_vector_index_tests_lua);
+}
 
-    TEST_F(VectorTest, OperatorTests)
-    {
-        executeScript(api_vector_operator_tests_lua);
-    }
+TEST_F(VectorTests, OperatorTests)
+{
+    executeScript(api_vector_operator_tests_lua);
 }

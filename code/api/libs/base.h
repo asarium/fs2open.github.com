@@ -26,6 +26,10 @@ namespace api
 
             static types::matrix createOrientation(float, float, float, float, float, float, float, float, float);
 
+            static float getFrametime(bool adjustForTimeCompression);
+
+            static const char* getCurrentMPStatus();
+
             static luabind::scope registerScope();
         };
     }

@@ -11347,64 +11347,6 @@ ADE_FUNC(stopMusic, l_Audio, "int audiohandle, [bool fade = false]", "Stops a pl
 //**********LIBRARY: Base
 ade_lib l_Base("Base", NULL, "ba", "Base FreeSpace 2 functions");
 
-ADE_FUNC(print, l_Base, "string Message", "Prints a string", NULL, NULL)
-{
-	mprintf(("%s", lua_tostring(L, -1)));
-
-	return ADE_RETURN_NIL;
-}
-
-ADE_FUNC(warning, l_Base, "string Message", "Displays a FreeSpace warning (debug build-only) message with the string provided", NULL, NULL)
-{
-	Warning(LOCATION, "%s", lua_tostring(L, -1));
-
-	return ADE_RETURN_NIL;
-}
-
-ADE_FUNC(error, l_Base, "string Message", "Displays a FreeSpace error message with the string provided", NULL, NULL)
-{
-	Error(LOCATION, "%s", lua_tostring(L, -1));
-
-	return ADE_RETURN_NIL;
-}
-
-ADE_FUNC(createOrientation, l_Base, "[p/r1c1, b/r1c2, h/r1c3, r2c1, r2c2, r2c3, r3c1, r3c2, r3c3]", "Given 0, 3, or 9 arguments, creates an orientation object with that orientation.", "orientation", "New orientation object, or null orientation on failure")
-{
-	matrix m;
-	int numargs = ade_get_args(L, "|fffffffff", &m.a1d[0], &m.a1d[1], &m.a1d[2], &m.a1d[3], &m.a1d[4], &m.a1d[5], &m.a1d[6], &m.a1d[7], &m.a1d[8]);
-	if(!numargs)
-	{
-		return ade_set_args(L, "o", l_Matrix.Set( matrix_h(&vmd_identity_matrix) ));
-	}
-	else if(numargs == 3)
-	{
-		angles a = {m.a1d[0], m.a1d[1], m.a1d[2]};
-		return ade_set_args(L, "o", l_Matrix.Set(matrix_h(&a)));
-	}
-	else if(numargs == 9)
-	{
-		return ade_set_args(L, "o", l_Matrix.Set(matrix_h(&m)));
-	}
-
-	return ade_set_error(L, "o", l_Matrix.Set(matrix_h()));
-}
-
-ADE_FUNC(createVector, l_Base, "[x, y, z]", "Creates a vector object", "vector", "Vector object")
-{
-	vec3d v3 = vmd_zero_vector;
-	ade_get_args(L, "|fff", &v3.xyz.x, &v3.xyz.y, &v3.xyz.z);
-
-	return ade_set_args(L, "o", l_Vector.Set(v3));
-}
-
-ADE_FUNC(getFrametime, l_Base, "[Do not adjust for time compression (Boolean)]", "Gets how long this frame is calculated to take. Use it to for animations, physics, etc to make incremental changes.", "number", "Frame time (seconds)")
-{
-	bool b=false;
-	ade_get_args(L, "|b", &b);
-
-	return ade_set_args(L, "f", b ? flRealframetime : flFrametime);
-}
-
 ADE_FUNC(getCurrentGameState, l_Base, "[Depth (number)]", "Gets current FreeSpace state; if a depth is specified, the state at that depth is returned. (IE at the in-game options game, a depth of 1 would give you the game state, while the function defaults to 0, which would be the options screen.", "gamestate", "Current game state at specified depth, or invalid handle if no game state is active yet")
 {
 	int depth = 0;
