@@ -33,3 +33,5 @@ IF(MSVC60 OR MSVC70)
 ENDIF(MSVC60 OR MSVC70)
 
 ADD_SUBDIRECTORY(ffmpeg)
+
+include(boost.cmake)

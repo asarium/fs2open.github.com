@@ -5,8 +5,7 @@
 
 #include "globalincs/pstypes.h"
 
-#include "SDL_thread.h"
-#include "SDL_mutex.h"
+#include <boost/thread/sync_bounded_queue.hpp>
 
 namespace cutscene
 {
@@ -40,6 +39,7 @@ namespace cutscene
 
         virtual DataPointers getDataPointers() = 0;
     };
+    typedef std::shared_ptr<VideoFrame> VideoFramePtr;
 
     struct MovieProperties
     {
@@ -48,7 +48,7 @@ namespace cutscene
         float fps;
     };
 
-    struct AudioData
+    struct AudioFrame
     {
         SCP_vector<short> audioData;
 
@@ -56,19 +56,18 @@ namespace cutscene
 
         long rate;
     };
+    typedef std::shared_ptr<AudioFrame> AudioFramePtr;
 
     class Decoder
     {
     private:
-        SDL_mutex* m_queueLock;
-        SDL_cond* m_queueAvailableSignal;
-
-        SCP_queue<std::shared_ptr<VideoFrame>> m_videoQueue;
-        SCP_queue<std::shared_ptr<AudioData>> m_audioQueue;
+        std::shared_ptr<boost::sync_bounded_queue<VideoFramePtr>> m_videoQueue;
+        std::shared_ptr<boost::sync_bounded_queue<AudioFramePtr>> m_audioQueue;
 
         bool m_decoding = true;
 
         Decoder(const Decoder&) = delete;
+        Decoder& operator=(const Decoder&) = delete;
 
     public:
         Decoder();
@@ -84,33 +83,24 @@ namespace cutscene
 
         virtual void close() = 0;
 
-        bool audioDataAvailable();
-        size_t getAudioQueueSize() { return m_audioQueue.size(); }
-        std::shared_ptr<AudioData> popAudioData();
+        size_t getAudioQueueSize() { return m_audioQueue->size(); }
+        bool isAudioFrameAvailable() { return !m_audioQueue->empty(); }
+        bool tryPopAudioData(AudioFramePtr&);
 
-        bool videoFrameAvailable();
-        size_t getVideoQueueSize() { return m_videoQueue.size(); }
-        std::shared_ptr<VideoFrame> popVideoFrame();
-
-        void sendQueueSignal(bool lock = true);
-
-        void stopDecoder() { m_decoding = false; }
+        size_t getVideoQueueSize() { return m_videoQueue->size(); }
+        bool isVideoFrameAvailable() { return !m_videoQueue->empty(); }
+        bool tryPopVideoFrame(VideoFramePtr&);
+        
+        void stopDecoder();
         bool isDecoding() { return m_decoding; }
 
     protected:
-        uint m_waitTimeout;
-        uint m_maxQueueSize;
-
-        void lockQueue();
+        void initializeQueues(size_t queueSize);
 
         bool canPushAudioData();
-        void pushAudioData(const std::shared_ptr<AudioData>& data);
+        void pushAudioData(const AudioFramePtr& data);
         
         bool canPushVideoData();
-        void pushFrameData(const std::shared_ptr<VideoFrame>& frame);
-
-        void waitForQueueSignal();
-
-        void unlockQueue();
+        void pushFrameData(const VideoFramePtr& frame);
     };
 }

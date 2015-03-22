@@ -50,19 +50,8 @@ namespace cutscene
         // Graphics state following
         bool videoInited = false;
 
-        std::shared_ptr<VideoFrame> currentFrame;
-
-        int hp2;
-        int wp2;
-
-        int screenX = 0;
-        int screenY = 0;
-
-        GLint screenYH = 0;
-        GLint screenXW = 0;
-        GLfloat screenU = 0;
-        GLfloat screenV = 0;
-
+        VideoFramePtr currentFrame;
+        
         GLfloat glVertices[4][4];
 
         // GPU accelerated decoding
@@ -149,11 +138,13 @@ namespace
             return;
 
         Assert(state != NULL);
-        
+
+        int wp2;
+        int hp2;
 
         if (gr_screen.mode == GR_OPENGL) {
             opengl_set_texture_target(GL_TEXTURE_2D);
-            opengl_tcache_get_adjusted_texture_size(state->props.size.width, state->props.size.height, &state->wp2, &state->hp2);
+            opengl_tcache_get_adjusted_texture_size(state->props.size.width, state->props.size.height, &wp2, &hp2);
 
             if (!Use_GLSL)
                 state->useShaders = false;
@@ -248,7 +239,7 @@ namespace
                 glTexParameteri(GL_texture_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
                 glTexParameteri(GL_texture_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                 glTexParameteri(GL_texture_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-                glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_RGB8, state->wp2, state->hp2, 0, GL_BGR, GL_UNSIGNED_BYTE, NULL);
+                glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_RGB8, wp2, hp2, 0, GL_BGR, GL_UNSIGNED_BYTE, NULL);
             }
             GL_state.SetTextureSource(TEXTURE_SOURCE_DECAL);
             GL_state.SetAlphaBlendMode(ALPHA_BLEND_NONE);
@@ -264,7 +255,7 @@ namespace
                 glTexParameteri(GL_texture_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
                 // NOTE: using NULL instead of pixelbuf crashes some drivers, but then so does pixelbuf
-                glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_LUMINANCE8, 2048, 2048, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
+                glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_LUMINANCE8, wp2, hp2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
 
                 GL_state.Texture.SetActiveUnit(1);
                 GL_state.Texture.SetTarget(GL_texture_target);
@@ -275,7 +266,7 @@ namespace
                 glTexParameteri(GL_texture_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
                 // NOTE: using NULL instead of pixelbuf crashes some drivers, but then so does pixelbuf
-                glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_LUMINANCE8, 1024, 1024, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
+                glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_LUMINANCE8, wp2 / 2, hp2 / 2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
 
                 GL_state.Texture.SetActiveUnit(2);
                 GL_state.Texture.SetTarget(GL_texture_target);
@@ -286,7 +277,7 @@ namespace
                 glTexParameteri(GL_texture_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
                 // NOTE: using NULL instead of pixelbuf crashes some drivers, but then so does pixelbuf
-                glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_LUMINANCE8, 1024, 1024, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
+                glTexImage2D(GL_state.Texture.GetTarget(), 0, GL_LUMINANCE8, wp2 / 2, hp2 / 2, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, NULL);
             }
             float screen_ratio = (float)gr_screen.max_w / (float)gr_screen.max_h;
             float movie_ratio = (float)state->props.size.width / (float)state->props.size.height;
@@ -321,53 +312,50 @@ namespace
             memset(state->pixelbuf, 0, state->props.size.width * state->props.size.height * 3);
         }
 
+        int screenX;
+        int screenY;
 
         if (state->scaleVideo) {
-            state->screenX = ((fl2i(gr_screen.max_w / scale_by + 0.5f) - state->props.size.width) / 2);
-            state->screenY = ((fl2i(gr_screen.max_h / scale_by + 0.5f) - state->props.size.height) / 2);
+            screenX = ((fl2i(gr_screen.max_w / scale_by + 0.5f) - state->props.size.width) / 2);
+            screenY = ((fl2i(gr_screen.max_h / scale_by + 0.5f) - state->props.size.height) / 2);
         }
         else {
             // centers on 1024x768, fills on 640x480
-            state->screenX = ((gr_screen.max_w - state->props.size.width) / 2);
-            state->screenY = ((gr_screen.max_h - state->props.size.height) / 2);
+            screenX = ((gr_screen.max_w - state->props.size.width) / 2);
+            screenY = ((gr_screen.max_h - state->props.size.height) / 2);
         }
 
         // set additional values for screen width/height and UV coords
         if (gr_screen.mode == GR_OPENGL) {
-            state->screenYH = state->screenY + state->props.size.height;
-            state->screenXW = state->screenX + state->props.size.width;
-
-            state->screenU = i2fl(state->props.size.width) / i2fl(state->wp2);
-            state->screenV = i2fl(state->props.size.height) / i2fl(state->hp2);
+            int screenXW = screenX + state->props.size.width;
+            int screenYH = screenY + state->props.size.height;
 
             if (state->useShaders) {
-                state->screenU = i2fl(state->props.size.width - 1) / i2fl(2048);
-                state->screenV = i2fl(state->props.size.height - 1) / i2fl(2048);
                 GL_state.Texture.SetShaderMode(GL_TRUE);
                 vglUniform1iARB(vglGetUniformLocationARB(shader_id, "ytex"), 0);
                 vglUniform1iARB(vglGetUniformLocationARB(shader_id, "utex"), 1);
                 vglUniform1iARB(vglGetUniformLocationARB(shader_id, "vtex"), 2);
             }
 
-            state->glVertices[0][0] = (GLfloat)state->screenX;
-            state->glVertices[0][1] = (GLfloat)state->screenY;
+            state->glVertices[0][0] = (GLfloat)screenX;
+            state->glVertices[0][1] = (GLfloat)screenY;
             state->glVertices[0][2] = 0.0f;
             state->glVertices[0][3] = 0.0f;
 
-            state->glVertices[1][0] = (GLfloat)state->screenX;
-            state->glVertices[1][1] = (GLfloat)state->screenYH;
+            state->glVertices[1][0] = (GLfloat)screenX;
+            state->glVertices[1][1] = (GLfloat)screenYH;
             state->glVertices[1][2] = 0.0f;
-            state->glVertices[1][3] = state->screenV;
+            state->glVertices[1][3] = 1.0f;
 
-            state->glVertices[2][0] = (GLfloat)state->screenXW;
-            state->glVertices[2][1] = (GLfloat)state->screenY;
-            state->glVertices[2][2] = state->screenU;
+            state->glVertices[2][0] = (GLfloat)screenXW;
+            state->glVertices[2][1] = (GLfloat)screenY;
+            state->glVertices[2][2] = 1.0f;
             state->glVertices[2][3] = 0.0f;
 
-            state->glVertices[3][0] = (GLfloat)state->screenXW;
-            state->glVertices[3][1] = (GLfloat)state->screenYH;
-            state->glVertices[3][2] = state->screenU;
-            state->glVertices[3][3] = state->screenV;
+            state->glVertices[3][0] = (GLfloat)screenXW;
+            state->glVertices[3][1] = (GLfloat)screenYH;
+            state->glVertices[3][2] = 1.0f;
+            state->glVertices[3][3] = 1.0f;
 
             GL_state.Array.BindArrayBuffer(0);
 
@@ -405,7 +393,158 @@ namespace
         state->audioInited = true;
     }
 
-    void processAudioData(PlayerState* state, Decoder* decoder)
+    void convert_YUV_to_RGB(PlayerState* state)
+    {
+        int Y1, Y2, U, V;
+        int R = 0, G = 0, B = 0;
+        int C, D, E;
+        uint x, y;
+        uint width_2 = state->props.size.width / 2;
+
+        ubyte *pix = &state->pixelbuf[0];
+
+        auto ptrs = state->currentFrame->getDataPointers();
+        ubyte *y_ptr = ptrs.y;
+        ubyte *u_ptr = ptrs.u;
+        ubyte *v_ptr = ptrs.v;
+
+        for (y = 0; y < (uint)state->props.size.height; y++) {
+            for (x = 0; x < width_2; x++) {
+                // we need two pixels of Y
+                Y1 = *y_ptr; y_ptr++;
+                Y2 = *y_ptr; y_ptr++;
+
+                // only one pixel of U and V (half the size of Y)
+                U = u_ptr[x];
+                V = v_ptr[x];
+
+                D = (U - 128);
+                E = (V - 128);
+
+                // first pixel
+                C = (Y1 - 16) * 298;
+
+                R = ((C + 409 * E + 128) >> 8);
+                G = ((C - 100 * D - 208 * E + 128) >> 8);
+                B = ((C + 516 * D + 128) >> 8);
+
+                CLAMP(R, 0, 255);
+                CLAMP(G, 0, 255);
+                CLAMP(B, 0, 255);
+
+                *pix++ = (ubyte)B;
+                *pix++ = (ubyte)G;
+                *pix++ = (ubyte)R;
+
+                // second pixel (U and V values are resused)
+                C = (Y2 - 16) * 298;
+
+                R = ((C + 409 * E + 128) >> 8);
+                G = ((C - 100 * D - 208 * E + 128) >> 8);
+                B = ((C + 516 * D + 128) >> 8);
+
+                CLAMP(R, 0, 255);
+                CLAMP(G, 0, 255);
+                CLAMP(B, 0, 255);
+
+                *pix++ = (ubyte)B;
+                *pix++ = (ubyte)G;
+                *pix++ = (ubyte)R;
+            }
+
+            y_ptr += (state->currentFrame->ySize.stride - state->currentFrame->ySize.width);
+
+            // u and v have to be done every other row (it's a 2x2 block)
+            if (y % 2) {
+                u_ptr += state->currentFrame->uvSize.stride;
+                v_ptr += state->currentFrame->uvSize.stride;
+            }
+        }
+    }
+
+    void uploadVideoFrameData(PlayerState* state)
+    {
+        if (!state->useShaders)
+        {
+            convert_YUV_to_RGB(state);
+        }
+
+        if (gr_screen.mode == GR_OPENGL)
+        {
+            if (state->useShaders)
+            {
+                auto ptrs = state->currentFrame->getDataPointers();
+
+                GL_state.Texture.SetActiveUnit(0);
+                glPixelStorei(GL_UNPACK_ROW_LENGTH, state->currentFrame->ySize.stride);
+                glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0,
+                    state->currentFrame->ySize.width, state->currentFrame->ySize.height,
+                    GL_LUMINANCE, GL_UNSIGNED_BYTE, ptrs.y);
+
+                GL_state.Texture.SetActiveUnit(1);
+                glPixelStorei(GL_UNPACK_ROW_LENGTH, state->currentFrame->uvSize.stride);
+                glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0,
+                    state->currentFrame->uvSize.width, state->currentFrame->uvSize.height,
+                    GL_LUMINANCE, GL_UNSIGNED_BYTE, ptrs.u);
+
+                GL_state.Texture.SetActiveUnit(2);
+                glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0,
+                    state->currentFrame->uvSize.width, state->currentFrame->uvSize.height,
+                    GL_LUMINANCE, GL_UNSIGNED_BYTE, ptrs.v);
+
+                // Reset this back to default
+                glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+            }
+            else
+            {
+                glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, state->props.size.width, state->props.size.height, GL_BGR, GL_UNSIGNED_BYTE, state->pixelbuf);
+            }
+        }
+    }
+
+    void processVideoData(PlayerState* state)
+    {
+        if (!state->currentFrame)
+        {
+            // Load the initial frame
+            VideoFramePtr firstFrame;
+            auto r = state->decoder->tryPopVideoFrame(firstFrame);
+
+            // This shouldn't happen...
+            Assertion(r, "Failed to pop frame!");
+
+            state->currentFrame = firstFrame;
+            uploadVideoFrameData(state);
+
+            return;
+        }
+
+        if (!state->decoder->isVideoFrameAvailable())
+        {
+            // Nothing to do here...
+            return;
+        }
+
+        // Make sure playbackGetTime gets called after the first popVideoFrame to make sure
+        // the decoder actually started decoding
+        auto currentTime = playbackGetTime(state);
+        auto newFrame = false;
+        VideoFramePtr videoFrame;
+        while (currentTime > state->currentFrame->frameTime && state->decoder->tryPopVideoFrame(videoFrame))
+        {
+            state->currentFrame = videoFrame;
+            newFrame = true;
+        }
+
+        mprintf(("Current frame time: %.5f, Queue size: %d\n", state->currentFrame->frameTime, state->decoder->getVideoQueueSize()));
+        if (newFrame)
+        {
+            // Avoid multiple frame uploads
+            uploadVideoFrameData(state);
+        }
+    }
+
+    void processAudioData(PlayerState* state)
     {
         ALint processed;
         OpenAL_ErrorCheck(alGetSourcei(state->audioSid, AL_BUFFERS_PROCESSED, &processed), return);
@@ -418,12 +557,12 @@ namespace
             state->unqueuedAudioBuffers.push(buffer);
         }
 
-        while (decoder->audioDataAvailable() && !state->unqueuedAudioBuffers.empty())
+        AudioFramePtr audioData;
+
+        while (!state->unqueuedAudioBuffers.empty() && state->decoder->tryPopAudioData(audioData))
         {
             auto buffer = state->unqueuedAudioBuffers.front();
             state->unqueuedAudioBuffers.pop();
-
-            auto audioData = decoder->popAudioData();
 
             ALenum format = (audioData->channels == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
 
@@ -506,124 +645,7 @@ namespace
         }
 
         state->videoInited = 0;
-        state->scaleVideo = 0;
         state->pixelbuf = NULL;
-        state->screenX = 0;
-        state->screenY = 0;
-
-        state->screenYH = 0;
-        state->screenXW = 0;
-        state->screenU = 0;
-        state->screenV = 0;
-    }
-
-    void convert_YUV_to_RGB(PlayerState* state)
-    {
-        int Y1, Y2, U, V;
-        int R = 0, G = 0, B = 0;
-        int C, D, E;
-        uint x, y;
-        uint width_2 = state->props.size.width / 2;
-
-        ubyte *pix = &state->pixelbuf[0];
-
-        auto ptrs = state->currentFrame->getDataPointers();
-        ubyte *y_ptr = ptrs.y;
-        ubyte *u_ptr = ptrs.u;
-        ubyte *v_ptr = ptrs.v;
-
-        for (y = 0; y < (uint) state->props.size.height; y++) {
-            for (x = 0; x < width_2; x++) {
-                // we need two pixels of Y
-                Y1 = *y_ptr; y_ptr++;
-                Y2 = *y_ptr; y_ptr++;
-
-                // only one pixel of U and V (half the size of Y)
-                U = u_ptr[x];
-                V = v_ptr[x];
-
-                D = (U - 128);
-                E = (V - 128);
-
-                // first pixel
-                C = (Y1 - 16) * 298;
-
-                R = ((C + 409 * E + 128) >> 8);
-                G = ((C - 100 * D - 208 * E + 128) >> 8);
-                B = ((C + 516 * D + 128) >> 8);
-
-                CLAMP(R, 0, 255);
-                CLAMP(G, 0, 255);
-                CLAMP(B, 0, 255);
-
-                *pix++ = (ubyte)B;
-                *pix++ = (ubyte)G;
-                *pix++ = (ubyte)R;
-
-                // second pixel (U and V values are resused)
-                C = (Y2 - 16) * 298;
-
-                R = ((C + 409 * E + 128) >> 8);
-                G = ((C - 100 * D - 208 * E + 128) >> 8);
-                B = ((C + 516 * D + 128) >> 8);
-
-                CLAMP(R, 0, 255);
-                CLAMP(G, 0, 255);
-                CLAMP(B, 0, 255);
-
-                *pix++ = (ubyte)B;
-                *pix++ = (ubyte)G;
-                *pix++ = (ubyte)R;
-            }
-
-            y_ptr += (state->currentFrame->ySize.stride - state->currentFrame->ySize.width);
-
-            // u and v have to be done every other row (it's a 2x2 block)
-            if (y % 2) {
-                u_ptr += state->currentFrame->uvSize.stride;
-                v_ptr += state->currentFrame->uvSize.stride;
-            }
-        }
-    }
-
-    void uploadVideoFrameData(PlayerState* state)
-    {
-        if (!state->useShaders)
-        {
-            convert_YUV_to_RGB(state);
-        }
-
-        if (gr_screen.mode == GR_OPENGL)
-        {
-            if (state->useShaders)
-            {
-                auto ptrs = state->currentFrame->getDataPointers();
-
-                GL_state.Texture.SetActiveUnit(0);
-                glPixelStorei(GL_UNPACK_ROW_LENGTH, state->currentFrame->ySize.stride);
-                glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, 
-                    state->currentFrame->ySize.width, state->currentFrame->ySize.height,
-                    GL_LUMINANCE, GL_UNSIGNED_BYTE, ptrs.y);
-
-                GL_state.Texture.SetActiveUnit(1);
-                glPixelStorei(GL_UNPACK_ROW_LENGTH, state->currentFrame->uvSize.stride);
-                glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, 
-                    state->currentFrame->uvSize.width / 2, state->currentFrame->uvSize.height / 2,
-                    GL_LUMINANCE, GL_UNSIGNED_BYTE, ptrs.u);
-
-                GL_state.Texture.SetActiveUnit(2);
-                glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, 
-                    state->currentFrame->uvSize.width / 2, state->currentFrame->uvSize.height / 2,
-                    GL_LUMINANCE, GL_UNSIGNED_BYTE, ptrs.v);
-
-                // Reset this back to default
-                glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-            }
-            else
-            {
-                glTexSubImage2D(GL_state.Texture.GetTarget(), 0, 0, 0, state->props.size.width, state->props.size.height, GL_BGR, GL_UNSIGNED_BYTE, state->pixelbuf);
-            }
-        }
     }
 
     void displayVideo(PlayerState* state)
@@ -678,8 +700,7 @@ namespace cutscene
     {
         if (!state->playbackHasBegun)
         {
-            // Wait until video is available
-            if (!state->decoder->videoFrameAvailable())
+            if (!state->decoder->isVideoFrameAvailable())
             {
                 return;
             }
@@ -687,49 +708,17 @@ namespace cutscene
             state->playbackHasBegun = true;
         }
 
-        if (m_decoder->videoFrameAvailable())
-        {
-            if (!state->currentFrame)
-            {
-                state->currentFrame = m_decoder->popVideoFrame();
-                uploadVideoFrameData(state);
-            }
+        processVideoData(state);
 
-            // Make sure playbackGetTime gets called after the first popVideoFrame to make sure
-            // the decoder actually started decoding
-            auto currentTime = playbackGetTime(state);
-            auto newFrame = false;
-            while (currentTime > state->currentFrame->frameTime && m_decoder->videoFrameAvailable())
-            {
-                // Get the next frame
-                auto frame = m_decoder->popVideoFrame();
-
-                mprintf(("Frame time diff: %.5f\n", frame->frameTime - state->currentFrame->frameTime));
-
-                state->currentFrame = frame;
-                newFrame = true;
-            }
-
-            if (newFrame)
-            {
-                // Avoid multiple frame uploads
-                uploadVideoFrameData(state);
-            }
-        }
-        else
-        {
-            mprintf(("No video frame available at time %.3fs!\n", playbackGetTime(state)));
-        }
-
-        processAudioData(state, m_decoder.get());
+        processAudioData(state);
 
         // Set the playing flag if the decoder is still active and there is still data available
-        state->playing = m_decoder->isDecoding() || (m_decoder->audioDataAvailable() || m_decoder->videoFrameAvailable());
+        state->playing = m_decoder->isDecoding() || (m_decoder->isAudioFrameAvailable() || m_decoder->isVideoFrameAvailable());
     }
 
     void Player::startPlayback()
     {
-        m_decoderThread = SDL_CreateThread(decoder, "Decoder", this);
+        m_decoderThread = std::make_unique<boost::thread>(std::bind(&Player::decoderThread, this));
 
         PlayerState state;
         state.props = m_decoder->getProperties();
@@ -764,13 +753,11 @@ namespace cutscene
             state.lastDisplayTimestamp = timer_get_milliseconds();
         }
         m_decoder->stopDecoder();
-        // Send a queue signal so if the thread is waiting it is unblocked
-        m_decoder->sendQueueSignal();
 
         audioPlaybackClose(&state);
         videoPlaybackClose(&state);
 
-        SDL_WaitThread(m_decoderThread, nullptr);
+        m_decoderThread->join();
     }
 
     void Player::decoderThread()

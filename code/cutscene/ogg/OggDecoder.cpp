@@ -246,11 +246,7 @@ namespace cutscene
 
             auto fps = static_cast<float>(movie.tinfo.fps_numerator) / movie.tinfo.fps_denominator;
             // Always buffer one second of video playback
-            m_maxQueueSize = static_cast<uint>(fps);
-
-            // Wait for double the time a frame is displayed, that should make sure the thread isn't constantly running
-            // and it also should make sure that the decoder thread waits too long
-            m_waitTimeout = static_cast<uint>(2. * 1000. / fps);
+            initializeQueues(static_cast<size_t>(fps));
 
             return true;
 
@@ -285,7 +281,7 @@ namespace cutscene
 
             int frameId = 0;
 
-            std::shared_ptr<AudioData> audioData;
+            AudioFramePtr audioData;
             std::shared_ptr<OggVideoFrame> videoData;
 
             if (!movie.theora_p)
@@ -339,7 +335,7 @@ namespace cutscene
                                 audiobuf_ready = true;
                                 audiobuf_fill = 0;
 
-                                audioData = std::make_shared<AudioData>();
+                                audioData = std::make_shared<AudioFrame>();
                                 audioData->audioData = SCP_vector<short>();
                                 audioData->audioData.assign(audiobuf.begin(), audiobuf.end());
 
@@ -405,15 +401,10 @@ namespace cutscene
                     }
                 }
 
-                // Begin transfering the data into our queue
-                lockQueue();
-
-                waitForQueueSignal();
-
-                // If playback has begun, top audio buffer off immediately.
                 if (canPushAudioData() && audiobuf_ready)
                 {
-                    pushAudioData(audioData);
+                    pushAudioData(audioData);;
+                    audioData = nullptr;
                     audiobuf_ready = false;
                 }
 
@@ -421,21 +412,15 @@ namespace cutscene
                 if (canPushVideoData() && videobuf_ready)
                 {
                     pushFrameData(videoData);
+                    videoData = nullptr;
                     videobuf_ready = false;
                 }
-
-                unlockQueue();
             }
-
-            // Push the rest of the data into the queue
-            lockQueue();
-
-            waitForQueueSignal();
 
             if (audiobuf_fill > 0)
             {
                 // There is some audio data left
-                audioData = std::make_shared<AudioData>();
+                audioData = std::make_shared<AudioFrame>();
                 audioData->audioData = SCP_vector<short>();
                 audioData->audioData.assign(audiobuf.begin(), audiobuf.begin() + audiobuf_fill);
 
@@ -444,8 +429,6 @@ namespace cutscene
 
                 pushAudioData(audioData);
             }
-
-            unlockQueue();
 
             // Set the decoding flag to false so the player knows that we are finished
             stopDecoder();

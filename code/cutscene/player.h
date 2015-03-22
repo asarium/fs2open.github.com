@@ -3,10 +3,9 @@
 
 #include <memory>
 
-#include "globalincs/pstypes.h"
+#include <boost/thread/thread.hpp>
 
-#include "SDL_thread.h"
-#include "SDL_mutex.h"
+#include "globalincs/pstypes.h"
 
 namespace cutscene
 {
@@ -18,7 +17,7 @@ namespace cutscene
     private:
         std::unique_ptr<Decoder> m_decoder;
 
-        SDL_Thread *m_decoderThread;
+        std::unique_ptr<boost::thread> m_decoderThread;
 
         void processDecoderData(PlayerState* state);
 

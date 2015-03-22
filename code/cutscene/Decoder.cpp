@@ -1,130 +1,64 @@
 
 #include "cutscene/Decoder.h"
 
-namespace
-{
-    const size_t DEFAULT_MAX_QUEUE_SIZE = 10;
-
-    const Uint32 DEFAULT_WAIT_TIMEOUT = 100;
-}
 
 namespace cutscene
 {
-    Decoder::Decoder() : m_waitTimeout(DEFAULT_WAIT_TIMEOUT), m_maxQueueSize(DEFAULT_MAX_QUEUE_SIZE)
+    Decoder::Decoder()
     {
-        m_queueLock = SDL_CreateMutex();
-        m_queueAvailableSignal = SDL_CreateCond();
     }
 
     Decoder::~Decoder()
     {
-        if (m_queueAvailableSignal)
-        {
-            SDL_DestroyCond(m_queueAvailableSignal);
-        }
-
-        if (m_queueLock)
-        {
-            SDL_DestroyMutex(m_queueLock);
-        }
     }
 
-    bool Decoder::audioDataAvailable()
+    bool Decoder::tryPopAudioData(AudioFramePtr& out)
     {
-        return !m_audioQueue.empty();
+        auto res = m_audioQueue->try_pull_front(out);
+        return res == boost::queue_op_status::success;
     }
 
-    std::shared_ptr<AudioData> Decoder::popAudioData()
+    bool Decoder::tryPopVideoFrame(VideoFramePtr& out)
     {
-        lockQueue();
-
-        auto data = m_audioQueue.front();
-        m_audioQueue.pop();
-
-        // The size of the queue decreased, notify waiting threads
-        SDL_CondSignal(m_queueAvailableSignal);
-
-        unlockQueue();
-
-        return data;
+        auto res = m_videoQueue->try_pull_front(out);
+        return res == boost::queue_op_status::success;
     }
 
-
-    bool Decoder::videoFrameAvailable()
+    void Decoder::initializeQueues(size_t queueSize)
     {
-        return !m_videoQueue.empty();
+        m_videoQueue = std::make_shared<boost::sync_bounded_queue<VideoFramePtr>>(queueSize);
+        m_audioQueue = std::make_shared<boost::sync_bounded_queue<AudioFramePtr>>(queueSize);
     }
 
-    std::shared_ptr<VideoFrame> Decoder::popVideoFrame()
+    void Decoder::stopDecoder()
     {
-        lockQueue();
+        m_decoding = false;
 
-        auto data = m_videoQueue.front();
-        m_videoQueue.pop();
-
-        // The size of the queue decreased, notify waiting threads
-        sendQueueSignal(false);
-
-        unlockQueue();
-
-        return data;
-    }
-
-    void Decoder::sendQueueSignal(bool lock)
-    {
-        if (lock)
-        {
-            lockQueue();
-        }
-
-        SDL_CondSignal(m_queueAvailableSignal);
-
-        if (lock)
-        {
-            unlockQueue();
-        }
-    }
-
-    void Decoder::lockQueue()
-    {
-        SDL_LockMutex(m_queueLock);
-    }
-    void Decoder::unlockQueue()
-    {
-        SDL_UnlockMutex(m_queueLock);
+        m_videoQueue->close();
+        m_audioQueue->close();
     }
 
     bool Decoder::canPushAudioData()
     {
-        return m_audioQueue.size() < m_maxQueueSize;
+        return !m_audioQueue->full();
     }
-    void Decoder::pushAudioData(const std::shared_ptr<AudioData>& data)
+    void Decoder::pushAudioData(const AudioFramePtr& data)
     {
         Assertion(data, "Invalid audio data passed!");
 
-        m_audioQueue.push(data);
+        // Ignore result but use the wait variant to make sure no exception is thrown when the queue was closed
+        m_audioQueue->wait_push_back(data);
     }
 
     bool Decoder::canPushVideoData()
     {
-        return m_videoQueue.size() < m_maxQueueSize;
+        return !m_videoQueue->full();
     }
-    void Decoder::pushFrameData(const std::shared_ptr<VideoFrame>& frame)
+    void Decoder::pushFrameData(const VideoFramePtr& frame)
     {
         Assertion(frame, "Invalid video data passed!");
 
-        m_videoQueue.push(frame);
-    }
-
-    void Decoder::waitForQueueSignal()
-    {
-        while (!(canPushVideoData() || (hasAudio() && canPushAudioData())) && m_decoding)
-        {
-            if (SDL_CondWaitTimeout(m_queueAvailableSignal, m_queueLock, m_waitTimeout) == 0)
-            {
-                // Signal was signaled
-                return;
-            }
-        }
+        // Ignore result but use the wait variant to make sure no exception is thrown when the queue was closed
+        m_videoQueue->wait_push_back(frame);
     }
 }

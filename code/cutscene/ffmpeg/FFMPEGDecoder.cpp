@@ -431,7 +431,7 @@ namespace cutscene
             auto audioPlanes = av_sample_fmt_is_planar(m_status->audioCodecCtx->sample_fmt) ? m_status->audioCodecCtx->channels : 1;
             
             std::shared_ptr<FFMPEGVideoFrame> videoFramePtr;
-            std::shared_ptr<AudioData> audioDataPtr;
+            AudioFramePtr audioDataPtr;
 
             int frameId = 0;
 
@@ -498,10 +498,6 @@ namespace cutscene
                     }
                 }
 
-                lockQueue();
-
-                waitForQueueSignal();
-
                 if (canPushVideoData() && videoFramePtr)
                 {
                     pushFrameData(videoFramePtr);
@@ -513,8 +509,6 @@ namespace cutscene
                     pushAudioData(audioDataPtr);
                     audioDataPtr = nullptr;
                 }
-
-                unlockQueue();
 
                 av_free_packet(&packet);
             }
