@@ -20,142 +20,53 @@
 #include "cmdline/cmdline.h"	
 #include "cfile/cfile.h"
 #include "cutscene/cutscenes.h" // cutscene_mark_viewable()
-#include "cutscene/mve/mvelib.h"
-#include "cutscene/ogg/oggplayer.h"
+#include "cutscene/player.h" // cutscene_mark_viewable()
 
 extern int Game_mode;
+extern int Is_standalone;
 
-
-#define MOVIE_NONE	-1
-#define MOVIE_OGG	0
-#define MOVIE_MVE	1
-
-// This module links freespace movie calls to the actual API calls the play the movie.
-// This module handles all the different requires of OS and gfx API and finding the file to play
-
-
-// filename		- file to search for
-// out_name		- output, full path to file
-// returns non-zero if file is found
-int movie_find(char *filename, char *out_name)
+namespace movie
 {
-	char full_path[MAX_PATH];
-	char tmp_name[MAX_PATH];
-	int size, offset = 0;
-	const int NUM_EXT = 2;
-	const char *movie_ext[NUM_EXT] = { ".ogg", ".mve" };
+    // Play one movie
+    bool play(const char *name)
+    {
+        // mark the movie as viewable to the player when in a campaign
+        // do this before anything else so that we're sure the movie is available
+        // to the player even if it's not going to play right now
+        if (Game_mode & GM_CAMPAIGN_MODE) {
+            cutscene_mark_viewable(name);
+        }
 
-	if (out_name == NULL)
-		return MOVIE_NONE;
+        if (Cmdline_nomovies || Is_standalone)
+            return false;
+        
+        // clear the screen and hide the mouse cursor
+        io::mouse::CursorManager::get()->showCursor(false);
+        gr_reset_clip();
+        gr_set_color(255, 255, 255);
+        gr_set_clear_color(0, 0, 0);
+        gr_zbuffer_clear(0);
+        // clear first buffer
+        gr_clear();
+        gr_flip();
+        // clear second buffer (may not be one, but that's ok)
+        gr_clear();
+        gr_flip();
+        // clear third buffer (may not be one, but that's ok)
+        gr_clear();
 
+        auto player = cutscene::Player::newPlayer(name);
+        player->startPlayback();
 
-	memset( full_path, 0, sizeof(full_path) );
-	memset( tmp_name, 0, sizeof(tmp_name) );
+        // show the mouse cursor again
+        io::mouse::CursorManager::get()->showCursor(true);
 
-	// remove extension
-	strcpy_s( tmp_name, filename );
-	char *p = strrchr(tmp_name, '.');
-	if ( p ) *p = 0;
+        return true;
+    }
 
-    int rc = cf_find_file_location_ext(tmp_name, NUM_EXT, movie_ext, CF_TYPE_ANY, sizeof(full_path) - 1, full_path, &size, &offset, 0);
-
-	if (rc == MOVIE_NONE)
-		return MOVIE_NONE;
-
-	strcpy( out_name, full_path );
-
-	return rc;
-}
-
-// Play one movie
-bool movie_play(char *name)
-{
-	// mark the movie as viewable to the player when in a campaign
-	// do this before anything else so that we're sure the movie is available
-	// to the player even if it's not going to play right now
-	if (Game_mode & GM_CAMPAIGN_MODE) {
-		cutscene_mark_viewable(name);
-	}
-
-	extern int Is_standalone;
-
-	if (Cmdline_nomovies || Is_standalone)
-		return false;
-
-
-	char full_name[MAX_PATH];
-	int rc = 0;
-
-	memset(full_name, 0, sizeof(full_name));
-
-	rc = movie_find(name, full_name);
-
-	if (rc == MOVIE_NONE) {
-		strcpy_s(full_name, name);
-		char *p = strrchr(full_name, '.');
-		if ( p ) *p = 0;
-
-		mprintf(("Movie Error:  Unable to open '%s' movie in any supported format.\n", full_name));
-		return false;
-	}
-
-	// clear the screen and hide the mouse cursor
-	io::mouse::CursorManager::get()->showCursor(false);
-	gr_reset_clip();
-	gr_set_color(255, 255, 255);
-	gr_set_clear_color(0, 0, 0);
-	gr_zbuffer_clear(0);
-	// clear first buffer
-	gr_clear();
-	gr_flip();
-	// clear second buffer (may not be one, but that's ok)
-	gr_clear();
-	gr_flip();
-	// clear third buffer (may not be one, but that's ok)
-	gr_clear();
-
-	if (rc == MOVIE_OGG) {
-		THEORAFILE *movie_ogg = theora_open(name);
-
-		if (movie_ogg) {
-			// start playing ...
-			theora_play(movie_ogg);
-
-			// ... done playing, close the movie
-			theora_close(movie_ogg);
-		} else {
-			// uh-oh, movie is invalid... Abory, Retry, Fail?
-			mprintf(("MOVIE ERROR: Found invalid movie! (%s)\n", name));
-			io::mouse::CursorManager::get()->showCursor(true);	// show the mouse cursor!
-			return false;
-		}
-	} else if (rc == MOVIE_MVE) {
-		MVESTREAM *movie_mve = mve_open(name);
-
-		if (movie_mve) {
-			// start playing ...
-			mve_init(movie_mve);
-			mve_play(movie_mve);
-
-			// ... done playing, close the movie
-			mve_shutdown();
-			mve_close(movie_mve);
-		} else {
-			// uh-oh, movie is invalid... Abory, Retry, Fail?
-			mprintf(("MOVIE ERROR: Found invalid movie! (%s)\n", name));
-			io::mouse::CursorManager::get()->showCursor(true);	// show the mouse cursor!
-			return false;
-		}
-	}
-
-	// show the mouse cursor again
-	io::mouse::CursorManager::get()->showCursor(true);
-
-	return true;
-}
-
-void movie_play_two(char *name1, char *name2)
-{
-	if ( movie_play(name1) )
-		movie_play(name2);
+    void play_two(const char *name1, const char *name2)
+    {
+        if (play(name1))
+            play(name2);
+    }
 }

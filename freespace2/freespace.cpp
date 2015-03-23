@@ -1198,7 +1198,7 @@ void game_loading_callback(int count)
 		char filename[35];
 		int size;
 		int i;
-	  	memblockinfo_sort();
+		memblockinfo_sort();
 		for(i = 0; i < 30; i++)
 		{
 			memblockinfo_sort_get_entry(i, filename, &size);
@@ -1367,7 +1367,7 @@ void game_post_level_init()
 	extern void game_environment_map_gen();
 	game_environment_map_gen();
 
- 	HUD_init();
+	HUD_init();
 	hud_setup_escort_list();
 	mission_hotkey_set_defaults();	// set up the default hotkeys (from mission file)
 
@@ -1716,7 +1716,7 @@ void game_init()
 
 	// Initialize the timer before the os
 	timer_init();
-    
+	
 #ifndef NDEBUG
 	outwnd_init(1);
 #endif
@@ -2037,7 +2037,7 @@ void game_init()
 	// if we are done initializing, start showing the cursor
 	io::mouse::CursorManager::get()->showCursor(true);
 
-    mouse_set_pos(gr_screen.max_w / 2, gr_screen.max_h / 2);
+	mouse_set_pos(gr_screen.max_w / 2, gr_screen.max_h / 2);
 }
 
 char transfer_text[128];
@@ -2232,7 +2232,7 @@ void game_show_framerate()
 			sy += dy;
 		}
 	}
-	 	
+		
 	if ( Show_mem  ) {
 
 		int sx,sy,dy;
@@ -2285,7 +2285,7 @@ void game_show_framerate()
 		char filename[MAX_PATH];
 		int size;
 
-	  	memblockinfo_sort();
+		memblockinfo_sort();
 
 		int mi = 0;
 		for( ; mi < 30; mi++) {
@@ -3257,7 +3257,7 @@ extern vec3d Dead_camera_pos;
 //	Set eye_pos and eye_orient based on view mode.
 camid game_render_frame_setup()
 {
-    bool fov_changed;
+	bool fov_changed;
 
 	if(!Main_camera.isValid())
 	{
@@ -3279,7 +3279,7 @@ camid game_render_frame_setup()
 	static int last_Viewer_objnum = -1;
 	static float last_FOV = Sexp_fov;
 
-    fov_changed = ((last_FOV != Sexp_fov) && (Sexp_fov > 0.0f));
+	fov_changed = ((last_FOV != Sexp_fov) && (Sexp_fov > 0.0f));
 
 	//First, make sure we take into account 2D Missions.
 	//These replace the normal player in-cockpit view with a topdown view.
@@ -4761,12 +4761,12 @@ void game_set_frametime(int state)
 
 	Frametime = fixmul(Frametime, Game_time_compression);
 
-    if (Frametime <= 0)
-    {
-        // If the Frametime is zero or below due to Game_time_compression, set
-        // the Frametime to 1 (1/65536 of a second).
-        Frametime = 1;
-    }
+	if (Frametime <= 0)
+	{
+		// If the Frametime is zero or below due to Game_time_compression, set
+		// the Frametime to 1 (1/65536 of a second).
+		Frametime = 1;
+	}
 
 	Last_time = thistime;
 	//mprintf(("Frame %i, Last_time = %7.3f\n", Framecount, f2fl(Last_time)));
@@ -4818,7 +4818,7 @@ void game_do_frame()
 		while( key_checkch() == 0 )
 			os_sleep(10);
 		os_set_title( XSTR( "FreeSpace", 171) );
-  		Last_time = timer_get_fixed_seconds();
+		Last_time = timer_get_fixed_seconds();
 	}
 
 	last_single_step = game_single_step;
@@ -5313,7 +5313,7 @@ void game_process_event( int current_state, int event )
 			gameseq_set_state( GS_STATE_MULTI_CLIENT_SETUP );
 			break;
 
-  		case GS_EVENT_GOTO_VIEW_CUTSCENES_SCREEN:
+		case GS_EVENT_GOTO_VIEW_CUTSCENES_SCREEN:
 			gameseq_set_state(GS_STATE_VIEW_CUTSCENES);
 			break;
 
@@ -5820,7 +5820,7 @@ void game_leave_state( int old_state, int new_state )
 
 		case GS_STATE_MULTI_STD_WAIT:
 			multi_standalone_wait_close();
-	  		break;
+			break;
 
 		case GS_STATE_STANDALONE_MAIN:			
 			standalone_main_close();
@@ -5944,7 +5944,7 @@ void game_enter_state( int old_state, int new_state )
 			if(Cmdline_start_mission) {
 				strcpy_s(Game_current_mission_filename, Cmdline_start_mission);
 				mprintf(( "Straight to mission '%s'\n", Game_current_mission_filename ));
- 				gameseq_post_event(GS_EVENT_START_GAME);
+				gameseq_post_event(GS_EVENT_START_GAME);
 				// This stops the mission from loading again when you go back to the hall
 				Cmdline_start_mission = NULL;
 			}
@@ -6266,7 +6266,7 @@ void mouse_force_pos(int x, int y);
 			break;
 
 		case GS_STATE_DEATH_DIED:
- 			Player_died_time = timestamp(10);
+			Player_died_time = timestamp(10);
 
 			if(!(Game_mode & GM_MULTIPLAYER)){
 				player_show_death_message();
@@ -7011,11 +7011,8 @@ int game_main(int argc, char *argv[])
 		return 0;
 	}
 
-    if (!Is_standalone) {
-        auto player = cutscene::Player::newPlayer("mp4test.mve");
-        player->startPlayback();
-
-        movie_play("intro.mve");
+	if (!Is_standalone) {
+		movie::play("intro.mve");
 	}
 
 	if (Is_standalone){
@@ -7949,7 +7946,7 @@ int game_cd_changed()
 		} else {
 			mprintf(( "CD '%s' was removed\n", Last_cd_label ));
 		}
-        changed = 1;
+		changed = 1;
 	} else {
 		if ( Last_cd_label_found )	{
 			if ( !stricmp( Last_cd_label, label ))	{

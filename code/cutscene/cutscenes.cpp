@@ -114,7 +114,7 @@ void cutscene_init()
 
 // function to return 0 based index of which CD a particular movie is on
 // returns -1 on failure.
-int cutscenes_get_cd_num( char *filename )
+int cutscenes_get_cd_num(const char *filename)
 {
 	for (SCP_vector<cutscene_info>::iterator cut = Cutscenes.begin(); cut != Cutscenes.end(); ++cut) {
 		if ( !stricmp(cut->filename, filename) ) {
@@ -126,7 +126,7 @@ int cutscenes_get_cd_num( char *filename )
 }
 
 // marks a cutscene as viewable
-void cutscene_mark_viewable(char *filename)
+void cutscene_mark_viewable(const char *filename)
 {
 	char cut_file[MAX_FILENAME_LEN];
 	char file[MAX_FILENAME_LEN];
@@ -256,7 +256,7 @@ static int Text_line_size[MAX_TEXT_LINES];
 static const char *Text_lines[MAX_TEXT_LINES];
 
 
-int cutscenes_validate_cd(char *mve_name, int prompt_for_cd)
+int cutscenes_validate_cd(const char *mve_name, int prompt_for_cd)
 {
 	int cd_present = 0;
 	int cd_drive_num;
@@ -323,7 +323,7 @@ void cutscenes_screen_play()
 
 	main_hall_stop_music();
 	main_hall_stop_ambient();
-	int rval = movie_play(name);
+	int rval = movie::play(name);
 	main_hall_start_music();
 
 	if ( !rval ) {
