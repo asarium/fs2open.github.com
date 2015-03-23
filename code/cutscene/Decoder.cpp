@@ -45,9 +45,15 @@ namespace cutscene
     void Decoder::pushAudioData(const AudioFramePtr& data)
     {
         Assertion(data, "Invalid audio data passed!");
-
-        // Ignore result but use the wait variant to make sure no exception is thrown when the queue was closed
-        m_audioQueue->wait_push_back(data);
+        
+        try
+        {
+            m_audioQueue->push_back(data);
+        }
+        catch (boost::sync_queue_is_closed&)
+        {
+            // Ignore
+        }
     }
 
     bool Decoder::canPushVideoData()
@@ -58,7 +64,13 @@ namespace cutscene
     {
         Assertion(frame, "Invalid video data passed!");
 
-        // Ignore result but use the wait variant to make sure no exception is thrown when the queue was closed
-        m_videoQueue->wait_push_back(frame);
+        try
+        {
+            m_videoQueue->push_back(frame);
+        }
+        catch (boost::sync_queue_is_closed&)
+        {
+            // Ignore
+        }
     }
 }

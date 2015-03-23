@@ -3,23 +3,10 @@
 
 #include "cfile/cfile.h"
 
-// Disable a few warnings that happen in the ffmpeg headers
-// TODO: Also do this for other compilers
-#pragma warning(push)
-#pragma warning(disable: 4244) // conversion from 'int' to '*'
+#include "cutscene/ffmpeg/internal.h"
 
-extern "C" {
-#include <avcodec.h>
-#include <avformat.h>
-#include <swscale.h>
-#include <swresample.h>
-
-#include <libavutil/imgutils.h>
-#include <libavutil/error.h>
-#include <libavutil/opt.h>
-}
-
-#pragma warning(pop)
+#include "cutscene/ffmpeg/AudioDecoder.h"
+#include "cutscene/ffmpeg/VideoDecoder.h"
 
 namespace
 {
@@ -79,33 +66,6 @@ namespace
         // cfseek returns the offset in the archive file (who thought that would be a good idea?)
         return cftell(cfile);
     }
-
-    float getFrameTime(int64_t pts, AVRational time_base)
-    {
-        return static_cast<float>(pts * av_q2d(time_base));
-    }
-
-    SwsContext* getSWSContext(int width, int height, AVPixelFormat fmt)
-    {
-        return sws_getContext(width, height, fmt, width, height, PIX_FMT_YUV420P,
-            SWS_BILINEAR, nullptr, nullptr, nullptr);
-    }
-
-    SwrContext* getSWRContext(uint64_t layout, int rate, AVSampleFormat inFmt)
-    {
-        auto swr = swr_alloc();
-
-        av_opt_set_int(swr, "in_channel_layout", layout, 0);
-        av_opt_set_int(swr, "out_channel_layout", layout, 0);
-        av_opt_set_int(swr, "in_sample_rate", rate, 0);
-        av_opt_set_int(swr, "out_sample_rate", rate, 0);
-        av_opt_set_sample_fmt(swr, "in_sample_fmt", inFmt, 0);
-        av_opt_set_sample_fmt(swr, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
-
-        swr_init(swr);
-
-        return swr;
-    }
 }
 
 namespace cutscene
@@ -153,48 +113,6 @@ namespace cutscene
                     filePtr = nullptr;
                 }
             }
-        };
-
-        struct DecoderStatus
-        {
-            int videoStreamIndex = -1;
-            AVStream* videoStream = nullptr;
-            AVCodecContext* videoCodecCtx = nullptr;
-            AVCodec* videoCodec = nullptr;
-
-            int audioStreamIndex = -1;
-            AVStream* audioStream = nullptr;
-            AVCodecContext* audioCodecCtx = nullptr;
-            AVCodec* audioCodec = nullptr;
-        };
-
-        class FFMPEGVideoFrame : public VideoFrame
-        {
-        public:
-            FFMPEGVideoFrame()
-            {
-                memset(&picture, 0, sizeof(picture));
-            }
-            virtual ~FFMPEGVideoFrame()
-            {
-                if (picture.data[0] != nullptr)
-                {
-                    avpicture_free(&picture);
-                    memset(&picture, 0, sizeof(picture));
-                }
-            }
-
-            virtual DataPointers getDataPointers()
-            {
-                DataPointers ptrs;
-                ptrs.y = picture.data[0];
-                ptrs.u = picture.data[1];
-                ptrs.v = picture.data[2];
-
-                return ptrs;
-            }
-
-            AVPicture picture;
         };
 
         FFMPEGDecoder::FFMPEGDecoder()
@@ -398,6 +316,8 @@ namespace cutscene
                 return false;
             }
 
+            initializeQueues(static_cast<size_t>(ceil(av_q2d(status->videoStream->avg_frame_rate))));
+
             // We're done, now just put the pointer into this
             std::swap(m_input, input);
             std::swap(m_status, status);
@@ -417,105 +337,31 @@ namespace cutscene
 
         void FFMPEGDecoder::startDecoding()
         {
+            using namespace std::placeholders;
+
             AVFrame* frame = av_frame_alloc();
 
-            // Get the scaling context to convert the frame to YUV
-            auto swsCtx = getSWSContext(m_status->videoCodecCtx->width, m_status->videoCodecCtx->height,
-                m_status->videoCodecCtx->pix_fmt);
-
-            // Get a resampling context used for resampling the data to a format we can use
-            auto swrCtx = getSWRContext(m_status->audioCodecCtx->channel_layout, m_status->audioCodecCtx->sample_rate,
-                m_status->audioCodecCtx->sample_fmt);
-            auto bla = swr_get_delay(swrCtx, m_status->audioCodecCtx->sample_rate);
-
-            auto audioPlanes = av_sample_fmt_is_planar(m_status->audioCodecCtx->sample_fmt) ? m_status->audioCodecCtx->channels : 1;
-            
-            std::shared_ptr<FFMPEGVideoFrame> videoFramePtr;
+            VideoDecoder videoDecoder(m_status.get(), std::bind(&FFMPEGDecoder::pushFrameData, this, _1));
+            AudioDecoder audioDecoder(m_status.get(), std::bind(&FFMPEGDecoder::pushAudioData, this, _1));
+                        
             AudioFramePtr audioDataPtr;
-
-            int frameId = 0;
-
+            
             AVPacket packet;
             while (isDecoding() && av_read_frame(m_input->context, &packet) >= 0)
             {
                 if (packet.stream_index == m_status->videoStreamIndex)
                 {
-                    int finishedFrame = 0;
-                    auto result = avcodec_decode_video2(m_status->videoCodecCtx, frame, &finishedFrame, &packet);
-
-                    if (result < 0)
-                    {
-                        mprintf(("FFMPEG: Decoding frame failed!\n"));
-                    }
-
-                    if (finishedFrame)
-                    {
-                        // Allocate a picture to hold the YUV data
-                        AVPicture yuvPicture;
-                        avpicture_alloc(&yuvPicture, PIX_FMT_YUV420P, m_status->videoCodecCtx->width, m_status->videoCodecCtx->height);
-
-                        // Convert frame to YUV
-                        sws_scale(
-                            swsCtx,
-                            (uint8_t const * const *)frame->data,
-                            frame->linesize,
-                            0,
-                            m_status->videoCodecCtx->height,
-                            yuvPicture.data,
-                            yuvPicture.linesize
-                            );
-
-                        videoFramePtr = std::make_shared<FFMPEGVideoFrame>();
-                        videoFramePtr->id = ++frameId;
-                        videoFramePtr->frameTime = getFrameTime(av_frame_get_best_effort_timestamp(frame), m_status->videoStream->time_base);
-                        videoFramePtr->picture = yuvPicture; // The class handles deallocating the memory
-
-                        videoFramePtr->ySize.height = m_status->videoCodecCtx->height;
-                        videoFramePtr->ySize.width = m_status->videoCodecCtx->width;
-                        videoFramePtr->ySize.stride = yuvPicture.linesize[0];
-
-                        videoFramePtr->uvSize.height = m_status->videoCodecCtx->height;
-                        videoFramePtr->uvSize.width = m_status->videoCodecCtx->width;
-                        videoFramePtr->uvSize.stride = yuvPicture.linesize[1];
-                    }
+                    videoDecoder.decodePacket(&packet, frame);
                 }
                 else if (packet.stream_index == m_status->audioStreamIndex)
                 {
-                    int finishedFrame = 0;
-                    //avcodec_decode_audio4(m_status->audioCodecCtx, frame, &finishedFrame, &packet);
-
-                    if (finishedFrame)
-                    {
-                        /*uint8_t *output;
-                        int out_samples = av_rescale_rnd(swr_get_delay(swr, 48000) +
-                            in_samples, 44100, 48000, AV_ROUND_UP);
-                        av_samples_alloc(&output, NULL, 2, out_samples,
-                            AV_SAMPLE_FMT_S16, 0);
-                        out_samples = swr_convert(swr, &output, out_samples,
-                            input, in_samples);
-                        handle_output(output, out_samples);
-                        av_freep(&output);*/
-                    }
-                }
-
-                if (canPushVideoData() && videoFramePtr)
-                {
-                    pushFrameData(videoFramePtr);
-                    videoFramePtr = nullptr;
-                }
-
-                if (canPushAudioData() && audioDataPtr)
-                {
-                    pushAudioData(audioDataPtr);
-                    audioDataPtr = nullptr;
+                    audioDecoder.decodePacket(&packet, frame);
                 }
 
                 av_free_packet(&packet);
             }
             stopDecoder();
 
-            swr_free(&swrCtx);
-            sws_freeContext(swsCtx);
             av_frame_free(&frame);
         }
 

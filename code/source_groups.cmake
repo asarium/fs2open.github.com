@@ -105,16 +105,19 @@ set (file_root_cutscene_mve
 
 # Cutscene\OGG files
 set (file_root_cutscene_ogg
-	cutscene/ogg/oggplayer.cpp
-	cutscene/ogg/oggplayer.h
 	cutscene/ogg/OggDecoder.cpp
 	cutscene/ogg/OggDecoder.h
 )
 
 # Cutscene\ffmpeg files
 set (file_root_cutscene_ffmpeg
+	cutscene/ffmpeg/AudioDecoder.cpp
+	cutscene/ffmpeg/AudioDecoder.h
 	cutscene/ffmpeg/FFMPEGDecoder.cpp
 	cutscene/ffmpeg/FFMPEGDecoder.h
+	cutscene/ffmpeg/internal.h
+	cutscene/ffmpeg/VideoDecoder.cpp
+	cutscene/ffmpeg/VideoDecoder.h
 )
 
 # ddsutils files

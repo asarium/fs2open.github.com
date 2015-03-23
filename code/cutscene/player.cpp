@@ -529,14 +529,16 @@ namespace
         // the decoder actually started decoding
         auto currentTime = playbackGetTime(state);
         auto newFrame = false;
+        auto numRemoved = 0;
         VideoFramePtr videoFrame;
         while (currentTime > state->currentFrame->frameTime && state->decoder->tryPopVideoFrame(videoFrame))
         {
             state->currentFrame = videoFrame;
             newFrame = true;
+            ++numRemoved;
         }
 
-        mprintf(("Current frame time: %.5f, Queue size: %d\n", state->currentFrame->frameTime, state->decoder->getVideoQueueSize()));
+        mprintf(("Current frame time: %.5f, Removed: %d\n", state->currentFrame->frameTime, numRemoved));
         if (newFrame)
         {
             // Avoid multiple frame uploads

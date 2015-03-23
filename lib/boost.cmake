@@ -19,5 +19,4 @@ target_include_directories(boost INTERFACE "${Boost_INCLUDE_DIRS}")
 target_compile_definitions(boost INTERFACE "BOOST_ALL_NO_LIB")
 
 CONVERT_OLD_LIBRARIES(${Boost_LIBRARIES})
-# Use normal linking everywhere else
 target_link_libraries(boost INTERFACE "${CONVERTED_LIBRARIES}")

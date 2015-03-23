@@ -7012,10 +7012,10 @@ int game_main(int argc, char *argv[])
 	}
 
     if (!Is_standalone) {
-        auto player = cutscene::Player::newPlayer("intro.mve");
+        auto player = cutscene::Player::newPlayer("mp4test.mve");
         player->startPlayback();
 
-        //movie_play("intro.mve");
+        movie_play("intro.mve");
 	}
 
 	if (Is_standalone){

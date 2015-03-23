@@ -11,17 +11,6 @@ namespace
 {
     void copyYUVData(cutscene::ogg::OggVideoFrame* frame, const yuv_buffer& buffer)
     {
-        /*
-        frame->yData.resize(buffer.y_height * buffer.y_stride);
-        memcpy(frame->yData.data(), buffer.y, buffer.y_height * buffer.y_stride);
-
-        frame->uData.resize(buffer.uv_height * buffer.uv_stride);
-        memcpy(frame->uData.data(), buffer.u, buffer.uv_height * buffer.uv_stride);
-
-        frame->vData.resize(buffer.uv_height * buffer.uv_stride);
-        memcpy(frame->vData.data(), buffer.v, buffer.uv_height * buffer.uv_stride);
-        */
-
         frame->yData.reset(new ubyte[buffer.y_height * buffer.y_stride]);
         memcpy(frame->yData.get(), buffer.y, buffer.y_height * buffer.y_stride);
 
