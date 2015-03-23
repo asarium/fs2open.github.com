@@ -766,8 +766,15 @@ namespace cutscene
 
     std::unique_ptr<Player> Player::newPlayer(const SCP_string& name)
     {
+        auto decoder = findDecoder(name);
+
+        if (decoder == nullptr)
+        {
+            return nullptr;
+        }
+
         auto player = std::make_unique<Player>();
-        player->m_decoder.reset(findDecoder(name));
+        player->m_decoder.reset(decoder);
 
         return player;
     }
