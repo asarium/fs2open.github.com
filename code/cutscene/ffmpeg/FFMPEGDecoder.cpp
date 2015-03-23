@@ -14,6 +14,20 @@ namespace
 
     const size_t AVIO_BUFFER_SIZE = 8192;
 
+    void log_callback_report(void *ptr, int level, const char *fmt, va_list vl)
+    {
+        va_list vl2;
+        char line[1024];
+        static int print_prefix = 1;
+        
+        va_copy(vl2, vl);
+        av_log_default_callback(ptr, level, fmt, vl);
+        av_log_format_line(ptr, level, fmt, vl2, line, sizeof(line), &print_prefix);
+        va_end(vl2);
+        
+        mprintf(("FFMPEG Log: %s", line)); // no \n, ffmpeg handles that
+    }
+
     void initializeFFMPEG()
     {
         static bool initialized = false;
@@ -24,6 +38,8 @@ namespace
         }
 
         av_register_all();
+        av_log_set_callback(&log_callback_report);
+        av_log_set_level(AV_LOG_ERROR);
     }
 
     int cfileRead(void* ptr, uint8_t* buf, int buf_size)
@@ -125,17 +141,17 @@ namespace cutscene
 
         std::unique_ptr<InputStream> FFMPEGDecoder::openStream(const SCP_string& name)
         {
-            auto input = std::make_unique<InputStream>();
-            input->filePtr = cfopen(name.c_str(), "rb", CFILE_NORMAL, CF_TYPE_ANY);
-
-            if (!input->filePtr)
+            auto filePtr = cfopen(name.c_str(), "rb", CFILE_NORMAL, CF_TYPE_ANY);
+            if (!filePtr)
             {
-                // file does not exist
                 return nullptr;
             }
 
             // Only initialize ffmpeg if we are actually going to use it
             initializeFFMPEG();
+
+            auto input = std::make_unique<InputStream>();
+            input->filePtr = filePtr;
 
             mprintf(("FFMPEG: Opening movie file '%s'...\n", name.c_str()));
 
@@ -174,14 +190,14 @@ namespace cutscene
             AVProbeData probe;
             probe.buf = input->avioBuffer;
             probe.buf_size = read;
-            probe.filename = name.c_str();
+            probe.filename = nullptr;
             probe.mime_type = nullptr;
 
             input->context->iformat = av_probe_input_format(&probe, true);
 
             input->context->flags |= AVFMT_FLAG_CUSTOM_IO;
 
-            auto ret = avformat_open_input(&input->context, name.c_str(), nullptr, nullptr);
+            auto ret = avformat_open_input(&input->context, nullptr, input->context->iformat, nullptr);
             if (ret < 0)
             {
                 char errorStr[512];
@@ -300,7 +316,7 @@ namespace cutscene
             {
                 movieName.resize(dotPos);
             }
-            
+
             // Only mp4 is supported for now
             movieName.append(".mp4");
 
