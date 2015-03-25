@@ -3,6 +3,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Set a few policies
+cmake_policy(SET CMP0051 OLD)
 cmake_policy(SET CMP0053 NEW)
 cmake_policy(SET CMP0054 NEW)
 
