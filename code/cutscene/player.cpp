@@ -692,7 +692,10 @@ namespace cutscene
     {
         if (!state->playbackHasBegun)
         {
-            if (!state->decoder->isVideoFrameAvailable())
+            // Wait until video and audio are available
+            // If we don't have audio, don't wait for it (obviously...)
+            if (!state->decoder->isVideoFrameAvailable() ||
+                !(state->decoder->isAudioFrameAvailable() || !state->decoder->hasAudio()))
             {
                 return;
             }
@@ -705,7 +708,9 @@ namespace cutscene
         processAudioData(state);
 
         // Set the playing flag if the decoder is still active and there is still data available
-        state->playing = m_decoder->isDecoding() || (m_decoder->isAudioFrameAvailable() || m_decoder->isVideoFrameAvailable());
+        state->playing = m_decoder->isDecoding() ||
+            ((m_decoder->isAudioFrameAvailable() || !m_decoder->hasAudio()) ||
+            m_decoder->isVideoFrameAvailable());
     }
 
     void Player::startPlayback()
