@@ -18,6 +18,8 @@ namespace cutscene
             int m_maxOutNumSamples;
             int m_outNumSamples;
 
+            SCP_vector<short> m_audioBuffer;
+
         public:
             AudioDecoder(DecoderStatus* status, std::function<void(std::shared_ptr<AudioFrame>)> push);
             virtual ~AudioDecoder();

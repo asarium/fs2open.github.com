@@ -35,6 +35,8 @@ namespace cutscene
         AudioDecoder::AudioDecoder(DecoderStatus* status, std::function<void(std::shared_ptr<AudioFrame>)> push)
             : FFMPEGStreamDecoder(status, push)
         {
+            m_audioBuffer.reserve(OUT_SAMPLE_RATE * OUT_NUM_CHANNELS / 2);
+
             m_swrCtx = getSWRContext(m_status->audioCodecCtx->channel_layout, m_status->audioCodecCtx->sample_rate,
                 m_status->audioCodecCtx->sample_fmt);
 
@@ -103,16 +105,29 @@ namespace cutscene
                     return;
                 }
 
-                AudioFramePtr audioFrame = std::make_shared<AudioFrame>();
-                audioFrame->channels = OUT_NUM_CHANNELS;
-                audioFrame->rate = OUT_SAMPLE_RATE;
-
                 auto begin = reinterpret_cast<short*>(m_outData[0]);
                 auto end = reinterpret_cast<short*>(m_outData[0] + outBufsize);
 
-                audioFrame->audioData.assign(begin, end);
+                auto size = std::distance(begin, end);
+                auto newSize = m_audioBuffer.size() + size;
+                
+                if (newSize <= m_audioBuffer.capacity())
+                {
+                    // We haven't filled the buffer yet
+                    m_audioBuffer.insert(m_audioBuffer.end(), begin, end);
+                }
+                else
+                {
+                    AudioFramePtr audioFrame = std::make_shared<AudioFrame>();
+                    audioFrame->channels = OUT_NUM_CHANNELS;
+                    audioFrame->rate = OUT_SAMPLE_RATE;
 
-                m_pushFunction(audioFrame);
+                    audioFrame->audioData.assign(m_audioBuffer.begin(), m_audioBuffer.end());
+
+                    m_pushFunction(audioFrame);
+
+                    m_audioBuffer.assign(begin, end);
+                }
             }
         }
     }
