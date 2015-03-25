@@ -1,4 +1,8 @@
 
+#include <limits>
+
+#include <boost/tokenizer.hpp>
+
 #include "cutscene/ffmpeg/FFMPEGDecoder.h"
 
 #include "cfile/cfile.h"
@@ -82,6 +86,24 @@ namespace
         // cfseek returns the offset in the archive file (who thought that would be a good idea?)
         return cftell(cfile);
     }
+
+    double getFrameRate(AVStream* stream)
+    {
+        // from OpenCV
+        double fps = av_q2d(stream->r_frame_rate);
+
+        if (fps < std::numeric_limits<double>::epsilon())
+        {
+            fps = av_q2d(stream->avg_frame_rate);
+        }
+
+        if (fps < std::numeric_limits<double>::epsilon())
+        {
+            fps = 1.0 / av_q2d(stream->codec->time_base);
+        }
+
+        return fps;
+    }
 }
 
 namespace cutscene
@@ -139,171 +161,214 @@ namespace cutscene
         {
         }
 
-        std::unique_ptr<InputStream> FFMPEGDecoder::openStream(const SCP_string& name)
+        namespace
         {
-            auto filePtr = cfopen(name.c_str(), "rb", CFILE_NORMAL, CF_TYPE_ANY);
-            if (!filePtr)
+            std::unique_ptr<InputStream> openStream(const SCP_string& name)
             {
-                return nullptr;
-            }
-
-            // Only initialize ffmpeg if we are actually going to use it
-            initializeFFMPEG();
-
-            auto input = std::make_unique<InputStream>();
-            input->filePtr = filePtr;
-
-            mprintf(("FFMPEG: Opening movie file '%s'...\n", name.c_str()));
-
-            input->context = avformat_alloc_context();
-
-            if (!input->context)
-            {
-                mprintf(("FFMPEG: Failed to allocate context! Error: %s\n"));
-                return nullptr;
-            }
-
-            input->avioBuffer = reinterpret_cast<uint8_t*>(av_malloc(AVIO_BUFFER_SIZE));
-
-            if (!input->avioBuffer)
-            {
-                mprintf(("FFMPEG: Failed to allocate IO buffer!\n"));
-                return nullptr;
-            }
-            input->bufferSize = AVIO_BUFFER_SIZE;
-
-            input->ioContext = avio_alloc_context(input->avioBuffer, input->bufferSize, 0, input->filePtr, cfileRead, nullptr, cfileSeek);
-            input->context->pb = input->ioContext;
-
-            if (!input->ioContext)
-            {
-                mprintf(("FFMPEG: Failed to allocate IO context!\n"));
-                return nullptr;
-            }
-
-            // Now determine the format
-            auto read = cfread(input->avioBuffer, 1, input->bufferSize, input->filePtr);
-
-            // Make sure we don't cause a buffer overrun
-            Assert(read <= (int) input->bufferSize);
-
-            AVProbeData probe;
-            probe.buf = input->avioBuffer;
-            probe.buf_size = read;
-            probe.filename = nullptr;
-            probe.mime_type = nullptr;
-
-            input->context->iformat = av_probe_input_format(&probe, true);
-
-            input->context->flags |= AVFMT_FLAG_CUSTOM_IO;
-
-            auto ret = avformat_open_input(&input->context, nullptr, input->context->iformat, nullptr);
-            if (ret < 0)
-            {
-                char errorStr[512];
-                av_strerror(ret, errorStr, sizeof(errorStr));
-                mprintf(("FFMPEG: Could not open movie file! Error: %s\n", errorStr));
-                return nullptr;
-            }
-
-            ret = avformat_find_stream_info(input->context, nullptr);
-            if (ret < 0)
-            {
-                char errorStr[512];
-                av_strerror(ret, errorStr, sizeof(errorStr));
-                mprintf(("FFMPEG: Failed to get stream information! Error: %s\n", errorStr));
-                return nullptr;
-            }
-
-            return input;
-        }
-
-        std::unique_ptr<DecoderStatus> FFMPEGDecoder::initializeStatus(std::unique_ptr<InputStream>& stream)
-        {
-            auto status = std::make_unique<DecoderStatus>();
-
-            auto ctx = stream->context;
-
-            auto videoStream = -1;
-            auto audioStream = -1;
-            for (uint i = 0; i < ctx->nb_streams; ++i)
-            {
-                if (videoStream == -1 && ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
+                // Only search the root and data/movies
+                auto filePtr = cfopen(name.c_str(), "rb", CFILE_NORMAL, CF_TYPE_ROOT);
+                if (!filePtr)
                 {
-                    // Found the video stream (we only support one)
-                    videoStream = i;
+                    filePtr = cfopen(name.c_str(), "rb", CFILE_NORMAL, CF_TYPE_MOVIES);
                 }
-                else if (audioStream == -1 && ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
+
+                if (!filePtr)
                 {
-                    audioStream = i;
+                    return nullptr;
                 }
-            }
 
-            if (videoStream < 0)
-            {
-                return nullptr;
-            }
+                auto input = std::make_unique<InputStream>();
+                input->filePtr = filePtr;
 
-            status->videoStreamIndex = videoStream;
-            status->videoStream = ctx->streams[videoStream];
+                mprintf(("FFMPEG: Opening movie file '%s'...\n", name.c_str()));
 
-            if (audioStream >= 0)
-            {
-                status->audioStreamIndex = audioStream;
-                status->audioStream = ctx->streams[audioStream];
-            }
+                input->context = avformat_alloc_context();
 
-            status->videoCodecCtx = ctx->streams[videoStream]->codec;
-            status->videoCodec = avcodec_find_decoder(status->videoCodecCtx->codec_id);
-
-            if (!status->videoCodec)
-            {
-                mprintf(("FFMPEG: Video codec isn't supported!\n"));
-                return nullptr;
-            }
-
-            AVDictionary *optionsDict = nullptr;
-            auto err = avcodec_open2(status->videoCodecCtx, status->videoCodec, &optionsDict);
-            if (err < 0)
-            {
-                char errorStr[512];
-                av_strerror(err, errorStr, sizeof(errorStr));
-                mprintf(("FFMPEG: Failed to open video codec! Error: %s\n", errorStr));
-                return nullptr;
-            }
-
-            // Now initialize audio, if this fails it's not a fatal error
-            if (audioStream >= 0)
-            {
-                status->audioCodecCtx = status->audioStream->codec;
-                status->audioCodec = avcodec_find_decoder(status->audioCodecCtx->codec_id);
-
-                if (!status->audioCodec)
+                if (!input->context)
                 {
-                    mprintf(("FFMPEG: No compatible audio decoder found!\n"));
-                    status->audioStreamIndex = -1;
-                    status->audioStream = nullptr;
-                    status->audioCodecCtx = nullptr;
-                    status->audioCodec = nullptr;
+                    mprintf(("FFMPEG: Failed to allocate context! Error: %s\n"));
+                    return nullptr;
                 }
-                else
+
+                input->avioBuffer = reinterpret_cast<uint8_t*>(av_malloc(AVIO_BUFFER_SIZE));
+
+                if (!input->avioBuffer)
                 {
-                    AVDictionary* audioOpts = nullptr;
-                    err = avcodec_open2(status->audioCodecCtx, status->audioCodec, &audioOpts);
-                    if (err < 0)
+                    mprintf(("FFMPEG: Failed to allocate IO buffer!\n"));
+                    return nullptr;
+                }
+                input->bufferSize = AVIO_BUFFER_SIZE;
+
+                input->ioContext = avio_alloc_context(input->avioBuffer, input->bufferSize, 0, input->filePtr, cfileRead, nullptr, cfileSeek);
+                input->context->pb = input->ioContext;
+
+                if (!input->ioContext)
+                {
+                    mprintf(("FFMPEG: Failed to allocate IO context!\n"));
+                    return nullptr;
+                }
+
+                // Now determine the format
+                auto read = cfread(input->avioBuffer, 1, input->bufferSize, input->filePtr);
+                cfseek(input->filePtr, 0, CF_SEEK_SET);
+
+                // Make sure we don't cause a buffer overrun
+                Assert(read <= (int)input->bufferSize);
+
+                AVProbeData probe;
+                probe.buf = input->avioBuffer;
+                probe.buf_size = read;
+                probe.filename = nullptr;
+                probe.mime_type = nullptr;
+
+                input->context->iformat = av_probe_input_format(&probe, true);
+
+                input->context->flags |= AVFMT_FLAG_CUSTOM_IO;
+
+                auto ret = avformat_open_input(&input->context, nullptr, input->context->iformat, nullptr);
+                if (ret < 0)
+                {
+                    char errorStr[512];
+                    av_strerror(ret, errorStr, sizeof(errorStr));
+                    mprintf(("FFMPEG: Could not open movie file! Error: %s\n", errorStr));
+                    return nullptr;
+                }
+
+                ret = avformat_find_stream_info(input->context, nullptr);
+                if (ret < 0)
+                {
+                    char errorStr[512];
+                    av_strerror(ret, errorStr, sizeof(errorStr));
+                    mprintf(("FFMPEG: Failed to get stream information! Error: %s\n", errorStr));
+                    return nullptr;
+                }
+
+                return input;
+            }
+
+            std::unique_ptr<DecoderStatus> initializeStatus(std::unique_ptr<InputStream>& stream)
+            {
+                auto status = std::make_unique<DecoderStatus>();
+
+                auto ctx = stream->context;
+
+                auto videoStream = -1;
+                auto audioStream = -1;
+                for (uint i = 0; i < ctx->nb_streams; ++i)
+                {
+                    if (videoStream == -1 && ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO)
                     {
-                        char errorStr[512];
-                        av_strerror(err, errorStr, sizeof(errorStr));
-                        mprintf(("FFMPEG: Failed to open audio codec! Error: %s\n", errorStr));
+                        // Found the video stream (we only support one)
+                        videoStream = i;
+                    }
+                    else if (audioStream == -1 && ctx->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO)
+                    {
+                        audioStream = i;
+                    }
+                }
+
+                if (videoStream < 0)
+                {
+                    return nullptr;
+                }
+
+                status->videoStreamIndex = videoStream;
+                status->videoStream = ctx->streams[videoStream];
+
+                if (audioStream >= 0)
+                {
+                    status->audioStreamIndex = audioStream;
+                    status->audioStream = ctx->streams[audioStream];
+                }
+
+                status->videoCodecCtx = ctx->streams[videoStream]->codec;
+                status->videoCodec = avcodec_find_decoder(status->videoCodecCtx->codec_id);
+
+                if (!status->videoCodec)
+                {
+                    mprintf(("FFMPEG: Video codec isn't supported!\n"));
+                    return nullptr;
+                }
+
+                AVDictionary *optionsDict = nullptr;
+                auto err = avcodec_open2(status->videoCodecCtx, status->videoCodec, &optionsDict);
+                if (err < 0)
+                {
+                    char errorStr[512];
+                    av_strerror(err, errorStr, sizeof(errorStr));
+                    mprintf(("FFMPEG: Failed to open video codec! Error: %s\n", errorStr));
+                    return nullptr;
+                }
+
+                // Now initialize audio, if this fails it's not a fatal error
+                if (audioStream >= 0)
+                {
+                    status->audioCodecCtx = status->audioStream->codec;
+                    status->audioCodec = avcodec_find_decoder(status->audioCodecCtx->codec_id);
+
+                    if (!status->audioCodec)
+                    {
+                        mprintf(("FFMPEG: No compatible audio decoder found!\n"));
                         status->audioStreamIndex = -1;
                         status->audioStream = nullptr;
                         status->audioCodecCtx = nullptr;
                         status->audioCodec = nullptr;
                     }
+                    else
+                    {
+                        AVDictionary* audioOpts = nullptr;
+                        err = avcodec_open2(status->audioCodecCtx, status->audioCodec, &audioOpts);
+                        if (err < 0)
+                        {
+                            char errorStr[512];
+                            av_strerror(err, errorStr, sizeof(errorStr));
+                            mprintf(("FFMPEG: Failed to open audio codec! Error: %s\n", errorStr));
+                            status->audioStreamIndex = -1;
+                            status->audioStream = nullptr;
+                            status->audioCodecCtx = nullptr;
+                            status->audioCodec = nullptr;
+                        }
+                    }
                 }
+
+                return status;
             }
 
-            return status;
+            std::unique_ptr<InputStream> openInputStream(const SCP_string& name)
+            {
+                initializeFFMPEG();
+
+                auto format = av_iformat_next(nullptr);
+                while (format != nullptr)
+                {
+                    // Check all formats that specify extensions
+                    if (format->extensions != nullptr)
+                    {
+                        SCP_string extensions(format->extensions);
+
+                        boost::char_separator<char> sep(",");
+                        boost::tokenizer<boost::char_separator<char>,
+                            SCP_string::const_iterator,
+                            SCP_string> tok(extensions, sep);
+
+                        for (auto ext : tok)
+                        {
+                            auto fileName = name + "." + ext;
+
+                            auto input = openStream(fileName);
+
+                            if (input)
+                            {
+                                return input;
+                            }
+                        }
+                    }
+
+                    format = av_iformat_next(format);
+                }
+
+                return nullptr;
+            }
         }
 
         bool FFMPEGDecoder::initialize(const SCP_string& fileName)
@@ -317,10 +382,8 @@ namespace cutscene
                 movieName.resize(dotPos);
             }
 
-            // Only mp4 is supported for now
-            movieName.append(".mp4");
+            auto input = openInputStream(movieName);
 
-            auto input = openStream(movieName);
             if (!input)
             {
                 return false;
@@ -332,7 +395,7 @@ namespace cutscene
                 return false;
             }
 
-            initializeQueues(static_cast<size_t>(ceil(av_q2d(status->videoStream->avg_frame_rate))));
+            initializeQueues(static_cast<size_t>(ceil(getFrameRate(status->videoStream))));
 
             // We're done, now just put the pointer into this
             std::swap(m_input, input);
@@ -346,7 +409,7 @@ namespace cutscene
             props.size.width = m_status->videoCodecCtx->width;
             props.size.height = m_status->videoCodecCtx->height;
 
-            props.fps = static_cast<float>(av_q2d(m_status->videoStream->avg_frame_rate));
+            props.fps = static_cast<float>(getFrameRate(m_status->videoStream));
 
             return props;
         }

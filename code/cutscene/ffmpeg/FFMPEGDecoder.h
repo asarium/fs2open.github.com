@@ -18,10 +18,6 @@ namespace cutscene
 
             std::unique_ptr<DecoderStatus> m_status;
 
-            std::unique_ptr<InputStream> openStream(const SCP_string& name);
-
-            std::unique_ptr<DecoderStatus> initializeStatus(std::unique_ptr<InputStream>& stream);
-
         public:
             FFMPEGDecoder();
             virtual ~FFMPEGDecoder();
