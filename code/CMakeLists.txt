@@ -61,6 +61,7 @@ ENDIF(FSO_BUILD_TOOLS)
 
 ADD_LIBRARY(code_objs OBJECT ${file_root} ${DEF_OUT_FILES} ${VOICE_REC_FILES})
 target_include_directories(code_objs PUBLIC "$<TARGET_PROPERTY:code,INTERFACE_INCLUDE_DIRECTORIES>")
+target_compile_definitions(code_objs PUBLIC "$<TARGET_PROPERTY:code,INTERFACE_COMPILE_DEFINITIONS>")
 IF(COTIRE_ENABLE)
 	# Disable unity build as it doesn't work well for us
 	set_target_properties(code_objs PROPERTIES COTIRE_ADD_UNITY_BUILD FALSE)
