@@ -9,9 +9,9 @@ namespace
             SWS_BILINEAR, nullptr, nullptr, nullptr);
     }
 
-    float getFrameTime(int64_t pts, AVRational time_base)
+    double getFrameTime(int64_t pts, AVRational time_base)
     {
-        return static_cast<float>(pts * av_q2d(time_base));
+        return pts * av_q2d(time_base);
     }
 }
 
@@ -19,6 +19,35 @@ namespace cutscene
 {
     namespace ffmpeg
     {
+        class FFMPEGVideoFrame : public VideoFrame
+        {
+        public:
+            FFMPEGVideoFrame()
+            {
+                memset(&picture, 0, sizeof(picture));
+            }
+            virtual ~FFMPEGVideoFrame()
+            {
+                if (picture.data[0] != nullptr)
+                {
+                    avpicture_free(&picture);
+                    memset(&picture, 0, sizeof(picture));
+                }
+            }
+
+            virtual DataPointers getDataPointers()
+            {
+                DataPointers ptrs;
+                ptrs.y = picture.data[0];
+                ptrs.u = picture.data[1];
+                ptrs.v = picture.data[2];
+
+                return ptrs;
+            }
+
+            AVPicture picture;
+        };
+
         VideoDecoder::VideoDecoder(DecoderStatus* status, std::function<void(std::shared_ptr<VideoFrame>)> push) : FFMPEGStreamDecoder(status, push),
             m_frameId(0)
         {

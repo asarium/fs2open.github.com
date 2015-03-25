@@ -40,35 +40,6 @@ namespace cutscene
             AVCodec* audioCodec = nullptr;
         };
 
-        class FFMPEGVideoFrame : public VideoFrame
-        {
-        public:
-            FFMPEGVideoFrame()
-            {
-                memset(&picture, 0, sizeof(picture));
-            }
-            virtual ~FFMPEGVideoFrame()
-            {
-                if (picture.data[0] != nullptr)
-                {
-                    avpicture_free(&picture);
-                    memset(&picture, 0, sizeof(picture));
-                }
-            }
-
-            virtual DataPointers getDataPointers()
-            {
-                DataPointers ptrs;
-                ptrs.y = picture.data[0];
-                ptrs.u = picture.data[1];
-                ptrs.v = picture.data[2];
-
-                return ptrs;
-            }
-
-            AVPicture picture;
-        };
-
         template<typename Frame>
         class FFMPEGStreamDecoder
         {
