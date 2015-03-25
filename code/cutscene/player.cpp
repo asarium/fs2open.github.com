@@ -97,13 +97,6 @@ namespace
         return nullptr;
     }
 
-    int decoder(void* data)
-    {
-        reinterpret_cast<Player*>(data)->decoderThread();
-
-        return 0;
-    }
-
     // get relative time since beginning playback, compensating for A/V drift
     double playbackGetTime(PlayerState* state)
     {
