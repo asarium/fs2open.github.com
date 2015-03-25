@@ -4,7 +4,7 @@
 namespace
 {
     const int OUT_CH_LAYOUT = AV_CH_LAYOUT_STEREO;
-    const int OUT_SAMPLE_RATE = 44100;
+    const int OUT_SAMPLE_RATE = 48000;
     const AVSampleFormat OUT_SAMPLE_FORMAT = AV_SAMPLE_FMT_S16;
     const int OUT_NUM_CHANNELS = av_get_channel_layout_nb_channels(OUT_CH_LAYOUT);
 
