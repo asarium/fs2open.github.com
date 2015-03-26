@@ -534,10 +534,10 @@ namespace
         }
     }
 
-    void processAudioData(PlayerState* state)
+    bool processAudioData(PlayerState* state)
     {
         ALint processed;
-        OpenAL_ErrorCheck(alGetSourcei(state->audioSid, AL_BUFFERS_PROCESSED, &processed), return);
+        OpenAL_ErrorCheck(alGetSourcei(state->audioSid, AL_BUFFERS_PROCESSED, &processed), return false);
 
         // First check for free buffers and push them int the audio queue
         for (int i = 0; i < processed; ++i)
@@ -556,18 +556,20 @@ namespace
 
             ALenum format = (audioData->channels == 2) ? AL_FORMAT_STEREO16 : AL_FORMAT_MONO16;
 
-            OpenAL_ErrorCheck(alBufferData(buffer, format, audioData->audioData.data(), audioData->audioData.size() * sizeof(short), audioData->rate), return);
+            OpenAL_ErrorCheck(alBufferData(buffer, format, audioData->audioData.data(), audioData->audioData.size() * sizeof(short), audioData->rate), return false);
 
-            OpenAL_ErrorCheck(alSourceQueueBuffers(state->audioSid, 1, &buffer), return);
+            OpenAL_ErrorCheck(alSourceQueueBuffers(state->audioSid, 1, &buffer), return false);
         }
 
         ALint status, queued;
-        OpenAL_ErrorCheck(alGetSourcei(state->audioSid, AL_SOURCE_STATE, &status), return);
+        OpenAL_ErrorCheck(alGetSourcei(state->audioSid, AL_SOURCE_STATE, &status), return false);
 
-        OpenAL_ErrorCheck(alGetSourcei(state->audioSid, AL_BUFFERS_QUEUED, &queued), return);
+        OpenAL_ErrorCheck(alGetSourcei(state->audioSid, AL_BUFFERS_QUEUED, &queued), return false);
 
         if ((status != AL_PLAYING) && (queued > 0))
             OpenAL_ErrorPrint(alSourcePlay(state->audioSid));
+
+        return status == AL_PLAYING;
     }
 
     void audioPlaybackClose(PlayerState* state)
@@ -699,11 +701,13 @@ namespace cutscene
 
         processVideoData(state);
 
-        processAudioData(state);
+        auto audioPlaying = processAudioData(state);
 
         // Set the playing flag if the decoder is still active or there is still data available
         auto decoding = m_decoder->isDecoding();
-        auto pendingAudio = m_decoder->isAudioFrameAvailable() && m_decoder->hasAudio();
+
+        // Audio is pending if there is data left in the queue or of OpenAL is still playing audio
+        auto pendingAudio = (m_decoder->isAudioFrameAvailable() && m_decoder->hasAudio()) || audioPlaying;
         auto pendingVideo = m_decoder->isVideoFrameAvailable();
 
         state->playing = decoding || pendingAudio || pendingVideo;
