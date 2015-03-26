@@ -32,8 +32,6 @@ namespace cutscene
 
         bool playing = true;
 
-        bool doSleep = true;
-
         bool playbackHasBegun = false;
 
         int lastDisplayTimestamp = -1;
@@ -666,10 +664,6 @@ namespace
             case KEY_SPACEBAR:
                 state->playing = false;
                 break;
-
-            case KEY_S:
-                state->doSleep = !state->doSleep;
-                break;
         }
     }
 }
@@ -741,7 +735,7 @@ namespace cutscene
 
             auto passed = timer_get_milliseconds() - state.lastDisplayTimestamp;
 
-            if (state.doSleep && passed < sleepTime)
+            if (passed < sleepTime)
             {
                 auto sleep = sleepTime - passed;
                 CLAMP(sleep, 0, sleepTime);
