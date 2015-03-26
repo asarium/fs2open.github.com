@@ -228,8 +228,8 @@ namespace cutscene
                 auto ret = avformat_open_input(&input->context, nullptr, input->context->iformat, nullptr);
                 if (ret < 0)
                 {
-                    char errorStr[512];
-                    av_strerror(ret, errorStr, sizeof(errorStr));
+                    char errorStr[AV_ERROR_MAX_STRING_SIZE];
+                    av_strerror(ret, errorStr, AV_ERROR_MAX_STRING_SIZE);
                     mprintf(("FFMPEG: Could not open movie file! Error: %s\n", errorStr));
                     return nullptr;
                 }
@@ -237,8 +237,8 @@ namespace cutscene
                 ret = avformat_find_stream_info(input->context, nullptr);
                 if (ret < 0)
                 {
-                    char errorStr[512];
-                    av_strerror(ret, errorStr, sizeof(errorStr));
+                    char errorStr[AV_ERROR_MAX_STRING_SIZE];
+                    av_strerror(ret, errorStr, AV_ERROR_MAX_STRING_SIZE);
                     mprintf(("FFMPEG: Failed to get stream information! Error: %s\n", errorStr));
                     return nullptr;
                 }
@@ -439,6 +439,20 @@ namespace cutscene
 
                 av_free_packet(&packet);
             }
+
+            if (isDecoding())
+            {
+                // If we are still alive read the last frames from the decoders
+
+                // The ffmpeg decoder functions use this packet to return frames
+                // if the decoder has a delay
+                packet.data = nullptr;
+                packet.size = 0;
+
+                videoDecoder.finishDecoding(&packet, frame);
+                audioDecoder.finishDecoding(&packet, frame);
+            }
+
             stopDecoder();
 
             av_frame_free(&frame);

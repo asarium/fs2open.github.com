@@ -66,69 +66,105 @@ namespace cutscene
             swr_free(&m_swrCtx);
         }
 
-        void AudioDecoder::decodePacket(AVPacket* packet, AVFrame* frame)
+        void AudioDecoder::flushAudioBuffer()
+        {
+            AudioFramePtr audioFrame = std::make_shared<AudioFrame>();
+            audioFrame->channels = OUT_NUM_CHANNELS;
+            audioFrame->rate = OUT_SAMPLE_RATE;
+
+            audioFrame->audioData.assign(m_audioBuffer.begin(), m_audioBuffer.end());
+
+            m_pushFunction(audioFrame);
+            m_audioBuffer.clear();
+        }
+
+        void AudioDecoder::handleDecodedFrame(AVFrame* frame)
+        {
+            /* compute destination number of samples */
+            m_outNumSamples = static_cast<int>(av_rescale_rnd(swr_get_delay(m_swrCtx, m_status->audioCodecCtx->sample_rate)
+                + frame->nb_samples, OUT_SAMPLE_RATE, m_status->audioCodecCtx->sample_rate, AV_ROUND_UP));
+
+            if (m_outNumSamples > m_maxOutNumSamples)
+            {
+                av_freep(&m_outData[0]);
+                auto ret = av_samples_alloc(m_outData, &m_outLinesize, OUT_NUM_CHANNELS, m_outNumSamples, OUT_SAMPLE_FORMAT, 1);
+                if (ret < 0)
+                {
+                    mprintf(("FFMPEG: Failed to allocate samples!!!"));
+                    return;
+                }
+
+                m_maxOutNumSamples = m_outNumSamples;
+            }
+
+            /* convert to destination format */
+            auto ret = swr_convert(m_swrCtx, m_outData, m_outNumSamples, (const uint8_t **)frame->data, frame->nb_samples);
+            if (ret < 0)
+            {
+                mprintf(("FFMPEG: Error while converting audio!\n"));
+                return;
+            }
+
+            auto outBufsize = av_samples_get_buffer_size(&m_outLinesize, OUT_NUM_CHANNELS, ret, OUT_SAMPLE_FORMAT, 1);
+            if (outBufsize < 0)
+            {
+                mprintf(("FFMPEG: Could not get sample buffer size!\n"));
+                return;
+            }
+
+            auto begin = reinterpret_cast<short*>(m_outData[0]);
+            auto end = reinterpret_cast<short*>(m_outData[0] + outBufsize);
+
+            auto size = std::distance(begin, end);
+            auto newSize = m_audioBuffer.size() + size;
+
+            if (newSize <= m_audioBuffer.capacity())
+            {
+                // We haven't filled the buffer yet
+                m_audioBuffer.insert(m_audioBuffer.end(), begin, end);
+            }
+            else
+            {
+                flushAudioBuffer();
+                m_audioBuffer.assign(begin, end);
+            }
+        }
+
+        void AudioDecoder::decodePacket(const AVPacket* packet, AVFrame* frame)
         {
             int finishedFrame = 0;
             auto err = avcodec_decode_audio4(m_status->audioCodecCtx, frame, &finishedFrame, packet);
 
             if (err >= 0 && finishedFrame)
             {
-                /* compute destination number of samples */
-                m_outNumSamples = static_cast<int>(av_rescale_rnd(swr_get_delay(m_swrCtx, m_status->audioCodecCtx->sample_rate)
-                    + frame->nb_samples, OUT_SAMPLE_RATE, m_status->audioCodecCtx->sample_rate, AV_ROUND_UP));
-
-                if (m_outNumSamples > m_maxOutNumSamples)
-                {
-                    av_freep(&m_outData[0]);
-                    auto ret = av_samples_alloc(m_outData, &m_outLinesize, OUT_NUM_CHANNELS, m_outNumSamples, OUT_SAMPLE_FORMAT, 1);
-                    if (ret < 0)
-                    {
-                        mprintf(("FFMPEG: Failed to allocate samples!!!"));
-                        return;
-                    }
-
-                    m_maxOutNumSamples = m_outNumSamples;
-                }
-
-                /* convert to destination format */
-                auto ret = swr_convert(m_swrCtx, m_outData, m_outNumSamples, (const uint8_t **)frame->data, frame->nb_samples);
-                if (ret < 0)
-                {
-                    mprintf(("FFMPEG: Error while converting audio!\n"));
-                    return;
-                }
-
-                auto outBufsize = av_samples_get_buffer_size(&m_outLinesize, OUT_NUM_CHANNELS, ret, OUT_SAMPLE_FORMAT, 1);
-                if (outBufsize < 0)
-                {
-                    mprintf(("FFMPEG: Could not get sample buffer size!\n"));
-                    return;
-                }
-
-                auto begin = reinterpret_cast<short*>(m_outData[0]);
-                auto end = reinterpret_cast<short*>(m_outData[0] + outBufsize);
-
-                auto size = std::distance(begin, end);
-                auto newSize = m_audioBuffer.size() + size;
-                
-                if (newSize <= m_audioBuffer.capacity())
-                {
-                    // We haven't filled the buffer yet
-                    m_audioBuffer.insert(m_audioBuffer.end(), begin, end);
-                }
-                else
-                {
-                    AudioFramePtr audioFrame = std::make_shared<AudioFrame>();
-                    audioFrame->channels = OUT_NUM_CHANNELS;
-                    audioFrame->rate = OUT_SAMPLE_RATE;
-
-                    audioFrame->audioData.assign(m_audioBuffer.begin(), m_audioBuffer.end());
-
-                    m_pushFunction(audioFrame);
-
-                    m_audioBuffer.assign(begin, end);
-                }
+                handleDecodedFrame(frame);
             }
+        }
+
+        void AudioDecoder::finishDecoding(const AVPacket* nullPacket, AVFrame* frame)
+        {
+            // Handle those decoders that have a delay
+            while (true)
+            {
+                int finishedFrame = 1;
+                auto err = avcodec_decode_audio4(m_status->audioCodecCtx, frame, &finishedFrame, nullPacket);
+
+                if (err < 0 || !finishedFrame)
+                {
+                    break;
+                }
+
+                handleDecodedFrame(frame);
+            }
+
+            if (m_audioBuffer.empty())
+            {
+                // Nothing to do here anymore
+                return;
+            }
+
+            // Push the last bits of audio data into the queue
+            flushAudioBuffer();
         }
     }
 }

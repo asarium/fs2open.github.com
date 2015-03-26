@@ -20,11 +20,17 @@ namespace cutscene
 
             SCP_vector<short> m_audioBuffer;
 
+            void handleDecodedFrame(AVFrame* frame);
+
+            void flushAudioBuffer();
+
         public:
             AudioDecoder(DecoderStatus* status, std::function<void(std::shared_ptr<AudioFrame>)> push);
             virtual ~AudioDecoder();
 
-            virtual void decodePacket(AVPacket* packet, AVFrame* preallocated) override;
+            virtual void decodePacket(const AVPacket* packet, AVFrame* preallocated) override;
+
+            virtual void finishDecoding(const AVPacket* nullPacket, AVFrame* preallocated) override;
         };
     }
 }

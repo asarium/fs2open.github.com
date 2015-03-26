@@ -54,7 +54,9 @@ namespace cutscene
                 : m_pushFunction(push), m_status(status) {}
             virtual ~FFMPEGStreamDecoder() {}
 
-            virtual void decodePacket(AVPacket* packet, AVFrame* preallocated) = 0;
+            virtual void decodePacket(const AVPacket* packet, AVFrame* preallocated) = 0;
+
+            virtual void finishDecoding(const AVPacket* nullPacket, AVFrame* preallocated) = 0;
         };
     }
 }

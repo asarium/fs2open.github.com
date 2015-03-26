@@ -59,48 +59,71 @@ namespace cutscene
             sws_freeContext(m_swsCtx);
         }
 
-        void VideoDecoder::decodePacket(AVPacket* packet, AVFrame* frame)
+        void VideoDecoder::convertAndPushPicture(const AVFrame* frame)
+        {
+            // Allocate a picture to hold the YUV data
+            AVPicture yuvPicture;
+            avpicture_alloc(&yuvPicture, PIX_FMT_YUV420P, m_status->videoCodecCtx->width, m_status->videoCodecCtx->height);
+
+            // Convert frame to YUV
+            sws_scale(
+                m_swsCtx,
+                (uint8_t const * const *)frame->data,
+                frame->linesize,
+                0,
+                m_status->videoCodecCtx->height,
+                yuvPicture.data,
+                yuvPicture.linesize
+                );
+
+            auto videoFramePtr = std::make_shared<FFMPEGVideoFrame>();
+            videoFramePtr->id = ++m_frameId;
+            videoFramePtr->frameTime = getFrameTime(av_frame_get_best_effort_timestamp(frame), m_status->videoStream->time_base);
+            videoFramePtr->picture = yuvPicture; // The class handles deallocating the memory
+
+            videoFramePtr->ySize.height = m_status->videoCodecCtx->height;
+            videoFramePtr->ySize.width = m_status->videoCodecCtx->width;
+            videoFramePtr->ySize.stride = yuvPicture.linesize[0];
+
+            // 420P means that the UV channels have half the with and height
+            videoFramePtr->uvSize.height = m_status->videoCodecCtx->height / 2;
+            videoFramePtr->uvSize.width = m_status->videoCodecCtx->width / 2;
+            videoFramePtr->uvSize.stride = yuvPicture.linesize[1];
+
+            m_pushFunction(videoFramePtr);
+        }
+
+        void VideoDecoder::decodePacket(const AVPacket* packet, AVFrame* frame)
         {
             int finishedFrame = 0;
             auto result = avcodec_decode_video2(m_status->videoCodecCtx, frame, &finishedFrame, packet);
-
-            if (result < 0)
+            
+            if (result >= 0 && finishedFrame)
             {
-                mprintf(("FFMPEG: Decoding frame failed!\n"));
+                convertAndPushPicture(frame);
+            }
+        }
+
+        void VideoDecoder::finishDecoding(const AVPacket* nullPacket, AVFrame* frame)
+        {
+            if ((m_status->videoCodec->capabilities & CODEC_CAP_DELAY) == 0)
+            {
+                // codec doesn't return frames with a delay, just return right away
+                return;
             }
 
-            if (finishedFrame)
+            // Handle those decoders that have a delay
+            while (true)
             {
-                // Allocate a picture to hold the YUV data
-                AVPicture yuvPicture;
-                avpicture_alloc(&yuvPicture, PIX_FMT_YUV420P, m_status->videoCodecCtx->width, m_status->videoCodecCtx->height);
+                int finishedFrame = 1;
+                auto err = avcodec_decode_video2(m_status->audioCodecCtx, frame, &finishedFrame, nullPacket);
 
-                // Convert frame to YUV
-                sws_scale(
-                    m_swsCtx,
-                    (uint8_t const * const *)frame->data,
-                    frame->linesize,
-                    0,
-                    m_status->videoCodecCtx->height,
-                    yuvPicture.data,
-                    yuvPicture.linesize
-                    );
+                if (err < 0 || !finishedFrame)
+                {
+                    break;
+                }
 
-                auto videoFramePtr = std::make_shared<FFMPEGVideoFrame>();
-                videoFramePtr->id = ++m_frameId;
-                videoFramePtr->frameTime = getFrameTime(av_frame_get_best_effort_timestamp(frame), m_status->videoStream->time_base);
-                videoFramePtr->picture = yuvPicture; // The class handles deallocating the memory
-
-                videoFramePtr->ySize.height = m_status->videoCodecCtx->height;
-                videoFramePtr->ySize.width = m_status->videoCodecCtx->width;
-                videoFramePtr->ySize.stride = yuvPicture.linesize[0];
-
-                // 420P means that the UV channels have half the with and height
-                videoFramePtr->uvSize.height = m_status->videoCodecCtx->height / 2;
-                videoFramePtr->uvSize.width = m_status->videoCodecCtx->width / 2;
-                videoFramePtr->uvSize.stride = yuvPicture.linesize[1];
-
-                m_pushFunction(videoFramePtr);
+                convertAndPushPicture(frame);
             }
         }
     }
