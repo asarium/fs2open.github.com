@@ -395,7 +395,8 @@ namespace cutscene
                 return false;
             }
 
-            initializeQueues(static_cast<size_t>(ceil(getFrameRate(status->videoStream))));
+            // Buffer ~ 2 seconds of video and audio
+            initializeQueues(static_cast<size_t>(ceil(getFrameRate(status->videoStream))) * 2);
 
             // We're done, now just put the pointer into this
             std::swap(m_input, input);
