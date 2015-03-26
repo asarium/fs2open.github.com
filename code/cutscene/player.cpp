@@ -707,10 +707,12 @@ namespace cutscene
 
         processAudioData(state);
 
-        // Set the playing flag if the decoder is still active and there is still data available
-        state->playing = m_decoder->isDecoding() ||
-            ((m_decoder->isAudioFrameAvailable() || !m_decoder->hasAudio()) ||
-            m_decoder->isVideoFrameAvailable());
+        // Set the playing flag if the decoder is still active or there is still data available
+        auto decoding = m_decoder->isDecoding();
+        auto pendingAudio = m_decoder->isAudioFrameAvailable() && m_decoder->hasAudio();
+        auto pendingVideo = m_decoder->isVideoFrameAvailable();
+
+        state->playing = decoding || pendingAudio || pendingVideo;
     }
 
     void Player::startPlayback()
