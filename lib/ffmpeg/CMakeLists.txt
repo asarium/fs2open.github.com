@@ -9,7 +9,7 @@ IF(WIN32)
 
         set(include_dir "${FFMPEG_ROOT_DIR}/include/lib${name}")
         set(dll_name "${FFMPEG_ROOT_DIR}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${libname}${CMAKE_SHARED_LIBRARY_SUFFIX}")
-        set(lib_name "${FFMPEG_ROOT_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}${libname}${CMAKE_STATIC_LIBRARY_SUFFIX}")
+        set(lib_name "${FFMPEG_ROOT_DIR}/lib/${CMAKE_STATIC_LIBRARY_PREFIX}${name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
         if (NOT IS_DIRECTORY "${include_dir}")
             message("Couldn't find include directory for ${name} in \"${FFMPEG_ROOT_DIR}\".")
