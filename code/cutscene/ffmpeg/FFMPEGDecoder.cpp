@@ -18,6 +18,11 @@ namespace
 
     const size_t AVIO_BUFFER_SIZE = 8192;
 
+    const char* CHECKED_EXTENSIONS[] = {
+        "mp4",
+        "ogg"
+    };
+
     void log_callback_report(void *ptr, int level, const char *fmt, va_list vl)
     {
         va_list vl2;
@@ -338,33 +343,18 @@ namespace cutscene
             {
                 initializeFFMPEG();
 
-                auto format = av_iformat_next(nullptr);
-                while (format != nullptr)
+                // Check a list of extensions we might use
+                // The actual format of the file may be whatever FFmpeg supports
+                for (auto ext : CHECKED_EXTENSIONS)
                 {
-                    // Check all formats that specify extensions
-                    if (format->extensions != nullptr)
+                    auto fileName = name + "." + ext;
+
+                    auto input = openStream(fileName);
+
+                    if (input)
                     {
-                        SCP_string extensions(format->extensions);
-
-                        boost::char_separator<char> sep(",");
-                        boost::tokenizer<boost::char_separator<char>,
-                            SCP_string::const_iterator,
-                            SCP_string> tok(extensions, sep);
-
-                        for (auto ext : tok)
-                        {
-                            auto fileName = name + "." + ext;
-
-                            auto input = openStream(fileName);
-
-                            if (input)
-                            {
-                                return input;
-                            }
-                        }
+                        return input;
                     }
-
-                    format = av_iformat_next(format);
                 }
 
                 return nullptr;
