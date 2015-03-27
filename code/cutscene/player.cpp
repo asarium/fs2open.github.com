@@ -668,6 +668,18 @@ namespace
                 break;
         }
     }
+
+    bool shouldBeginPlayback(Decoder* decoder)
+    {
+        auto video = decoder->isVideoQueueFull();
+        auto audio = decoder->isAudioQueueFull();
+
+        // Wait until one of the queues is full, that should make sure
+        // that we have enough frames at the beginning of playback and that
+        // we don't wait indefinitely if the cutscene has a weird amount of audio
+        // or video at the beginning
+        return audio || video;
+    }
 }
 
 namespace cutscene
@@ -690,8 +702,7 @@ namespace cutscene
         {
             // Wait until video and audio are available
             // If we don't have audio, don't wait for it (obviously...)
-            if (!state->decoder->isVideoFrameAvailable() ||
-                !(state->decoder->isAudioFrameAvailable() || !state->decoder->hasAudio()))
+            if (!shouldBeginPlayback(state->decoder))
             {
                 return;
             }

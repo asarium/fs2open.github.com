@@ -83,11 +83,11 @@ namespace cutscene
 
         virtual void close() = 0;
 
-        size_t getAudioQueueSize() { return m_audioQueue->size(); }
+        bool isAudioQueueFull() { return m_audioQueue->full(); }
         bool isAudioFrameAvailable() { return !m_audioQueue->empty(); }
         bool tryPopAudioData(AudioFramePtr&);
 
-        size_t getVideoQueueSize() { return m_videoQueue->size(); }
+        bool isVideoQueueFull() { return m_videoQueue->full(); }
         bool isVideoFrameAvailable() { return !m_videoQueue->empty(); }
         bool tryPopVideoFrame(VideoFramePtr&);
         
