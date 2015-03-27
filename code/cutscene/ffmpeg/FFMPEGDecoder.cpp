@@ -421,21 +421,26 @@ namespace cutscene
 
             AVFrame* frame = av_frame_alloc();
 
-            VideoDecoder videoDecoder(m_status.get(), std::bind(&FFMPEGDecoder::pushFrameData, this, _1));
-            AudioDecoder audioDecoder(m_status.get(), std::bind(&FFMPEGDecoder::pushAudioData, this, _1));
-                        
-            AudioFramePtr audioDataPtr;
+            std::unique_ptr<VideoDecoder> videoDecoder = std::make_unique<VideoDecoder>(m_status.get(),
+                std::bind(&FFMPEGDecoder::pushFrameData, this, _1));
+
+            std::unique_ptr<AudioDecoder> audioDecoder;
+
+            if (hasAudio())
+            {
+                audioDecoder = std::make_unique<AudioDecoder>(m_status.get(), std::bind(&FFMPEGDecoder::pushAudioData, this, _1));
+            }
             
             AVPacket packet;
             while (isDecoding() && av_read_frame(m_input->context, &packet) >= 0)
             {
                 if (packet.stream_index == m_status->videoStreamIndex)
                 {
-                    videoDecoder.decodePacket(&packet, frame);
+                    videoDecoder->decodePacket(&packet, frame);
                 }
-                else if (packet.stream_index == m_status->audioStreamIndex)
+                else if (audioDecoder && packet.stream_index == m_status->audioStreamIndex)
                 {
-                    audioDecoder.decodePacket(&packet, frame);
+                    audioDecoder->decodePacket(&packet, frame);
                 }
 
                 av_free_packet(&packet);
@@ -450,8 +455,12 @@ namespace cutscene
                 packet.data = nullptr;
                 packet.size = 0;
 
-                videoDecoder.finishDecoding(&packet, frame);
-                audioDecoder.finishDecoding(&packet, frame);
+                videoDecoder->finishDecoding(&packet, frame);
+
+                if (audioDecoder)
+                {
+                    audioDecoder->finishDecoding(&packet, frame);
+                }
             }
 
             stopDecoder();
