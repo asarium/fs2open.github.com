@@ -116,7 +116,7 @@ namespace cutscene
             while (true)
             {
                 int finishedFrame = 1;
-                auto err = avcodec_decode_video2(m_status->audioCodecCtx, frame, &finishedFrame, nullPacket);
+                auto err = avcodec_decode_video2(m_status->videoCodecCtx, frame, &finishedFrame, nullPacket);
 
                 if (err < 0 || !finishedFrame)
                 {
