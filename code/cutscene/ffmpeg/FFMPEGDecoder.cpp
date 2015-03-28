@@ -1,8 +1,6 @@
 
 #include <limits>
 
-#include <boost/tokenizer.hpp>
-
 #include "cutscene/ffmpeg/FFMPEGDecoder.h"
 
 #include "cfile/cfile.h"
@@ -19,6 +17,7 @@ namespace
     const size_t AVIO_BUFFER_SIZE = 8192;
 
     const char* CHECKED_EXTENSIONS[] = {
+        "webm",
         "mp4",
         "ogg"
     };
