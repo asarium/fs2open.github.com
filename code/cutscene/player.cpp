@@ -647,6 +647,7 @@ namespace
             return;
         }
 
+        gr_clear();
         if (gr_screen.mode == GR_OPENGL)
         {
             glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
