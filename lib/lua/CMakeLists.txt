@@ -127,7 +127,6 @@ ELSE(FSO_USE_LUAJIT)
 			ltable.c
 			ltablib.c
 			ltm.c
-			lua.c
 			lundump.c
 			lvm.c
 			lzio.c
