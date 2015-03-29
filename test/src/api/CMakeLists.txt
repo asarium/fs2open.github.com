@@ -3,7 +3,7 @@ include(source_groups.cmake)
 
 generateTestFiles("api" file_root_lua LUA_FILES)
 
-add_executable(apiTests ${file_root} ${LUA_FILES})
+add_executable(apiTests ${file_root} ${LUA_FILES} $<TARGET_OBJECTS:code_objs>)
 
 target_link_libraries(apiTests PUBLIC fsoTest)
 target_include_directories(apiTests PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
