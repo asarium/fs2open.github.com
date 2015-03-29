@@ -3,7 +3,6 @@
 
 #include "api/lua/types/vector/vector_index_tests.lua.h"
 #include "api/lua/types/vector/vector_operator_tests.lua.h"
-#include "api/lua/types/vector/vector_getScreenCoords.lua.h"
 
 class VectorTests : public LuaFileTest
 {
