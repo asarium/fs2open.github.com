@@ -24,6 +24,9 @@ void game_start_subspace_ambient_sound() {}
 void game_stop_subspace_ambient_sound() {}
 int Show_cpu = 0;
 float Sun_spot = -1.0f;
+void game_get_framerate() {}
+float frametotal = 0.0f;
+float Framerate = 0.0f;
 
 char Fred_alt_names[MAX_SHIPS][NAME_LENGTH + 1];
 char Fred_callsigns[MAX_SHIPS][NAME_LENGTH + 1];
