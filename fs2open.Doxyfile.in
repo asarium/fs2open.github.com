@@ -228,7 +228,12 @@ TAB_SIZE               = 8
 # "Side Effects:". You can put \n's in the value part of an alias to insert
 # newlines.
 
-ALIASES                =
+ALIASES                = "readwrite{2}=@par Scripting Property:\nThis is a scripting property, use \ref \1 or \ref \2 when accessing the property from C++" \
+                         "readonly{1}=@attention This property is read-only, attempting to assign a property will cause an error!\n  @par Scripting Property:\nThis is a scripting property, use \ref \1 when accessing the property from C++" \
+                         "writeonly{1}=@attention This property is write-only, attempting to read this property will cause an error!\n   @par Scripting Property:\nThis is a scripting property, use \ref \1 when accessing the property from C++" \
+                         "propertygetter=@par Getter (a.x) documentation:\n" \
+                         "propertysetter=@par Setter (a.x = y) documentation:\n" \
+                         "notscriptingapi=@attention This member is <b>not</b> part of the scripting API!"
 
 # This tag can be used to specify a number of word-keyword mappings (TCL only).
 # A mapping has the form "name=value". For example adding "class=itcl::class"
@@ -1985,7 +1990,7 @@ INCLUDE_FILE_PATTERNS  =
 # recursively expanded use the := operator instead of the = operator.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-PREDEFINED             =
+PREDEFINED             = DOXYGEN_PARSER
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The
@@ -1994,7 +1999,7 @@ PREDEFINED             =
 # definition found in the source code.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-EXPAND_AS_DEFINED      =
+EXPAND_AS_DEFINED      = SCRIPT_PROPERTY
 
 # If the SKIP_FUNCTION_MACROS tag is set to YES then doxygen's preprocessor will
 # remove all refrences to function-like macros that are alone on a line, have an
