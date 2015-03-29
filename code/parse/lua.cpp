@@ -11358,112 +11358,14 @@ ADE_FUNC(getCurrentGameState, l_Base, "[Depth (number)]", "Gets current FreeSpac
 	return ade_set_args(L, "o", l_GameState.Set(gamestate_h(gameseq_get_state(depth))));
 }
 
-ADE_FUNC(getCurrentMPStatus, l_Base, "NIL", "Gets this computers current MP status", "string", "Current MP status" )
-{
-	if ( MULTIPLAYER_MASTER )
-		return ade_set_args(L, "s", "MULTIPLAYER_MASTER");
-
-	if ( MULTIPLAYER_HOST )
-		return ade_set_args(L, "s", "MULTIPLAYER_HOST");
-
-	if ( MULTIPLAYER_CLIENT )
-		return ade_set_args(L, "s", "MULTIPLAYER_CLIENT");
-
-	if ( MULTIPLAYER_STANDALONE )
-		return ade_set_args(L, "s", "MULTIPLAYER_STANDALONE");
-
-	return ade_set_args(L, "s", "SINGLEPLAYER");
-}
-
 ADE_FUNC(getCurrentPlayer, l_Base, NULL, "Gets a handle of the currently used player.<br><b>Note:</b> If there is no current player then the first player will be returned, check the game state to make sure you have a valid player handle.", "player", "Player handle")
 {
 	return ade_set_args(L, "o", l_Player.Set(Player_num));
 }
 
-ADE_FUNC(setControlMode, l_Base, "NIL or enumeration LE_*_CONTROL", "Sets the current control mode for the game.", "string", "Current control mode")
-{
-	enum_h *e = NULL;
-	if (!(ade_get_args(L, "|o", l_Enum.GetPtr(&e)))) {
-		if (lua_game_control & LGC_NORMAL)
-			return ade_set_args(L, "s", "NORMAL");
-		else if (lua_game_control & LGC_STEERING)
-			return ade_set_args(L, "s", "STEERING");
-		else if (lua_game_control & LGC_FULL)
-			return ade_set_args(L, "s", "FULL");
-		else
-			return ade_set_error(L, "s", "");
-	}
-
-	switch (e->index) {
-		case LE_NORMAL_CONTROLS:
-			lua_game_control |= LGC_NORMAL;
-			lua_game_control &= ~(LGC_STEERING|LGC_FULL);
-			return ade_set_args(L, "s", "NORMAL CONTROLS");
-		case LE_LUA_STEERING_CONTROLS:
-			lua_game_control |= LGC_STEERING;
-			lua_game_control &= ~(LGC_NORMAL|LGC_FULL);
-			return ade_set_args(L, "s", "LUA STEERING CONTROLS");
-		case LE_LUA_FULL_CONTROLS:
-			lua_game_control |= LGC_FULL;
-			lua_game_control &= ~(LGC_STEERING|LGC_NORMAL);
-			return ade_set_args(L, "s", "LUA FULL CONTROLS");
-		default:
-			return ade_set_error(L, "s", "");
-	}
-}
-
-ADE_FUNC(setButtonControlMode, l_Base, "NIL or enumeration LE_*_BUTTON_CONTROL", "Sets the current control mode for the game.", "string", "Current control mode")
-{
-	enum_h *e = NULL;
-	if (!(ade_get_args(L, "|o", l_Enum.GetPtr(&e)))) {
-		if (lua_game_control & LGC_B_NORMAL)
-			return ade_set_args(L, "s", "NORMAL");
-		else if (lua_game_control & LGC_B_OVERRIDE)
-			return ade_set_args(L, "s", "OVERRIDE");
-		else if (lua_game_control & LGC_B_ADDITIVE)
-			return ade_set_args(L, "s", "ADDITIVE");
-		else
-			return ade_set_error(L, "s", "");
-	}
-
-	switch (e->index) {
-		case LE_NORMAL_BUTTON_CONTROLS:
-			lua_game_control |= LGC_B_NORMAL;
-			lua_game_control &= ~(LGC_B_ADDITIVE|LGC_B_OVERRIDE);
-			return ade_set_args(L, "s", "NORMAL BUTTON CONTROL");
-		case LE_LUA_ADDITIVE_BUTTON_CONTROL:
-			lua_game_control |= LGC_B_ADDITIVE;
-			lua_game_control &= ~(LGC_B_NORMAL|LGC_B_OVERRIDE);
-			return ade_set_args(L, "s", "LUA OVERRIDE BUTTON CONTROL");
-		case LE_LUA_OVERRIDE_BUTTON_CONTROL:
-			lua_game_control |= LGC_B_OVERRIDE;
-			lua_game_control &= ~(LGC_B_ADDITIVE|LGC_B_NORMAL);
-			return ade_set_args(L, "s", "LUA ADDITIVE BUTTON CONTROL");
-		default:
-			return ade_set_error(L, "s", "");
-	}
-}
-
 ADE_FUNC(getControlInfo, l_Base, NULL, "Gets the control info handle.", "control info", "control info handle")
 {
 	return ade_set_args(L, "o", l_Control_Info.Set(1));
-}
-
-ADE_FUNC(setTips, l_Base, "True or false", "Sets whether to display tips of the day the next time the current pilot enters the mainhall.", NULL, NULL)
-{
-	if (Player == NULL)
-		return ADE_RETURN_NIL;
-
-	bool tips = false;
-
-	ade_get_args(L, "b", &tips);
-
-	if (tips)
-		Player->tips = 1;
-	else
-		Player->tips = 0;
-
-	return ADE_RETURN_NIL;
 }
 
 ADE_FUNC(postGameEvent, l_Base, "gameevent Event", "Sets current game event. Note that you can crash FreeSpace 2 by posting an event at an improper time, so test extensively if you use it.", "boolean", "True if event was posted, false if passed event was invalid")
