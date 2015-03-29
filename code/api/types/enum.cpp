@@ -128,7 +128,7 @@ namespace api
         {
             using namespace luabind;
 
-            auto max = static_cast<size_t>(Values::NUM_VALUES);
+            auto max = static_cast<size_t>(LE_NUM_VALUES);
             for (size_t i = 0; i < max; ++i)
             {
                 object enumObj(L, luaenum(static_cast<Values>(i)));
