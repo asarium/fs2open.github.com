@@ -33,6 +33,7 @@ set (file_root_asteroid
 )
 
 set(file_root_api
+	api/util.h
 )
 
 set(file_root_api_libs

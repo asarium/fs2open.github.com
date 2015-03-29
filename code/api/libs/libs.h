@@ -6,20 +6,12 @@ extern "C" {
 }
 #include <luabind/luabind.hpp>
 
+#include "api/util.h"
+
 namespace api
 {
     namespace libs
     {
         void registerLibraries(lua_State*);
-
-        class library
-        {
-        protected:
-            library() = delete;
-            library(const library&) = delete;
-
-        public:
-            virtual ~library() {}
-        };
     }
 }
