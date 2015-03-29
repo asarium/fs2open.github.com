@@ -4,6 +4,8 @@ extern "C" {
 #include <lua.h>
 }
 
+#include "api/util.h"
+
 namespace api
 {
     namespace types
