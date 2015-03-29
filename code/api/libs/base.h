@@ -6,6 +6,7 @@
 
 #include "api/types/vector.h"
 #include "api/types/matrix.h"
+#include "api/types/enum.h"
 
 namespace api
 {
@@ -29,6 +30,14 @@ namespace api
             static float getFrametime(bool adjustForTimeCompression);
 
             static const char* getCurrentMPStatus();
+
+            static const char* setControlMode(const types::luaenum& e);
+            static const char* setControlMode();
+
+            static const char* setButtonControlMode();
+            static const char* setButtonControlMode(const types::luaenum& e);
+
+            static void setTips(bool enable);
 
             static luabind::scope registerScope();
         };

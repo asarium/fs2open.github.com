@@ -4,12 +4,14 @@
 #include "globalincs/pstypes.h"
 #include "freespace.h"
 #include "network/multi.h"
+#include "playerman/player.h"
 
 #include "api/libs/base.h"
 
 #include <luabind/luabind.hpp>
 #include <luabind/adopt_policy.hpp>
 #include <luabind/tag_function.hpp>
+#include <luabind/class.hpp>
 
 namespace
 {
@@ -45,6 +47,11 @@ namespace
     float getFrametimeFalse()
     {
         return base::getFrametime(false);
+    }
+
+    void setTipsFalse()
+    {
+        base::setTips(false);
     }
 }
 
@@ -103,29 +110,122 @@ namespace api
             return "SINGLEPLAYER";
         }
 
+        const char* base::setControlMode(const luaenum& e)
+        {
+            switch (e.getValue())
+            {
+            case luaenum::LE_NORMAL_CONTROLS:
+                lua_game_control |= LGC_NORMAL;
+                lua_game_control &= ~(LGC_STEERING | LGC_FULL);
+                return "NORMAL CONTROLS";
+            case luaenum::LE_LUA_STEERING_CONTROLS:
+                lua_game_control |= LGC_STEERING;
+                lua_game_control &= ~(LGC_NORMAL | LGC_FULL);
+                return "LUA STEERING CONTROLS";
+            case luaenum::LE_LUA_FULL_CONTROLS:
+                lua_game_control |= LGC_FULL;
+                lua_game_control &= ~(LGC_STEERING | LGC_NORMAL);
+                return "LUA FULL CONTROLS";
+            default:
+                return "";
+            }
+        }
+
+        const char* base::setControlMode()
+        {
+            if (lua_game_control & LGC_NORMAL)
+            {
+                return "NORMAL";
+            }
+            else if (lua_game_control & LGC_STEERING)
+            {
+                return "STEERING";
+            }
+            else if (lua_game_control & LGC_FULL)
+            {
+                return "FULL";
+            }
+            else
+            {
+                return "";
+            }
+        }
+
+        const char* base::setButtonControlMode()
+        {
+            if (lua_game_control & LGC_B_NORMAL)
+                return "NORMAL";
+            else if (lua_game_control & LGC_B_OVERRIDE)
+                return "OVERRIDE";
+            else if (lua_game_control & LGC_B_ADDITIVE)
+                return "ADDITIVE";
+            else
+                return "";
+        }
+
+        const char* base::setButtonControlMode(const luaenum& e)
+        {
+            switch (e.getValue()) {
+            case luaenum::LE_NORMAL_BUTTON_CONTROLS:
+                lua_game_control |= LGC_B_NORMAL;
+                lua_game_control &= ~(LGC_B_ADDITIVE | LGC_B_OVERRIDE);
+                return "NORMAL BUTTON CONTROL";
+            case luaenum::LE_LUA_ADDITIVE_BUTTON_CONTROL:
+                lua_game_control |= LGC_B_ADDITIVE;
+                lua_game_control &= ~(LGC_B_NORMAL | LGC_B_OVERRIDE);
+                return "LUA OVERRIDE BUTTON CONTROL";
+            case luaenum::LE_LUA_OVERRIDE_BUTTON_CONTROL:
+                lua_game_control |= LGC_B_OVERRIDE;
+                lua_game_control &= ~(LGC_B_ADDITIVE | LGC_B_NORMAL);
+                return "LUA ADDITIVE BUTTON CONTROL";
+            default:
+                return "";
+            }
+        }
+
+        void base::setTips(bool enable)
+        {
+            if (Player == NULL)
+                return;
+
+            if (enable)
+                Player->tips = 1;
+            else
+                Player->tips = 0;
+        }
+
         luabind::scope base::registerScope()
         {
             using namespace luabind;
 
-            return namespace_("ba")
-                [
+            return class_<base>("ba")
+                .scope[
                     def("print", &base::print),
-                    def("warning", &base::warning),
-                    def("error", &base::error),
+                        def("warning", &base::warning),
+                        def("error", &base::error),
 
-                    def("createVector", &createVector0),
-                    def("createVector", &createVector1),
-                    def("createVector", &createVector2),
-                    def("createVector", &base::createVector),
+                        def("createVector", &createVector0),
+                        def("createVector", &createVector1),
+                        def("createVector", &createVector2),
+                        def("createVector", &base::createVector),
 
-                    def("createOrientation", &createOrientation0),
-                    def("createOrientation", &createOrientation3),
-                    def("createOrientation", &base::createOrientation),
+                        def("createOrientation", &createOrientation0),
+                        def("createOrientation", &createOrientation3),
+                        def("createOrientation", &base::createOrientation),
 
-                    def("getFrametime", &getFrametimeFalse),
-                    def("getFrametime", &base::getFrametime),
+                        def("getFrametime", &getFrametimeFalse),
+                        def("getFrametime", &base::getFrametime),
 
-                    def("getCurrentMPStatus", &base::getCurrentMPStatus)
+                        def("getCurrentMPStatus", &base::getCurrentMPStatus),
+
+                        def("setControlMode", (const char*(*)())&base::setControlMode),
+                        def("setControlMode", (const char*(*)(const luaenum&))&base::setControlMode),
+
+                        def("setButtonControlMode", (const char*(*)()) &base::setButtonControlMode),
+                        def("setButtonControlMode", (const char*(*)(const luaenum&)) &base::setButtonControlMode),
+
+                        def("setTips", &base::setTips),
+                        def("setTips", &setTipsFalse)
                 ];
         }
     }
