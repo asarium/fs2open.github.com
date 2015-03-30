@@ -3,62 +3,137 @@
 #include <memory>
 
 #include "globalincs/pstypes.h"
+#include "nanovg/nanovg.h"
 
-struct NVGcontext;
+#include "graphics/2d.h"
+
 namespace graphics
 {
-	namespace paths
-	{
-		class PathRenderer
-		{
-		private:
-			static std::unique_ptr<PathRenderer> s_instance;
+    namespace paths
+    {
+        enum class Direction
+        {
+            CCW,
+            CW
+        };
 
-			NVGcontext* m_context;
+        enum class Solidity
+        {
+            SOLID,
+            HOLE
+        };
 
-			PathRenderer();
-		public:
-			~PathRenderer();
+        /**
+         * @brief A paint used for drawing
+         * @attention The contents of this struct are private, do not rely on any form of structure in it
+         */
+        struct DrawPaint
+        {
+            // Use an union when more backends are implemented
+            NVGpaint nvg;
+        };
 
-			static bool init();
+        class PathRenderer
+        {
+        private:
+            static std::unique_ptr<PathRenderer> s_instance;
 
-			static inline PathRenderer* instance()
-			{
-				return s_instance.get();
-			}
+        protected:
+            PathRenderer() {}
+        public:
+            virtual ~PathRenderer() {}
 
-			static void shutdown();
+            static bool init();
 
-			void beginFrame();
+            static inline PathRenderer* instance()
+            {
+                return s_instance.get();
+            }
 
-			void cancelFrame();
+            static void shutdown();
 
-			void endFrame();
+            virtual void beginFrame() = 0;
 
-			void setAlpha(float alpha);
+            virtual void cancelFrame() = 0;
 
-			void setFillColor(float r, float g, float b, float a);
+            virtual void endFrame() = 0;
 
-			void setStrokeColor(float r, float g, float b, float a);
+            virtual void scissor(float x, float y, float w, float h) = 0;
 
-			void beginPath();
+            virtual void resetScissor() = 0;
 
-			void moveTo(float x, float y);
+            /* begin transforms */
 
-			void lineTo(float x, float y);
+            virtual void resetTransform() = 0;
 
-			void rectangle(float x, float y, float w, float h);
+            virtual void translate(float x, float y) = 0;
 
-			void roundedRectangle(float x, float y, float w, float h, float radius);
+            virtual void rotate(float rad) = 0;
 
-			void circle(float x, float y, float r);
+            virtual void skewX(float rad) = 0;
 
-			void ellipse(float x, float y, float rx, float ry);
+            virtual void skewY(float rad) = 0;
 
-			void fill();
+            virtual void scale(float x, float y) = 0;
 
-			void stroke();
-		};
-	}
+            /* end transforms */
+
+            /* begin paint creation */
+
+            virtual DrawPaint createLinearGradient(float sx, float sy, float ex,
+                float ey, color* icol, color* ocol) = 0;
+
+            /* end paint creation */
+
+            /* begin color handling */
+            virtual void setAlpha(float alpha) = 0;
+
+            virtual void setFillColor(color* color) = 0;
+
+            virtual void setFillPaint(const DrawPaint& paint) = 0;
+
+            virtual void setStrokeColor(color* color) = 0;
+
+            virtual void setStrokePaint(const DrawPaint& paint) = 0;
+
+            virtual void setStrokeWidth(float witdh) = 0;
+            /* end color handling */
+            
+            virtual void beginPath() = 0;
+
+            virtual void moveTo(float x, float y) = 0;
+
+            virtual void setSolidity(Solidity solid) = 0;
+
+            /* begin shapes
+               TODO: Replace this with doxygen */
+
+            virtual void lineTo(float x, float y) = 0;
+
+            virtual void rectangle(float x, float y, float w, float h) = 0;
+
+            virtual void roundedRectangle(float x, float y, float w, float h, float radius) = 0;
+
+            virtual void circle(float x, float y, float r) = 0;
+
+            virtual void ellipse(float x, float y, float rx, float ry) = 0;
+
+            virtual void arc(float cx, float cy, float r, float a0, float a1, Direction dir) = 0;
+
+            /* end shapes */
+
+            virtual void closePath() = 0;
+
+            virtual void fill() = 0;
+
+            virtual void stroke() = 0;
+
+            virtual void saveState() = 0;
+
+            virtual void resetState() = 0;
+
+            virtual void restoreState() = 0;
+        };
+    }
 }
 

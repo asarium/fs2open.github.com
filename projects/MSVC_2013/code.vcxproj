@@ -566,6 +566,7 @@
     <ClCompile Include="..\..\code\graphics\paths\nanovg\nanovg.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug SSE2|Win32'">false</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\..\code\graphics\paths\NVGRenderer.cpp" />
     <ClCompile Include="..\..\code\graphics\paths\PathRenderer.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug SSE2|Win32'">false</ExcludedFromBuild>
     </ClCompile>
@@ -852,7 +853,9 @@
     <ClInclude Include="..\..\code\graphics\paths\nanovg\nanovg_gl_utils.h" />
     <ClInclude Include="..\..\code\graphics\paths\nanovg\stb_image.h" />
     <ClInclude Include="..\..\code\graphics\paths\nanovg\stb_truetype.h" />
+    <ClInclude Include="..\..\code\graphics\paths\NVGRenderer.h" />
     <ClInclude Include="..\..\code\graphics\paths\PathRenderer.h" />
+    <ClInclude Include="..\..\code\graphics\paths\StubRenderer.h" />
     <ClInclude Include="..\..\code\graphics\tmapper.h" />
     <ClInclude Include="..\..\code\Graphics\font.h" />
     <ClInclude Include="..\..\code\graphics\generic.h" />

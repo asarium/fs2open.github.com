@@ -381,11 +381,11 @@ void main_hall_blit_table_status()
 {
 	// blit ship table status
 	gr_set_color_fast(Game_ships_tbl_valid ? &Color_bright_green : &Color_bright_red);
-	gr_line(1, gr_screen.max_h_unscaled_zoomed - 1, 1, gr_screen.max_h_unscaled_zoomed - 1, GR_RESIZE_MENU_ZOOMED);
+	gr_rect(1, gr_screen.max_h_unscaled_zoomed - 1, 2, 2, GR_RESIZE_MENU_ZOOMED);
 
 	// blit weapon table status
 	gr_set_color_fast(Game_weapons_tbl_valid ? &Color_bright_green : &Color_bright_red);
-	gr_line(3, gr_screen.max_h_unscaled_zoomed - 1, 3, gr_screen.max_h_unscaled_zoomed - 1, GR_RESIZE_MENU_ZOOMED);
+    gr_rect(3, gr_screen.max_h_unscaled_zoomed - 1, 2, 2, GR_RESIZE_MENU_ZOOMED);
 }
 
 /**

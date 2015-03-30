@@ -442,19 +442,6 @@ void player_select_do()
 	// draw any pending messages on the bottom or middle of the screen
 	player_select_display_all_text();
 
-	auto path = graphics::paths::PathRenderer::instance();
-
-	path->beginFrame();
-
-	path->setStrokeColor(1.0f, 0.5f, 0.0f, 1.0f);
-	path->setFillColor(0.0f, 0.5f, 1.0f, 1.0f);
-
-	path->roundedRectangle(50.f, 50.f, 300.f, 70.f, 3.f);
-	path->stroke();
-	path->fill();
-
-	path->endFrame();
-
 	gr_flip();
 }
 
