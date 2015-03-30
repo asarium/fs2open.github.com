@@ -76,6 +76,11 @@ namespace
         int clip_width = ((do_resize) ? gr_screen.clip_width_unscaled : gr_screen.clip_width);
         int clip_height = ((do_resize) ? gr_screen.clip_height_unscaled : gr_screen.clip_height);
 
+        int offset_x = ((do_resize) ? gr_screen.offset_x_unscaled : gr_screen.offset_x);
+        int offset_y = ((do_resize) ? gr_screen.offset_y_unscaled : gr_screen.offset_y);
+
+        path->translate(offset_x, offset_y);
+
         path->scissor(0.0f, 0.0f, i2fl(clip_width), i2fl(clip_height));
     }
 
@@ -662,7 +667,7 @@ void gr_opengl_aaline(vertex *v1, vertex *v2)
 	float y2 = v2->screen.xyw.y;
 
     // AA is now standard
-    gr_opengl_line(x1, y1, x2, y2, GR_RESIZE_FULL);
+    gr_opengl_line(x1, y1, x2, y2, GR_RESIZE_MENU);
 }
 
 void gr_opengl_gradient(int x1, int y1, int x2, int y2, int resize_mode)
