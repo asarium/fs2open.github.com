@@ -23,7 +23,7 @@ if(NOT CMAKE_CXX_FLAGS)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 	ELSEIF(COMPILER_SUPPORTS_CXX0X)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-	ENDIF(COMPILER_SUPPORTS_CXX11)
+	ENDIF()
 endif(NOT CMAKE_CXX_FLAGS)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
@@ -31,7 +31,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 # Omit "argument unused during compilation" when clang is used with ccache.
 if(${CMAKE_CXX_COMPILER} MATCHES "ccache")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qunused-arguments")
-endif(${CMAKE_CXX_COMPILER} MATCHES "ccache")
+endif()
 # Omit "conversion from string literal to 'char *' is deprecated" warnings.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-writable-strings -Wno-writable-strings")
 # Omit "unknown pragma ignored" warnings.
