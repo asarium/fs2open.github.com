@@ -31,9 +31,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
 # Omit "argument unused during compilation" when clang is used with ccache.
 if(${CMAKE_CXX_COMPILER} MATCHES "ccache")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Qunused-arguments")
-endif()
+endif(${CMAKE_CXX_COMPILER} MATCHES "ccache")
 # Omit "conversion from string literal to 'char *' is deprecated" warnings.
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-writable-strings")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-writable-strings -Wno-writable-strings")
 # Omit "unknown pragma ignored" warnings.
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unknown-pragmas")
 # Omit "... antiquated header ..." warnings. This is caused by clang's usage of GNU/GCC's hash_map.

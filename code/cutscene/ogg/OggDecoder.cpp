@@ -66,6 +66,7 @@ namespace cutscene
 
         bool OggDecoder::initialize(const SCP_string& fileName)
         {
+            float fps;
             SCP_string movieName = fileName;
             std::transform(movieName.begin(), movieName.end(), movieName.begin(), ::tolower);
 
@@ -233,7 +234,7 @@ namespace cutscene
                 vorbis_block_init(&movie.vstate, &movie.vblock);
             }
 
-            auto fps = static_cast<float>(movie.tinfo.fps_numerator) / movie.tinfo.fps_denominator;
+            fps = static_cast<float>(movie.tinfo.fps_numerator) / movie.tinfo.fps_denominator;
             // Always buffer one second of video playback
             initializeQueues(static_cast<size_t>(fps));
 

@@ -20,15 +20,9 @@ IF(WIN32)
         IMPORTED_IMPLIB "${lib_name}"
         )
 
-        if ("${name}" STREQUAL "avutil")
-            set_target_properties(${name} PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_ROOT_DIR}/include"
-            )
-        else("${name}" STREQUAL "avutil")
-            set_target_properties(${name} PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${include_dir}"
-            )
-        endif ("${name}" STREQUAL "avutil")
+        set_target_properties(${name} PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${FFMPEG_ROOT_DIR}/include"
+        )
 
     	INSTALL(FILES "${dll_name}"
     			DESTINATION ${BINARY_DESTINATION}
@@ -47,5 +41,20 @@ IF(WIN32)
         message("ffmpeg root directory \"${FFMPEG_ROOT_DIR}\" does not exist")
     endif(IS_DIRECTORY "${FFMPEG_ROOT_DIR}")
 ELSE(WIN32)
-    message("ffmpeg library finding isn't supported on this platform")
+    # CMake can't check for ffmpeg so we'll just use PkgConfig
+    INCLUDE(FindPkgConfig)
+    INCLUDE(util)
+
+    macro(add_av_lib name)
+        PKG_SEARCH_MODULE(${name} REQUIRED "lib${name}")
+
+        PKG_CONFIG_LIB_RESOLVE(${name} ${name}_LIB)
+        ADD_IMPORTED_LIB("${name}" "${${name}_INCLUDE_DIRS}" "${${name}_LIB}" SHARED)
+    endmacro(add_av_lib)
+
+    add_av_lib(avcodec)
+    add_av_lib(avformat)
+    add_av_lib(avutil)
+    add_av_lib(swresample)
+    add_av_lib(swscale)
 ENDIF(WIN32)
