@@ -79,7 +79,7 @@ namespace
         int offset_x = ((do_resize) ? gr_screen.offset_x_unscaled : gr_screen.offset_x);
         int offset_y = ((do_resize) ? gr_screen.offset_y_unscaled : gr_screen.offset_y);
 
-        path->translate(offset_x, offset_y);
+        path->translate(i2fl(offset_x), i2fl(offset_y));
 
         path->scissor(0.0f, 0.0f, i2fl(clip_width), i2fl(clip_height));
     }
@@ -750,112 +750,55 @@ void gr_opengl_arc(int xc, int yc, float r, float angle_start, float angle_end, 
 
 void gr_opengl_curve(int xc, int yc, int r, int direction, int resize_mode)
 {
-	int a, b, p;
+    using namespace graphics::paths;
 
-	if (resize_mode != GR_RESIZE_NONE) {
-		gr_resize_screen_pos(&xc, &yc, NULL, NULL, resize_mode);
-	}
+    auto path = beginDrawing(resize_mode);
+    float centerX, centerY;
+    float beginAngle, endAngle;
 
-	if ( (xc + r) < gr_screen.clip_left ) {
-		return;
-	}
+    switch (direction)
+    {
+    case 0:
+    {
+        centerX = i2fl(xc + r);
+        centerY = i2fl(yc + r);
+        beginAngle = ANG_TO_RAD(180.f);
+        endAngle = ANG_TO_RAD(270.f);
+        break;
+    }
+    case 1:
+    {
+        centerX = i2fl(xc);
+        centerY = i2fl(yc + r);
+        beginAngle = ANG_TO_RAD(270.f);
+        endAngle = ANG_TO_RAD(360.f);
+        break;
+    }
+    case 2:
+    {
+        centerX = i2fl(xc + r);
+        centerY = i2fl(yc);
+        beginAngle = ANG_TO_RAD(90.f);
+        endAngle = ANG_TO_RAD(180.f);
+        break;
+    }
+    case 3:
+    {
+        centerX = i2fl(xc);
+        centerY = i2fl(yc);
+        beginAngle = ANG_TO_RAD(0.f);
+        endAngle = ANG_TO_RAD(90.f);
+        break;
+    }
+    default:
+        return;
+    }
 
-	if ( (yc + r) < gr_screen.clip_top ) {
-		return;
-	}
+    path->arc(centerX, centerY, i2fl(r), beginAngle, endAngle, Direction::CW);
+    path->setStrokeColor(&gr_screen.current_color);
+    path->stroke();
 
-	p = 3 - (2 * r);
-	a = 0;
-	b = r;
-
-	switch (direction) {
-		case 0: {
-			yc += r;
-			xc += r;
-
-			while (a < b) {
-				// Draw the first octant
-				gr_opengl_line(xc - b + 1, yc - a, xc - b, yc - a, GR_RESIZE_NONE);
-
-				if (p < 0) {
-					p += (a << 2) + 6;
-				} else {
-					// Draw the second octant
-					gr_opengl_line(xc - a + 1, yc - b, xc - a, yc - b, GR_RESIZE_NONE);
-					p += ((a - b) << 2) + 10;
-					b--;
-				}
-
-				a++;
-			}
-
-			break;
-		}
-
-		case 1: {
-			yc += r;
-
-			while (a < b) {
-				// Draw the first octant
-				gr_opengl_line(xc + b - 1, yc - a, xc + b, yc - a, GR_RESIZE_NONE);
-
-				if (p < 0) {
-					p += (a << 2) + 6;
-				} else {
-					// Draw the second octant
-					gr_opengl_line(xc + a - 1, yc - b, xc + a, yc - b, GR_RESIZE_NONE);
-					p += ((a - b) << 2) + 10;
-					b--;
-				}
-
-				a++;
-			}
-
-			break;
-		}
-
-		case 2: {
-			xc += r;
-
-			while (a < b) {
-				// Draw the first octant
-				gr_opengl_line(xc - b + 1, yc + a, xc - b, yc + a, GR_RESIZE_NONE);
-
-				if (p < 0) {
-					p += (a << 2) + 6;
-				} else {
-					// Draw the second octant
-					gr_opengl_line(xc - a + 1, yc + b, xc - a, yc + b, GR_RESIZE_NONE);
-					p += ((a - b) << 2) + 10;
-					b--;
-				}
-
-				a++;
-			}
-
-			break;
-		}
-
-		case 3: {
-			while (a < b) {
-				// Draw the first octant
-				gr_opengl_line(xc + b - 1, yc + a, xc + b, yc + a, GR_RESIZE_NONE);
-
-				if (p < 0) {
-					p += (a << 2) + 6;
-				} else {
-					// Draw the second octant
-					gr_opengl_line(xc + a - 1, yc + b, xc + a, yc + b, GR_RESIZE_NONE);
-					p += ((a - b) << 2) + 10;
-					b--;
-				}
-
-				a++;
-			}
-
-			break;
-		}
-	}
+    endDrawing(path);
 }
 
 struct v6 { GLfloat x,y,z,w,u,v; };

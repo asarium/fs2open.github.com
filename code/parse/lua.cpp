@@ -13287,14 +13287,14 @@ ADE_FUNC(drawCurve, l_Graphics, "number X, number Y, number Radius", "Draws a cu
 	if(!Gr_inited)
 		return ADE_RETURN_NIL;
 
-	int x,y,ra;
+	int x,y,ra,dir = 0;
 
-	if(!ade_get_args(L, "iii", &x,&y,&ra))
+	if(!ade_get_args(L, "iii|i", &x,&y,&ra, &dir))
 		return ADE_RETURN_NIL;
 
 	//WMC - direction should be settable at a certain point via enumerations.
 	//Not gonna deal with it now.
-	gr_curve(x,y,ra,0,GR_RESIZE_FULL);
+    gr_curve(x, y, ra, dir, GR_RESIZE_NONE);
 
 	return ADE_RETURN_NIL;
 }
