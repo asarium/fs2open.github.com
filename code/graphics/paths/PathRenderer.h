@@ -29,7 +29,7 @@ namespace graphics
          */
         struct DrawPaint
         {
-            // Use an union when more backends are implemented
+            // Use a union when more backends are implemented
             NVGpaint nvg;
         };
 

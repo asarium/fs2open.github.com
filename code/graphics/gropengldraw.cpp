@@ -96,11 +96,15 @@ namespace
 
         setupTransforms(path, resize_mode);
 
+        gr_opengl_set_2d_matrix();
+
         return path;
     }
 
     void endDrawing(graphics::paths::PathRenderer* path)
     {
+        gr_opengl_end_2d_matrix();
+
         path->endFrame();
         path->restoreState();
     }
