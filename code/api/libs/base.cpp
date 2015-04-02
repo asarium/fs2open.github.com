@@ -194,6 +194,15 @@ namespace api
                 Player->tips = 0;
         }
 
+        const char* base::GameEvents::getByName(const char* key)
+        {
+            return "Index Test";
+        }
+        static const char* base::GameEvents::getByIndex(int index)
+        {
+
+        }
+
         luabind::scope base::registerScope()
         {
             using namespace luabind;
@@ -225,7 +234,12 @@ namespace api
                         def("setButtonControlMode", (const char*(*)(const luaenum&)) &base::setButtonControlMode),
 
                         def("setTips", &base::setTips),
-                        def("setTips", &setTipsFalse)
+                        def("setTips", &setTipsFalse),
+
+                        class_<GameEvents>("GameEvents")
+                        .scope[
+                            def("__index", &GameEvents::get)
+                        ]
                 ];
         }
     }

@@ -39,6 +39,15 @@ namespace api
 
             static void setTips(bool enable);
 
+            class GameEvents : public library
+            {
+            public:
+                ~GameEvents() {}
+
+                static const char* getByName(const char* key);
+                static const char* getByIndex(int index);
+            };
+
             static luabind::scope registerScope();
         };
     }

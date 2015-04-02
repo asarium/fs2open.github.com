@@ -46,6 +46,8 @@ set(file_root_api_libs
 set(file_root_api_types
 	api/types/enum.cpp
 	api/types/enum.h
+	api/types/gameevent.cpp
+	api/types/gameevent.h
 	api/types/matrix.cpp
 	api/types/matrix.h
 	api/types/types.cpp
