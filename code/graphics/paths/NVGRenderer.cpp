@@ -3,6 +3,7 @@
 
 #include "graphics/gropengl.h"
 #include "graphics/gropenglstate.h"
+#include "graphics/gropengltnl.h"
 
 #include "nanovg/nanovg.h"
 // NanoVG supports OpenGL 2 and 3, we currently use OpenGL 2
@@ -84,7 +85,12 @@ namespace graphics
 
         void NVGRenderer::endFrame()
         {
+            gr_opengl_set_2d_matrix();
+
             nvgEndFrame(m_context);
+
+            gr_opengl_end_2d_matrix();
+
             resetGLState();
         }
 
