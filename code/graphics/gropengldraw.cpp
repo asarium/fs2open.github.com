@@ -92,19 +92,15 @@ namespace
         setupDrawingState(path);
 
         path->beginFrame();
-        path->beginPath();
-
         setupTransforms(path, resize_mode);
 
-        gr_opengl_set_2d_matrix();
+        path->beginPath();
 
         return path;
     }
 
     void endDrawing(graphics::paths::PathRenderer* path)
     {
-        gr_opengl_end_2d_matrix();
-
         path->endFrame();
         path->restoreState();
     }
@@ -671,7 +667,7 @@ void gr_opengl_aaline(vertex *v1, vertex *v2)
 	float y2 = v2->screen.xyw.y;
 
     // AA is now standard
-    gr_opengl_line(x1, y1, x2, y2, GR_RESIZE_MENU);
+    gr_opengl_line(x1, y1, x2, y2, GR_RESIZE_NONE);
 }
 
 void gr_opengl_gradient(int x1, int y1, int x2, int y2, int resize_mode)
