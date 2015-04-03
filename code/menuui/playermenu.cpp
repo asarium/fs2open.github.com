@@ -33,7 +33,7 @@
 #include "network/multi.h"
 #include "debugconsole/console.h"
 
-#include "graphics/paths/PathRenderer.h"
+#include "svg/SVGImage.h"
 
 // --------------------------------------------------------------------------------------------------------
 // PLAYER SELECT defines
@@ -240,6 +240,8 @@ void player_select_set_controls(int gray)
 	}
 }
 
+std::unique_ptr<svg::SVGImage> image;
+
 // functions for selecting single/multiplayer pilots at the very beginning of FreeSpace
 void player_select_init()
 {
@@ -338,7 +340,9 @@ void player_select_init()
 
 	if ( (Player_select_num_pilots == 1) && Player_select_input_mode ) {
 		Player_select_autoaccept = 1;
-	}
+    }
+
+    image = svg::SVGImage::loadSVGFile("test.svg");
 }
 
 // no need to reset this to false because we only ever see player_select once per game run
@@ -441,6 +445,10 @@ void player_select_do()
 	
 	// draw any pending messages on the bottom or middle of the screen
 	player_select_display_all_text();
+
+    graphics::paths::PathRenderer::instance()->beginFrame();
+    image->drawImage(graphics::paths::PathRenderer::instance());
+    graphics::paths::PathRenderer::instance()->endFrame();
 
 	gr_flip();
 }

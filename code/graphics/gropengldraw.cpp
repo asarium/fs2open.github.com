@@ -601,7 +601,7 @@ void gr_opengl_line(float x1, float y1, float x2, float y2, int resize_mode)
     {
         path->circle(x1, y1, 1.5);
 
-        path->setFillColor(&gr_screen.current_color);
+        path->setFillColor(gr_screen.current_color);
         path->fill();
     }
     else
@@ -609,7 +609,7 @@ void gr_opengl_line(float x1, float y1, float x2, float y2, int resize_mode)
         path->moveTo(x1, y1);
         path->lineTo(x2, y2);
 
-        path->setStrokeColor(&gr_screen.current_color);
+        path->setStrokeColor(gr_screen.current_color);
         path->setStrokeWidth(1.0f);
         path->stroke();
     }
@@ -683,7 +683,7 @@ void gr_opengl_gradient(int x1, int y1, int x2, int y2, int resize_mode)
     endColor.alpha = 0;
 
     auto gradientPaint = path->createLinearGradient(i2fl(x1), i2fl(y1),
-        i2fl(x2), i2fl(y2), &gr_screen.current_color, &endColor);
+        i2fl(x2), i2fl(y2), gr_screen.current_color, endColor);
 
     path->moveTo(i2fl(x1), i2fl(y1));
     path->lineTo(i2fl(x2), i2fl(y2));
@@ -700,7 +700,7 @@ void gr_opengl_circle(int xc, int yc, int d, int resize_mode)
     auto path = beginDrawing(resize_mode);
 
     path->circle(i2fl(xc), i2fl(yc), d / 2.0f);
-    path->setFillColor(&gr_screen.current_color);
+    path->setFillColor(gr_screen.current_color);
     path->fill();
 
     endDrawing(path);
@@ -711,7 +711,7 @@ void gr_opengl_unfilled_circle(int xc, int yc, int d, int resize_mode)
     auto path = beginDrawing(resize_mode);
 
     path->circle(i2fl(xc), i2fl(yc), d / 2.0f);
-    path->setStrokeColor(&gr_screen.current_color);
+    path->setStrokeColor(gr_screen.current_color);
     path->stroke();
 
     endDrawing(path);
@@ -735,13 +735,13 @@ void gr_opengl_arc(int xc, int yc, float r, float angle_start, float angle_end, 
         path->arc(i2fl(xc), i2fl(yc), r, ANG_TO_RAD(angle_start), ANG_TO_RAD(angle_end), Direction::CW);
         path->lineTo(i2fl(xc), i2fl(yc));
 
-        path->setFillColor(&gr_screen.current_color);
+        path->setFillColor(gr_screen.current_color);
         path->fill();
     }
     else
     {
         path->arc(i2fl(xc), i2fl(yc), r, ANG_TO_RAD(angle_start), ANG_TO_RAD(angle_end), Direction::CW);
-        path->setStrokeColor(&gr_screen.current_color);
+        path->setStrokeColor(gr_screen.current_color);
         path->stroke();
     }
 
@@ -795,7 +795,7 @@ void gr_opengl_curve(int xc, int yc, int r, int direction, int resize_mode)
     }
 
     path->arc(centerX, centerY, i2fl(r), beginAngle, endAngle, Direction::CW);
-    path->setStrokeColor(&gr_screen.current_color);
+    path->setStrokeColor(gr_screen.current_color);
     path->stroke();
 
     endDrawing(path);

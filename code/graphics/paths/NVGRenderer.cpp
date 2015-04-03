@@ -49,9 +49,9 @@ namespace
         GL_state.StencilTest(GL_FALSE);
     }
 
-    NVGcolor fsColorToNVG(color* c)
+    NVGcolor fsColorToNVG(const color& c)
     {
-        return nvgRGBA(c->red, c->green, c->blue, c->is_alphacolor ? c->alpha : 255);
+        return nvgRGBA(c.red, c.green, c.blue, c.is_alphacolor ? c.alpha : 255);
     }
 }
 
@@ -61,7 +61,7 @@ namespace graphics
     {
         NVGRenderer::NVGRenderer()
         {
-            m_context = nvgCreateGL2(NVG_ANTIALIAS | NVG_STENCIL_STROKES);
+            m_context = nvgCreateGL2(NVG_ANTIALIAS | NVG_STENCIL_STROKES | NVG_DEBUG);
         }
 
         NVGRenderer::~NVGRenderer()
@@ -135,7 +135,7 @@ namespace graphics
         }
 
         DrawPaint NVGRenderer::createLinearGradient(float sx, float sy, float ex,
-            float ey, color* icol, color* ocol)
+            float ey, const color& icol, const color& ocol)
         {
             DrawPaint p;
 
@@ -149,7 +149,7 @@ namespace graphics
             nvgGlobalAlpha(m_context, alpha);
         }
 
-        void NVGRenderer::setFillColor(color* color)
+        void NVGRenderer::setFillColor(const color& color)
         {
             nvgFillColor(m_context, fsColorToNVG(color));
         }
@@ -159,7 +159,7 @@ namespace graphics
             nvgFillPaint(m_context, paint.nvg);
         }
 
-        void NVGRenderer::setStrokeColor(color* color)
+        void NVGRenderer::setStrokeColor(const color& color)
         {
             nvgStrokeColor(m_context, fsColorToNVG(color));
         }
@@ -201,6 +201,11 @@ namespace graphics
             }
 
             nvgPathWinding(m_context, nvgSolid);
+        }
+
+        void NVGRenderer::bezierTo(float c1x, float c1y, float c2x, float c2y, float x, float y)
+        {
+            nvgBezierTo(m_context, c1x, c1y, c2x, c2y, x, y);
         }
 
         void NVGRenderer::lineTo(float x, float y)

@@ -214,6 +214,12 @@
     <Filter Include="Graphics\OpenGLGr\gl">
       <UniqueIdentifier>{4370a840-cb95-4539-98d7-2587fc37986e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SVG">
+      <UniqueIdentifier>{98d50602-d724-4b1c-a0b5-dec4e7041762}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="SVG\nanosvg">
+      <UniqueIdentifier>{e34f26b1-a2b1-48c1-8c9e-743672ef4a24}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\code\ai\ai.cpp">
@@ -1083,6 +1089,12 @@
     <ClCompile Include="..\..\code\graphics\paths\NVGRenderer.cpp">
       <Filter>Graphics\Paths</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\svg\SVGImage.cpp">
+      <Filter>SVG</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\svg\nanosvg\nanosvg.cpp">
+      <Filter>SVG\nanosvg</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\ai\ai.h">
@@ -1918,6 +1930,12 @@
     </ClInclude>
     <ClInclude Include="..\..\code\graphics\paths\StubRenderer.h">
       <Filter>Graphics\Paths</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\svg\SVGImage.h">
+      <Filter>SVG</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\svg\nanosvg\nanosvg.h">
+      <Filter>SVG\nanosvg</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

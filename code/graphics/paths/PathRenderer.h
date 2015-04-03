@@ -81,18 +81,18 @@ namespace graphics
             /* begin paint creation */
 
             virtual DrawPaint createLinearGradient(float sx, float sy, float ex,
-                float ey, color* icol, color* ocol) = 0;
+                float ey, const color& icol, const color& ocol) = 0;
 
             /* end paint creation */
 
             /* begin color handling */
             virtual void setAlpha(float alpha) = 0;
 
-            virtual void setFillColor(color* color) = 0;
+            virtual void setFillColor(const color& color) = 0;
 
             virtual void setFillPaint(const DrawPaint& paint) = 0;
 
-            virtual void setStrokeColor(color* color) = 0;
+            virtual void setStrokeColor(const color& color) = 0;
 
             virtual void setStrokePaint(const DrawPaint& paint) = 0;
 
@@ -104,9 +104,11 @@ namespace graphics
             virtual void moveTo(float x, float y) = 0;
 
             virtual void setSolidity(Solidity solid) = 0;
-
+            
             /* begin shapes
                TODO: Replace this with doxygen */
+
+            virtual void bezierTo(float c1x, float c1y, float c2x, float c2y, float x, float y) = 0;
 
             virtual void lineTo(float x, float y) = 0;
 

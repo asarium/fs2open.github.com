@@ -36,15 +36,15 @@ namespace graphics
             virtual void scale(float x, float y) override {};
 
             virtual DrawPaint createLinearGradient(float sx, float sy, float ex,
-                float ey, color* icol, color* ocol) override { return DrawPaint(); };
+                float ey, const color& icol, const color& ocol) override { return DrawPaint(); };
 
             virtual void setAlpha(float alpha) override {};
 
-            virtual void setFillColor(color* color) override {};
+            virtual void setFillColor(const color& color) override {};
 
             virtual void setFillPaint(const DrawPaint& paint) override {};
 
-            virtual void setStrokeColor(color* color) override {};
+            virtual void setStrokeColor(const color& color) override {};
 
             virtual void setStrokePaint(const DrawPaint& paint) override {};
 
@@ -55,6 +55,8 @@ namespace graphics
             virtual void moveTo(float x, float y) override {};
 
             virtual void setSolidity(Solidity solid) override {};
+
+            virtual void bezierTo(float c1x, float c1y, float c2x, float c2y, float x, float y) override {};
 
             virtual void lineTo(float x, float y) override {};
 

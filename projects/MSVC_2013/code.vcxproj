@@ -719,6 +719,8 @@
     <ClCompile Include="..\..\code\Stats\medals.cpp" />
     <ClCompile Include="..\..\code\Stats\scoring.cpp" />
     <ClCompile Include="..\..\code\Stats\stats.cpp" />
+    <ClCompile Include="..\..\code\svg\nanosvg\nanosvg.cpp" />
+    <ClCompile Include="..\..\code\svg\SVGImage.cpp" />
     <ClCompile Include="..\..\code\ui\button.cpp" />
     <ClCompile Include="..\..\code\ui\checkbox.cpp" />
     <ClCompile Include="..\..\code\ui\gadget.cpp" />
@@ -1009,6 +1011,8 @@
     <ClInclude Include="..\..\code\Stats\medals.h" />
     <ClInclude Include="..\..\code\stats\scoring.h" />
     <ClInclude Include="..\..\code\Stats\stats.h" />
+    <ClInclude Include="..\..\code\svg\nanosvg\nanosvg.h" />
+    <ClInclude Include="..\..\code\svg\SVGImage.h" />
     <ClInclude Include="..\..\code\ui\ui.h" />
     <ClInclude Include="..\..\code\ui\uidefs.h" />
     <ClInclude Include="..\..\code\weapon\beam.h" />
