@@ -56,6 +56,10 @@ namespace graphics
 
             virtual void setSolidity(Solidity solid) override {};
 
+            virtual void setLineJoin(LineJoin join) override {};
+
+            virtual void setLineCap(LineCap cap) override {};
+
             virtual void bezierTo(float c1x, float c1y, float c2x, float c2y, float x, float y) override {};
 
             virtual void lineTo(float x, float y) override {};

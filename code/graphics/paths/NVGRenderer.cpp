@@ -203,6 +203,49 @@ namespace graphics
             nvgPathWinding(m_context, nvgSolid);
         }
 
+        void NVGRenderer::setLineJoin(LineJoin join)
+        {
+            int nvgJoin;
+            switch (join)
+            {
+            case LineJoin::BEVEL:
+                nvgJoin = NVG_BEVEL;
+                break;
+            case LineJoin::MITER:
+                nvgJoin = NVG_MITER;
+                break;
+            case LineJoin::ROUND:
+                nvgJoin = NVG_ROUND;
+                break;
+            default:
+                nvgJoin = NVG_MITER;
+            }
+
+            nvgLineJoin(m_context, nvgJoin);
+        }
+
+        void NVGRenderer::setLineCap(LineCap cap)
+        {
+            int nvgCap;
+            switch (cap)
+            {
+            case LineCap::BUTT:
+                nvgCap = NVG_BUTT;
+                break;
+            case LineCap::ROUND:
+                nvgCap = NVG_ROUND;
+                break;
+            case LineCap::SQUARE:
+                nvgCap = NVG_SQUARE;
+                break;
+            default:
+                nvgCap = NVG_BUTT;
+                break;
+            }
+
+            nvgLineCap(m_context, nvgCap);
+        }
+
         void NVGRenderer::bezierTo(float c1x, float c1y, float c2x, float c2y, float x, float y)
         {
             nvgBezierTo(m_context, c1x, c1y, c2x, c2y, x, y);

@@ -23,6 +23,20 @@ namespace graphics
             HOLE
         };
 
+        enum class LineCap
+        {
+            BUTT,
+            ROUND,
+            SQUARE
+        };
+
+        enum class LineJoin
+        {
+            MITER,
+            ROUND,
+            BEVEL
+        };
+
         /**
          * @brief A paint used for drawing
          * @attention The contents of this struct are private, do not rely on any form of structure in it
@@ -104,6 +118,10 @@ namespace graphics
             virtual void moveTo(float x, float y) = 0;
 
             virtual void setSolidity(Solidity solid) = 0;
+
+            virtual void setLineJoin(LineJoin join) = 0;
+
+            virtual void setLineCap(LineCap cap) = 0;
             
             /* begin shapes
                TODO: Replace this with doxygen */

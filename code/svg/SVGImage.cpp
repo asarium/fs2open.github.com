@@ -20,11 +20,31 @@ namespace
         return c;
     }
 
+    /*
+    DrawPaint getLinearGradient(PathRenderer* renderer, NSVGshape* shape, NSVGgradient* gradient)
+    {
+        float sx = shape->bounds[0];
+        float sy = shape->bounds[1];
+
+        float ex = shape->bounds[2];
+        float ey = shape->bounds[3];
+
+        auto startGradient = screenToGradientSpace(gradient, 0.f, 0.f);
+        auto endGradient = screenToGradientSpace(gradient, ex - sx, ey - sy);
+
+        return renderer->createLinearGradient(;
+    }
+    */
+
     void setFillState(PathRenderer* renderer, NSVGshape* shape)
     {
         if (shape->fill.type == NSVG_PAINT_COLOR)
         {
             renderer->setFillColor(getFSColor(shape->fill.color));
+        }
+        else if (shape->fill.type == NSVG_PAINT_LINEAR_GRADIENT)
+        {
+            //renderer->setFillPaint(getLinearGradient(renderer, shape, shape->fill.gradient));
         }
         else
         {
@@ -32,9 +52,41 @@ namespace
         }
     }
 
+    LineJoin getLineJoin(int join)
+    {
+        switch (join)
+        {
+        case NSVG_JOIN_BEVEL:
+            return LineJoin::BEVEL;
+        case NSVG_JOIN_MITER:
+            return LineJoin::MITER;
+        case NSVG_JOIN_ROUND:
+            return LineJoin::ROUND;
+        default:
+            return LineJoin::MITER;
+        }
+    }
+
+    LineCap getLineCap(int cap)
+    {
+        switch (cap)
+        {
+        case NSVG_CAP_BUTT:
+            return LineCap::BUTT;
+        case NSVG_CAP_ROUND:
+            return LineCap::ROUND;
+        case NSVG_CAP_SQUARE:
+            return LineCap::SQUARE;
+        default:
+            return LineCap::BUTT;
+        }
+    }
+
     void setStrokeState(PathRenderer* renderer, NSVGshape* shape)
     {
         renderer->setStrokeWidth(shape->strokeWidth);
+        renderer->setLineJoin(getLineJoin(shape->strokeLineJoin));
+        renderer->setLineCap(getLineCap(shape->strokeLineCap));
         if (shape->stroke.type == NSVG_PAINT_COLOR)
         {
             renderer->setStrokeColor(getFSColor(shape->stroke.color));
@@ -63,6 +115,8 @@ namespace svg
     {
         renderer->saveState();
 
+        renderer->translate(50.f, 50.f);
+        
         for (auto shape = m_image->shapes; shape != NULL; shape = shape->next)
         {
             if (shape->fill.type == NSVG_PAINT_NONE && shape->stroke.type == NSVG_PAINT_NONE)
@@ -70,22 +124,22 @@ namespace svg
                 continue;
             }
 
+            renderer->beginPath();
             for (auto path = shape->paths; path != NULL; path = path->next)
             {
-                renderer->beginPath();
-
-                for (auto i = 0; i < path->npts - 1; i += 3)
+                renderer->moveTo(path->pts[0], path->pts[1]);
+                for (auto i = 1; i < path->npts - 1; i += 3)
                 {
                     float* p = &path->pts[i * 2];
                     renderer->bezierTo(p[0], p[1], p[2], p[3], p[4], p[5]);
                 }
-
                 if (path->closed)
                 {
-                    renderer->closePath();
+                    renderer->lineTo(path->pts[0], path->pts[1]);
                 }
             }
 
+            renderer->setAlpha(shape->opacity);
             if (shape->fill.type != NSVG_PAINT_NONE)
             {
                 setFillState(renderer, shape);
@@ -119,6 +173,11 @@ namespace svg
 
         auto image = std::unique_ptr<SVGImage>(new SVGImage());
         image->m_image = nsvgParse(&contents[0], "px", 96.0f);
+
+        if (image->m_image == nullptr)
+        {
+            throw std::runtime_error("Failed to load SVG image!");
+        }
 
         return image;
     }

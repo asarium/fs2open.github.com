@@ -610,7 +610,6 @@ void gr_opengl_line(float x1, float y1, float x2, float y2, int resize_mode)
         path->lineTo(x2, y2);
 
         path->setStrokeColor(gr_screen.current_color);
-        path->setStrokeWidth(1.0f);
         path->stroke();
     }
 

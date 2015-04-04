@@ -446,9 +446,19 @@ void player_select_do()
 	// draw any pending messages on the bottom or middle of the screen
 	player_select_display_all_text();
 
-    graphics::paths::PathRenderer::instance()->beginFrame();
-    image->drawImage(graphics::paths::PathRenderer::instance());
-    graphics::paths::PathRenderer::instance()->endFrame();
+    auto renderer = graphics::paths::PathRenderer::instance();
+    renderer->beginFrame();
+    /*renderer->resetState();
+    renderer->beginPath();
+
+    renderer->moveTo(0.0f, 0.f);
+    renderer->lineTo(700.f, 600.f);
+    renderer->setStrokeColor(Color_white);
+    renderer->stroke();*/
+
+    image->drawImage(renderer);
+
+    renderer->endFrame();
 
 	gr_flip();
 }
