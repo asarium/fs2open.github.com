@@ -3,9 +3,6 @@
 #include <unordered_map>
 #include <QGLWidget>
 
-///! \bug subsys_to_render should have its own include.
-#include "fredrender.h"
-
 namespace fso {
 namespace fred {
 

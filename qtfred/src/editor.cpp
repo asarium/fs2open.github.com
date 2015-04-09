@@ -28,8 +28,6 @@
 #include "starfield/starfield.h" // stars_init, stars_pre_level_init, stars_post_level_init
 #include "osapi/osapi.h" // os_get_window, os_set_window.
 
-#include "fredrender.h" // eye_pos, eye_orient
-
 
 namespace fso {
 namespace fred {
@@ -70,12 +68,7 @@ void initialize(const std::string &cfilepath, InitializerCallback listener)
             stars_init();
             stars_pre_level_init(true);
             stars_post_level_init();
-        }, SubSystem::Stars},
-        {[]{
-            gr_reset_clip();
-            g3_start_frame(0);
-            g3_set_view_matrix(&eye_pos, &eye_orient, 0.5f);
-        }, SubSystem::View}
+        }, SubSystem::Stars}
     };
 
     for (const auto &initializer : initializers) {
@@ -106,7 +99,7 @@ void Editor::setRenderWindow(const void *handle)
 
 void Editor::initializeRenderer()
 {
-    fred_render_init();
+    m_renderer.reset(new FredRenderer());
     resetPhysics();
 }
 
@@ -117,10 +110,10 @@ void Editor::resize(int width, int height)
 
 void Editor::update()
 {
-    game_do_frame(-1, 0, 0, -1);
+    m_renderer->game_do_frame(-1, 0, 0, -1);
     std::array<bool, MAX_IFFS> iffs;
     iffs.fill(true);
-    render_frame(-1, Render_subsys, false, Marking_box(), currentObject, true, true, &iffs[0], true, true, true, true, false, true, true, true);
+    m_renderer->render_frame(-1, Render_subsys, false, Marking_box(), currentObject, true, true, &iffs[0], true, true, true, true, false, true, true, true);
 }
 
 void Editor::loadMission(const std::string &filepath)
@@ -130,8 +123,8 @@ void Editor::loadMission(const std::string &filepath)
 
     obj_merge_created_list();
 
-    view_orient = Parse_viewer_orient;
-    view_pos = Parse_viewer_pos;
+    m_renderer->view_orient = Parse_viewer_orient;
+    m_renderer->view_pos = Parse_viewer_pos;
     stars_post_level_init();
     initializeRenderer();
 }
@@ -141,7 +134,7 @@ void Editor::findFirstObjectUnder(int x, int y)
     std::array<bool, MAX_IFFS> iffs;
     iffs.fill(true);
 
-    currentObject = select_object(x, y, false, true, true, &iffs[0], true);
+    currentObject = m_renderer->select_object(x, y, false, true, true, &iffs[0], true);
 
     if (currentObject != -1)
         Objects[currentObject].flags |= OF_MARKED;  // set as marked
@@ -151,6 +144,8 @@ void Editor::resetPhysics()
 {
     int physics_speed = 100;
     int physics_rot = 20;
+
+    physics_info view_physics;
     physics_init(&view_physics);
     view_physics.max_vel.xyz.x *= physics_speed / 3.0f;
     view_physics.max_vel.xyz.y *= physics_speed / 3.0f;
@@ -160,6 +155,8 @@ void Editor::resetPhysics()
     view_physics.max_rotvel.xyz.y *= physics_rot / 30.0f;
     view_physics.max_rotvel.xyz.z *= physics_rot / 30.0f;
     view_physics.flags |= PF_ACCELERATES | PF_SLIDE_ENABLED;
+
+    m_renderer->view_physics = view_physics;
 }
 
 } // namespace fred

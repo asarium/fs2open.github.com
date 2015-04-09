@@ -1,7 +1,8 @@
 #pragma once
 #include <functional>
-#include <string>
+#include <memory>
 #include <stdexcept>
+#include "FredRenderer.h"
 
 namespace fso {
 namespace fred {
@@ -66,6 +67,8 @@ public:
 
     void findFirstObjectUnder(int x, int y);
 
+    FredRenderer* renderer() { return m_renderer.get(); }
+
     ///! Non-copyable.
     Editor(const Editor &) = delete;
 
@@ -73,6 +76,7 @@ public:
     const Editor &operator =(const Editor &) = delete;
 private:
     void resetPhysics();
+    std::unique_ptr<FredRenderer> m_renderer;
     subsys_to_render Render_subsys;
     int currentObject;
 };

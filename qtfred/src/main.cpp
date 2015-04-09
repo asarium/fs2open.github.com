@@ -84,10 +84,10 @@ int main(int argc, char *argv[])
     });
 
     fso::fred::MainWindow mw;
+    mw.setEditor(fred);
     splash.showMessage(qApp->tr("Switching rendering window"), Qt::AlignHCenter | Qt::AlignBottom, Qt::white);
     app.processEvents();
     fred->setRenderWindow(reinterpret_cast<void *>(mw.effectiveWinId()));
-    mw.setEditor(fred);
     mw.show();
     splash.finish(&mw);
 

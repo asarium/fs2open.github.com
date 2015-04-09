@@ -45,7 +45,7 @@ void MainWindow::loadMission()
     try {
         fred->loadMission(pathName.toStdString());
         ui->centralwidget->updateGL();
-        statusBar()->showMessage(tr("Units = %1 meters").arg(The_grid->square_size));
+        statusBar()->showMessage(tr("Units = %1 meters").arg(fred->renderer()->The_grid->square_size));
     }
     catch (const fso::fred::mission_load_error &) {
         QMessageBox::critical(this, tr("Failed loading mission."), tr("Could not parse the mission."));
