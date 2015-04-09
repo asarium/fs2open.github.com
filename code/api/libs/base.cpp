@@ -7,11 +7,10 @@
 #include "playerman/player.h"
 
 #include "api/libs/base.h"
+#include "api/types/gameevent.h"
 
-#include <luabind/luabind.hpp>
-#include <luabind/adopt_policy.hpp>
-#include <luabind/tag_function.hpp>
 #include <luabind/class.hpp>
+#include <gamesequence/gamesequence.h>
 
 namespace
 {
@@ -185,22 +184,13 @@ namespace api
 
         void base::setTips(bool enable)
         {
-            if (Player == NULL)
+            if (Player == nullptr)
                 return;
 
             if (enable)
                 Player->tips = 1;
             else
                 Player->tips = 0;
-        }
-
-        const char* base::GameEvents::getByName(const char* key)
-        {
-            return "Index Test";
-        }
-        static const char* base::GameEvents::getByIndex(int index)
-        {
-
         }
 
         luabind::scope base::registerScope()
@@ -227,20 +217,36 @@ namespace api
 
                         def("getCurrentMPStatus", &base::getCurrentMPStatus),
 
-                        def("setControlMode", (const char*(*)())&base::setControlMode),
-                        def("setControlMode", (const char*(*)(const luaenum&))&base::setControlMode),
+                        def("setControlMode", static_cast<const char*(*)()>(&base::setControlMode)),
+                        def("setControlMode", static_cast<const char*(*)(const luaenum&)>(&base::setControlMode)),
 
-                        def("setButtonControlMode", (const char*(*)()) &base::setButtonControlMode),
-                        def("setButtonControlMode", (const char*(*)(const luaenum&)) &base::setButtonControlMode),
+                        def("setButtonControlMode", static_cast<const char*(*)()>(&base::setButtonControlMode)),
+                        def("setButtonControlMode", static_cast<const char*(*)(const luaenum&)>(&base::setButtonControlMode)),
 
                         def("setTips", &base::setTips),
                         def("setTips", &setTipsFalse),
 
                         class_<GameEvents>("GameEvents")
                         .scope[
-                            def("__index", &GameEvents::get)
+                            def("byName", &GameEvents::byName),
+                            def("byIndex", &GameEvents::byIndex),
+                            def("__len", &GameEvents::len)
                         ]
                 ];
+        }
+
+        gameevent base::GameEvents::byName(const char* key)
+        {
+            return gameevent(gameseq_get_event_idx(key));
+        }
+        gameevent base::GameEvents::byIndex(int index)
+        {
+            return gameevent(index);
+        }
+
+        size_t base::GameEvents::len()
+        {
+            return Num_gs_event_text;
         }
     }
 }

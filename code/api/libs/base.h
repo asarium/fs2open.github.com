@@ -1,12 +1,9 @@
 #pragma once
 
-#include <string>
-
-#include "api/libs/libs.h"
-
 #include "api/types/vector.h"
 #include "api/types/matrix.h"
 #include "api/types/enum.h"
+#include "api/types/gameevent.h"
 
 namespace api
 {
@@ -44,8 +41,10 @@ namespace api
             public:
                 ~GameEvents() {}
 
-                static const char* getByName(const char* key);
-                static const char* getByIndex(int index);
+                static types::gameevent byName(const char* key);
+                static types::gameevent byIndex(int index);
+
+                static size_t len();
             };
 
             static luabind::scope registerScope();

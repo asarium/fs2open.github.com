@@ -1,6 +1,4 @@
 
-#include <exception>
-
 #include "api/types/gameevent.h"
 
 #include "gamesequence/gamesequence.h"
@@ -22,14 +20,15 @@ namespace api
     {
         gameevent::gameevent(int index) : m_index(index)
         {
-            if (index < 0 || index >= Num_gs_event_text)
-            {
-                throw std::runtime_error("gameevent index out of range!");
-            }
         }
 
         const char* gameevent::tostring() const
         {
+            if (m_index < 0 || m_index >= Num_gs_event_text)
+            {
+                return "";
+            }
+
             return GS_event_text[m_index];
         }
 
@@ -38,7 +37,8 @@ namespace api
             using namespace luabind;
 
             return class_<gameevent>("gameevent")
-                .property("Name", &gameevent::tostring);
+                .property("Name", &gameevent::tostring)
+                .def(luabind::tostring(const_self));
         }
     }
 }

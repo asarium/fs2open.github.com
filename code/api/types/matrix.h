@@ -2,7 +2,6 @@
 
 #include "globalincs/pstypes.h"
 
-#include "api/types/types.h"
 #include "api/types/vector.h"
 
 #include <luabind/luabind.hpp>
