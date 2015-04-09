@@ -17,6 +17,8 @@ set(QTFRED_SRC
     src/renderwidget.cpp
     src/mainwindow.cpp
     src/editor.cpp
+
+    src/FredRenderer.cpp
 )
 
 set(QTFRED_HEADERS
@@ -27,6 +29,8 @@ set(QTFRED_HEADERS
     include/object.h
     include/renderwidget.h
     include/wing.h
+
+    include/FredRenderer.h
 )
 
 add_executable(qtfred ${EXE_GUI_TYPE}
@@ -35,6 +39,7 @@ add_executable(qtfred ${EXE_GUI_TYPE}
     ${qtfred_MOC}
     ${qtfred_UIS}
     ${qtfred_QRC}
+    $<TARGET_OBJECTS:code_objs>
 )
 set_target_properties(qtfred PROPERTIES OUTPUT_NAME "qtfred_${FSO_BINARY_SUFFIX}")
 
@@ -46,16 +51,15 @@ if(UNIX)
   add_definitions(-DSCP_UNIX -DLUA_USE_LINUX)
 endif(UNIX)
 
-include_directories(
+target_include_directories(qtfred PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CODE_HEADERS}
-  ${SDL_HEADERS}
   ${GENERATED_SOURCE_DIR}
   ${COMPILER_INCLUDES}
   ${PLATFORM_INCLUDES}
 )
 
 target_link_libraries(qtfred
+    PUBLIC
     code
     Qt5::Widgets Qt5::OpenGL
     ${PLATFORM_LBRARIES} ${COMPILER_LIBRARIES})

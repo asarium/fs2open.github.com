@@ -52,7 +52,6 @@ struct Marking_box {
 };
 
 void fred_render_init();
-void generate_starfield();
 void move_mouse(int btn, int mdx, int mdy);
 void game_do_frame(const int view_obj, const int viewpoint, const int cur_object_index, const int Cursor_over);
 void render_frame(
@@ -73,3 +72,4 @@ int select_object(
 // cur_obj -> ship viewed.
 void level_controlled(const int viewpoint, const int cur_obj);
 void verticalize_controlled(const int viewpoint, const int cur_obj);
+

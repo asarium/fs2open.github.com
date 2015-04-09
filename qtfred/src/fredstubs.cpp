@@ -19,6 +19,10 @@
 #include "stats/scoring.h"
 #include "cfile/cfile.h"
 
+float frametotal;
+float Framerate;
+void game_get_framerate() {}
+
 float flFrametime;
 int	game_zbuffer = 1;
 int	Current_mission = 0xdeadbeef;

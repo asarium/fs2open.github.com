@@ -101,16 +101,6 @@ function(list_target_dependencies _target _out_var)
 		list(REMOVE_AT work_libs 0)
 		list(APPEND out_list ${current})
 
-		get_target_property(current_libs ${current} LINK_LIBRARIES)
-
-		if(current_libs)
-			foreach(lib ${current_libs})
-				if (TARGET ${lib})
-					list(APPEND work_libs ${lib})
-				endif (TARGET ${lib})
-			endforeach(lib)
-		endif(current_libs)
-
 		get_target_property(current_libs ${current} INTERFACE_LINK_LIBRARIES)
 
 		if(current_libs)

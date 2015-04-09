@@ -3,8 +3,6 @@
 #include <string>
 #include <stdexcept>
 
-#include "fredrender.h"
-
 namespace fso {
 namespace fred {
 

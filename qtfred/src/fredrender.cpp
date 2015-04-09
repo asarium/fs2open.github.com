@@ -7,14 +7,9 @@
  *
 */
 #include "fredrender.h"
+
 #include <cassert>
 #include <functional>
-#if 0
-#include "FRED.h"
-#include "FREDDoc.h"
-#include "FREDView.h"
-#include "MainFrm.h"
-#endif
 
 //#include "Management.h"
 #include "object/object.h"
@@ -28,18 +23,10 @@
 #include "io/key.h"
 #include "physics/physics.h"
 #include "math/floating.h"
-#include "object/object.h"
-#include "model/model.h"
-#include "palman/palman.h"
-#include "ai/ailocal.h"
 #include "ship/ship.h"
-#include "cfile/cfile.h"
 #include "mission/missionparse.h"
 #include "globalincs/linklist.h"
 #include "math/fvi.h"
-#include "render/3dinternal.h"
-#include "weapon/weapon.h"
-#include "wing.h"
 #include "starfield/starfield.h"
 #include "io/timer.h"
 #include "lighting/lighting.h"
@@ -386,36 +373,6 @@ void move_mouse( int btn, int mdx, int mdy )
 
     if ( btn & 2 )	{
         my_pos.xyz.z += (float)dy;
-    }
-}
-
-///////////////////////////////////////////////////
-static void process_system_keys(int key)
-{
-//	mprintf(("Key = %d\n", key));
-    switch (key) {
-
-    case KEY_LAPOSTRO:
-        ///! \todo cycle through axis-constraints for rotations.
-        //CFREDView::GetView()->cycle_constraint();
-        break;
-
-    case KEY_R:  // for some stupid reason, an accelerator for 'R' doesn't work.
-        ///! \todo Change editing mode to 'move and rotate'.
-        //Editing_mode = 2;
-        break;
-
-    case KEY_SPACEBAR:
-        ///! \todo Toggle selection lock.
-        //Selection_lock = !Selection_lock;
-        break;
-
-    case KEY_ESC:
-        ///! \todo Cancel drag.
-        //if (button_down)
-        //	cancel_drag();
-
-        break;
     }
 }
 
