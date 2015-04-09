@@ -11,7 +11,6 @@ qt5_add_resources(qtfred_QRC resources/resources.qrc)
 
 set(QTFRED_SRC
     src/main.cpp
-    src/fredrender.cpp
     src/fredstubs.cpp
     src/object.cpp
     src/renderwidget.cpp
@@ -24,7 +23,6 @@ set(QTFRED_SRC
 set(QTFRED_HEADERS
     include/iterators.h
     include/editor.h
-    include/fredrender.h
     include/mainwindow.h
     include/object.h
     include/renderwidget.h
