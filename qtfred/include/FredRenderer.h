@@ -62,7 +62,7 @@ namespace fso
             control_info view_controls;
 
             SCP_vector<int> rendering_order;
-            bool Last_cursor_over = -1;
+            int Last_cursor_over = -1;
             int Control_mode = 0;
             bool Group_rotate = true;
             bool Lookat_mode = false;

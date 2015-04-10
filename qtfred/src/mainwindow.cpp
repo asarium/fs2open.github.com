@@ -1,8 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
 
-#include <stdexcept>
-
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QDebug>
@@ -55,3 +53,33 @@ void MainWindow::loadMission()
 
 } // namespace fred
 } // namespace fso
+
+void fso::fred::MainWindow::on_actionShow_Stars_triggered(bool checked)
+{
+    fred->renderer()->view.Show_stars = checked;
+}
+
+void fso::fred::MainWindow::on_actionShow_Horizon_triggered(bool checked)
+{
+    fred->renderer()->view.Show_horizon = checked;
+}
+
+void fso::fred::MainWindow::on_actionShow_Grid_triggered(bool checked)
+{
+    fred->renderer()->view.Show_grid = checked;
+}
+
+void fso::fred::MainWindow::on_actionShow_Distances_triggered(bool checked)
+{
+    fred->renderer()->view.Show_distances = checked;
+}
+
+void fso::fred::MainWindow::on_actionShow_Coordinates_triggered(bool checked)
+{
+    fred->renderer()->view.Show_coordinates = checked;
+}
+
+void fso::fred::MainWindow::on_actionShow_Outlines_triggered(bool checked)
+{
+    fred->renderer()->view.Show_outlines = checked;
+}
