@@ -622,11 +622,11 @@ namespace fso
                 vm_vec_add2(pos, &rel_movement_vec);
 
                 vm_angles_2_matrix(&rotmat, &rotangs);
-                if (rotangs.h && Universal_heading)
+                if (rotangs.h && view.Universal_heading)
                     vm_transpose_matrix(orient);
                 vm_matrix_x_matrix(&newmat, orient, &rotmat);
                 *orient = newmat;
-                if (rotangs.h && Universal_heading)
+                if (rotangs.h && view.Universal_heading)
                     vm_transpose_matrix(orient);
             }
         }
@@ -838,7 +838,7 @@ namespace fso
                 nrows *= 2;
             }
 
-            if (Aa_gridlines)
+            if (view.Aa_gridlines)
                 gr_set_color_fast(&Fred_grid_dark_aa);
             else
                 gr_set_color_fast(&Fred_grid_dark);
@@ -864,7 +864,7 @@ namespace fso
             nrows = gridp->nrows / 2;
 
             // now draw the larger, brighter gridlines that is x10 the scale of smaller one.
-            if (Aa_gridlines)
+            if (view.Aa_gridlines)
                 gr_set_color_fast(&Fred_grid_bright_aa);
             else
                 gr_set_color_fast(&Fred_grid_bright);
@@ -1033,7 +1033,7 @@ namespace fso
                             Assert(0);
                         }
 
-                        if (Show_coordinates)
+                        if (view.Show_coordinates)
                         {
                             sprintf(pos, "(%.0f,%.0f,%.0f)", objp->pos.xyz.x, objp->pos.xyz.y, objp->pos.xyz.z);
                             if (*buf)
@@ -1280,7 +1280,7 @@ namespace fso
             plane tplane;
             vec3d* gv;
 
-            if (!Show_grid_positions)
+            if (!view.Show_grid_positions)
                 return;
 
             tplane.A = gridp->gmatrix.vec.uvec.xyz.x;
@@ -1357,13 +1357,13 @@ namespace fso
             else if ((objp->flags & OF_MARKED) && !Bg_bitmap_dialog) // is it a marked object?
                 Fred_outline = FRED_COLOUR_YELLOW;
 
-            else if ((objp->type == OBJ_SHIP) && Show_outlines)
+            else if ((objp->type == OBJ_SHIP) && view.Show_outlines)
             {
                 color* iff_color = iff_get_color_by_team_and_object(Ships[objp->instance].team, -1, 1, objp);
 
                 Fred_outline = (iff_color->red << 16) | (iff_color->green << 8) | (iff_color->blue);
             }
-            else if ((objp->type == OBJ_START) && Show_outlines)
+            else if ((objp->type == OBJ_START) && view.Show_outlines)
             {
                 Fred_outline = 0x007f00;
             }
@@ -1371,7 +1371,7 @@ namespace fso
                 Fred_outline = 0;
 
             // build flags
-            if ((Show_ship_models || Show_outlines) && ((objp->type == OBJ_SHIP) || (objp->type == OBJ_START)))
+            if ((Show_ship_models || view.Show_outlines) && ((objp->type == OBJ_SHIP) || (objp->type == OBJ_START)))
             {
                 if (Show_ship_models)
                 {
@@ -1479,7 +1479,7 @@ namespace fso
             plane tplane;
             vec3d* gv;
 
-            if (!Show_grid_positions)
+            if (!view.Show_grid_positions)
                 return;
 
             tplane.A = gridp->gmatrix.vec.uvec.xyz.x;
@@ -1557,13 +1557,13 @@ namespace fso
             else if ((objp->flags & OF_MARKED) && !Bg_bitmap_dialog) // is it a marked object?
                 Fred_outline = FRED_COLOUR_YELLOW;
 
-            else if ((objp->type == OBJ_SHIP) && Show_outlines)
+            else if ((objp->type == OBJ_SHIP) && view.Show_outlines)
             {
                 color* iff_color = iff_get_color_by_team_and_object(Ships[objp->instance].team, -1, 1, objp);
 
                 Fred_outline = (iff_color->red << 16) | (iff_color->green << 8) | (iff_color->blue);
             }
-            else if ((objp->type == OBJ_START) && Show_outlines)
+            else if ((objp->type == OBJ_START) && view.Show_outlines)
             {
                 Fred_outline = 0x007f00;
             }
@@ -1571,7 +1571,7 @@ namespace fso
                 Fred_outline = 0;
 
             // build flags
-            if ((Show_ship_models || Show_outlines) && ((objp->type == OBJ_SHIP) || (objp->type == OBJ_START)))
+            if ((Show_ship_models || view.Show_outlines) && ((objp->type == OBJ_SHIP) || (objp->type == OBJ_START)))
             {
                 g3_start_instance_matrix(&Eye_position, &Eye_matrix, 0);
                 if (Show_ship_models)
@@ -1805,27 +1805,27 @@ namespace fso
             enable_htl();
             if (Bg_bitmap_dialog)
             {
-                stars_draw(Show_stars, 1, Show_stars, 0, 0);
+                stars_draw(view.Show_stars, 1, view.Show_stars, 0, 0);
             }
             else
             {
-                stars_draw(Show_stars, Show_stars, Show_stars, 0, 0);
+                stars_draw(view.Show_stars, view.Show_stars, view.Show_stars, 0, 0);
             }
             disable_htl();
 
-            if (Show_horizon)
+            if (view.Show_horizon)
             {
                 gr_set_color(128, 128, 64);
                 g3_draw_horizon_line();
             }
 
-            if (Show_asteroid_field)
+            if (view.Show_asteroid_field)
             {
                 gr_set_color(192, 96, 16);
                 draw_asteroid_field();
             }
 
-            if (Show_grid)
+            if (view.Show_grid)
                 render_grid(The_grid);
             if (Bg_bitmap_dialog)
                 hilight_bitmap();
@@ -1838,7 +1838,7 @@ namespace fso
                 Show_ship_models, Show_dock_points, Show_paths_fred,
                 Lighting_on, FullDetail);
 
-            if (Show_distances)
+            if (view.Show_distances)
             {
                 display_distances();
             }
@@ -1953,11 +1953,11 @@ namespace fso
             if (objp->flags & OF_HIDDEN)
                 return 0;
 
-            if ((Show_ship_models || Show_outlines) && (objp->type == OBJ_SHIP))
+            if ((Show_ship_models || view.Show_outlines) && (objp->type == OBJ_SHIP))
             {
                 mc.model_num = Ship_info[Ships[objp->instance].ship_info_index].model_num; // Fill in the model to check
             }
-            else if ((Show_ship_models || Show_outlines) && (objp->type == OBJ_START))
+            else if ((Show_ship_models || view.Show_outlines) && (objp->type == OBJ_START))
             {
                 mc.model_num = Ship_info[Ships[objp->instance].ship_info_index].model_num; // Fill in the model to check
             }

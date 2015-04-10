@@ -25,6 +25,20 @@ namespace fso
 {
     namespace fred
     {
+        struct ViewSettings
+        {
+            bool Universal_heading = false;
+            bool Show_stars = true;
+            bool Show_horizon = false;
+            bool Show_grid = true;
+            bool Show_distances = true;
+            bool Show_asteroid_field = true;
+            bool Aa_gridlines = false;
+            bool Show_coordinates = false;
+            bool Show_outlines = false;
+            bool Show_grid_positions = true;
+        };
+
         class FredRenderer
         {
             /**
@@ -47,23 +61,13 @@ namespace fso
             matrix eye_orient;
             control_info view_controls;
 
-            int Control_mode = 0;
-            int Flying_controls_mode = 1;
-            int Universal_heading = 0;
-            int Group_rotate = 1;
-            int Lookat_mode = 0;
-            int Last_cursor_over = -1;
-            int Show_stars = 1;
-            int Show_horizon = 0;
-            int Show_grid = 1;
-            int Show_distances = 1;
-            int Show_asteroid_field = 1;
-            int Aa_gridlines = 0;
-            int Fred_outline = 0;
-            int Show_coordinates = 0;
             SCP_vector<int> rendering_order;
-            int Show_outlines = 0;
-            int Show_grid_positions = 1;
+            bool Last_cursor_over = -1;
+            int Control_mode = 0;
+            bool Group_rotate = true;
+            bool Lookat_mode = false;
+            int Flying_controls_mode = 1;
+            int Fred_outline = 0;
 
             matrix my_orient = vmd_identity_matrix;
             matrix trackball_orient = vmd_identity_matrix;
@@ -140,6 +144,8 @@ namespace fso
             // cur_obj -> ship viewed.
             void level_controlled(const int viewpoint, const int cur_obj);
             void verticalize_controlled(const int viewpoint, const int cur_obj);
+
+            ViewSettings view;
 
             matrix view_orient = vmd_identity_matrix;
             vec3d view_pos;
