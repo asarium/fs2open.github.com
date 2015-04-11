@@ -41,10 +41,10 @@ namespace api
             public:
                 ~GameEvents() {}
 
-                static types::gameevent byName(const char* key);
-                static types::gameevent byIndex(int index);
+                static types::gameevent get(const char* key);
+                static types::gameevent get(int index);
 
-                static size_t len();
+                static size_t count();
             };
 
             static luabind::scope registerScope();

@@ -15,6 +15,64 @@
 #include "controlconfig/controlsconfig.h"
 #include "freespace.h"
 #include "weapon/beam.h"
+#include "mod_table/mod_table.h"
+
+#include <boost/algorithm/string.hpp>
+
+#include <luabind/luabind.hpp>
+#include <luabind/object.hpp>
+#include <luabind/operator.hpp>
+#include <luabind/make_function.hpp>
+
+#include "def_files/apiCompat.lua.h"
+
+namespace
+{
+    int environmentSetterHandle = LUA_NOREF;
+    
+    int loadFunction(lua_State* L, const char* s, size_t len, const char* name, int apiVersion)
+    {
+        // Only try to load if we have a lower API version
+        if (apiVersion < 2 && environmentSetterHandle == LUA_NOREF)
+        {
+            auto res = luaL_loadbuffer(L, Default_apiCompat_lua, strlen(Default_apiCompat_lua), "API Compatibility");
+
+            if (res)
+            {
+                LuaError(L);
+
+                return LUA_ERRSYNTAX;
+            }
+
+            // Call loader to get the actual function
+            if (lua_pcall(L, 0, 1, 0))
+            {
+                LuaError(L);
+                return LUA_ERRSYNTAX;
+            }
+
+            environmentSetterHandle = luaL_ref(L, LUA_REGISTRYINDEX);
+        }
+
+        auto ret = luaL_loadbuffer(L, s, len, name);
+
+        if (ret)
+        {
+            return ret;
+        }
+
+        // Only execute that function if the API version requires it
+        if (apiVersion < 2)
+        {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, environmentSetterHandle);
+            // Push function
+            lua_pushvalue(L, -2);
+            lua_call(L, 1, 0);
+        }
+
+        return ret;
+    }
+}
 
 //tehe. Declare the main event
 script_state Script_system("FS2_Open Scripting");
@@ -122,23 +180,23 @@ void script_parse_table(const char *filename)
 		//int num = 42;
 		//Script_system.SetHookVar("Version", 'i', &num);
 		if(optional_string("$Global:")) {
-			st->ParseChunk(&Script_globalhook, "Global");
+			st->ParseChunk(&Script_globalhook, "Global", Scripting_ApiVersion);
 		}
 
 		if(optional_string("$Splash:")) {
-			st->ParseChunk(&Script_splashhook, "Splash");
+            st->ParseChunk(&Script_splashhook, "Splash", Scripting_ApiVersion);
 		}
 
 		if(optional_string("$GameInit:")) {
-			st->ParseChunk(&Script_gameinithook, "GameInit");
+            st->ParseChunk(&Script_gameinithook, "GameInit", Scripting_ApiVersion);
 		}
 
 		if(optional_string("$Simulation:")) {
-			st->ParseChunk(&Script_simulationhook, "Simulation");
+            st->ParseChunk(&Script_simulationhook, "Simulation", Scripting_ApiVersion);
 		}
 
 		if(optional_string("$HUD:")) {
-			st->ParseChunk(&Script_hudhook, "HUD");
+            st->ParseChunk(&Script_hudhook, "HUD", Scripting_ApiVersion);
 		}
 
 		required_string("#End");
@@ -1118,7 +1176,7 @@ bool script_state::EvalString(char* string, char *format, void *rtn, char *debug
 	//WMC - Push error handling function
 	lua_pushcfunction(LuaState, ade_friendly_error);
 	//Parse string
-	int rval = luaL_loadbuffer(LuaState, s, strlen(s), debug_str);
+    int rval = loadFunction(LuaState, s, strlen(s), debug_str, Scripting_ApiVersion);
 	//We don't need s anymore.
 	delete[] s;
 	//Call function
@@ -1160,7 +1218,7 @@ bool script_state::EvalString(char* string, char *format, void *rtn, char *debug
 	return true;
 }
 
-void script_state::ParseChunkSub(int *out_lang, int *out_index, char* debug_str)
+void script_state::ParseChunkSub(int *out_lang, int *out_index, char* debug_str, int apiVersion)
 {
 	Assert(out_lang != NULL);
 	Assert(out_index != NULL);
@@ -1193,7 +1251,7 @@ void script_state::ParseChunkSub(int *out_lang, int *out_index, char* debug_str)
 
 			//WMC - use filename instead of debug_str so that the filename
 			//gets passed.
-			if(!luaL_loadbuffer(GetLuaSession(), raw_lua, len, filename))
+            if (!loadFunction(GetLuaSession(), raw_lua, len, filename, apiVersion))
 			{
 				//Stick it in the registry
 				*out_index = luaL_ref(GetLuaSession(), LUA_REGISTRYINDEX);
@@ -1230,7 +1288,7 @@ void script_state::ParseChunkSub(int *out_lang, int *out_index, char* debug_str)
 		
 		//Load it into a buffer & parse it
 		//WMC - This is causing an access violation error. Sigh.
-		if(!luaL_loadbuffer(GetLuaSession(), tmp_ptr, strlen(tmp_ptr), debug_str))
+        if (!loadFunction(GetLuaSession(), tmp_ptr, strlen(tmp_ptr), debug_str, apiVersion))
 		{
 			//Stick it in the registry
 			*out_index = luaL_ref(GetLuaSession(), LUA_REGISTRYINDEX);
@@ -1266,7 +1324,7 @@ void script_state::ParseChunkSub(int *out_lang, int *out_index, char* debug_str)
 		int len = strlen(buf);
 
 		//Load it into a buffer & parse it
-		if(!luaL_loadbuffer(GetLuaSession(), buf, len, debug_str))
+        if (!loadFunction(GetLuaSession(), buf, len, debug_str, apiVersion))
 		{
 			//Stick it in the registry
 			*out_index = luaL_ref(GetLuaSession(), LUA_REGISTRYINDEX);
@@ -1282,7 +1340,7 @@ void script_state::ParseChunkSub(int *out_lang, int *out_index, char* debug_str)
 	}
 }
 
-void script_state::ParseChunk(script_hook *dest, char *debug_str)
+void script_state::ParseChunk(script_hook *dest, char *debug_str, int apiVersion)
 {
 	static int total_parse_calls = 0;
 	char debug_buf[128];
@@ -1296,7 +1354,7 @@ void script_state::ParseChunk(script_hook *dest, char *debug_str)
 		sprintf(debug_str, "script_parse() count %d", total_parse_calls);
 	}
 
-	ParseChunkSub(&dest->h_language, &dest->h_index, debug_str);
+	ParseChunkSub(&dest->h_language, &dest->h_index, debug_str, apiVersion);
 
 	if(optional_string("+Override:"))
 	{
@@ -1304,7 +1362,7 @@ void script_state::ParseChunk(script_hook *dest, char *debug_str)
 		char *debug_str_over = (char*)vm_malloc(bufSize);
 		strcpy_s(debug_str_over, bufSize, debug_str);
 		strcat_s(debug_str_over, bufSize, " override");
-		ParseChunkSub(&dest->o_language, &dest->o_index, debug_str_over);
+        ParseChunkSub(&dest->o_language, &dest->o_index, debug_str_over, apiVersion);
 		vm_free(debug_str_over);
 	}
 }
@@ -1337,6 +1395,22 @@ bool script_state::ParseCondition(const char *filename)
 {
 	ConditionedHook *chp = NULL;
 	int condition;
+
+    int apiVersion = Scripting_ApiVersion;
+    if (optional_string("$API Version:"))
+    {
+        int temp;
+        stuff_int(&temp);
+
+        if (temp < 1 || temp > 2)
+        {
+            error_display(0, "Invalid API version %d!", temp);
+        }
+        else
+        {
+            apiVersion = temp;
+        }
+    }
 
 	for(condition = script_parse_condition(); condition != CHC_NONE; condition = script_parse_condition())
 	{
@@ -1388,7 +1462,7 @@ bool script_state::ParseCondition(const char *filename)
 		char *buf = (char *)vm_malloc(strlen(filename) + strlen(action->name) + 4);
 		sprintf(buf, "%s - %s", filename, action->name);
 
-		ParseChunk(&sat.hook, buf);
+        ParseChunk(&sat.hook, buf, apiVersion);
 		
 		//Free error string
 		vm_free(buf);

@@ -4,6 +4,7 @@
 #include "vector.h"
 #include "matrix.h"
 #include "enum.h"
+#include "gameevent.h"
 
 #include <luabind/luabind.hpp>
 
@@ -16,7 +17,8 @@ namespace api
             return luabind::module(L, "fso")[
                 vector::registerScope(),
                 matrix::registerScope(),
-                luaenum::registerScope()
+                luaenum::registerScope(),
+                gameevent::registerScope()
             ];
         }
     }

@@ -228,23 +228,23 @@ namespace api
 
                         class_<GameEvents>("GameEvents")
                         .scope[
-                            def("byName", &GameEvents::byName),
-                            def("byIndex", &GameEvents::byIndex),
-                            def("__len", &GameEvents::len)
+                            def("get", static_cast<gameevent(*)(const char*)>(&GameEvents::get)),
+                                def("get", static_cast<gameevent(*)(int)>(&GameEvents::get)),
+                            def("count", &GameEvents::count)
                         ]
                 ];
         }
 
-        gameevent base::GameEvents::byName(const char* key)
+        gameevent base::GameEvents::get(const char* key)
         {
             return gameevent(gameseq_get_event_idx(key));
         }
-        gameevent base::GameEvents::byIndex(int index)
+        gameevent base::GameEvents::get(int index)
         {
             return gameevent(index);
         }
 
-        size_t base::GameEvents::len()
+        size_t base::GameEvents::count()
         {
             return Num_gs_event_text;
         }

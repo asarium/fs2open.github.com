@@ -26,6 +26,7 @@ bool Full_color_head_anis = false;
 bool Weapons_inherit_parent_collision_group = false;
 bool Flight_controls_follow_eyepoint_orientation = false;
 int FS2NetD_port = 0;
+int Scripting_ApiVersion = 1;
 
 
 void parse_mod_table(const char *filename)
@@ -168,6 +169,23 @@ void parse_mod_table(const char *filename)
 		if (FS2NetD_port)
 			mprintf(("Game Settings Table: FS2NetD connecting to port %i\n", FS2NetD_port));
 	}
+
+    optional_string("#SCRIPTING SETTINGS");
+
+    if (optional_string("$Script API version:"))
+    {
+        int temp;
+        stuff_int(&temp);
+
+        if (temp < 1 || temp > 2)
+        {
+            error_display(0, "Invalid scripting API version %d!", temp);
+        }
+        else
+        {
+            Scripting_ApiVersion = temp;
+        }
+    }
 
 	optional_string("#OTHER SETTINGS"); 
 

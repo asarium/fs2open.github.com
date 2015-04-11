@@ -142,6 +142,7 @@ set (file_root_debugconsole
 
 SET(file_root_def_files
 	def_files/ai_profiles.tbl
+	def_files/apiCompat.lua
 	def_files/autopilot.tbl
 	def_files/blur-f.sdr
 	def_files/brightpass-f.sdr

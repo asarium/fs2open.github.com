@@ -139,7 +139,7 @@ private:
 
 private:
 
-	void ParseChunkSub(int *out_lang, int *out_index, char* debug_str=NULL);
+    void ParseChunkSub(int *out_lang, int *out_index, char* debug_str, int apiVersion);
 	int RunBytecodeSub(int in_lang, int in_idx, char format='\0', void *data=NULL);
 
 	void SetLuaSession(struct lua_State *L);
@@ -190,7 +190,7 @@ public:
 
 	//***Hook creation functions
 	bool EvalString(char* string, char *format=NULL, void *rtn=NULL, char *debug_str=NULL);
-	void ParseChunk(script_hook *dest, char* debug_str=NULL);
+    void ParseChunk(script_hook *dest, char* debug_str, int apiVersion);
 	bool ParseCondition(const char *filename="<Unknown>");
 
 	//***Hook running functions
