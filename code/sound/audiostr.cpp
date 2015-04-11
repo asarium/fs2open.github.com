@@ -2,7 +2,10 @@
 
 #ifdef _WIN32
 #define VC_EXTRALEAN
+
+#ifndef STRICT
 #define STRICT
+#endif
 
 #include <windows.h>
 #include <mmsystem.h>
