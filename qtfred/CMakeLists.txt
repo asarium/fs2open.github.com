@@ -37,7 +37,6 @@ add_executable(qtfred ${EXE_GUI_TYPE}
     ${qtfred_MOC}
     ${qtfred_UIS}
     ${qtfred_QRC}
-    $<TARGET_OBJECTS:code_objs>
 )
 set_target_properties(qtfred PROPERTIES OUTPUT_NAME "qtfred_${FSO_BINARY_SUFFIX}")
 
