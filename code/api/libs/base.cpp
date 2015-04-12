@@ -92,6 +92,11 @@ namespace api
                 r3c1, r3c2, r3c3);
         }
 
+        float base::getFrametimeOverall()
+        {
+            return f2fl(game_get_overall_frametime());
+        }
+
         float base::getFrametime(bool adjustForTimeCompression)
         {
             return adjustForTimeCompression ? flRealframetime : flFrametime;
@@ -244,6 +249,8 @@ namespace api
                         def("createOrientation", &createOrientation0),
                         def("createOrientation", &createOrientation3),
                         def("createOrientation", &base::createOrientation),
+                        
+                        def("getFrametimeOverall", &base::getFrametimeOverall),
 
                         def("getFrametime", &getFrametimeFalse),
                         def("getFrametime", &base::getFrametime),

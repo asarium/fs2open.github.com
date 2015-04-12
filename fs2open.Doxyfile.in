@@ -233,7 +233,8 @@ ALIASES                = "readwrite{2}=@par Scripting Property:\nThis is a scrip
                          "writeonly{1}=@attention This property is write-only, attempting to read this property will cause an error!\n   @par Scripting Property:\nThis is a scripting property, use \ref \1 when accessing the property from C++" \
                          "propertygetter=@par Getter (a.x) documentation:\n" \
                          "propertysetter=@par Setter (a.x = y) documentation:\n" \
-                         "notscriptingapi=@attention This member is <b>not</b> part of the scripting API!"
+                         "notscriptingapi=@attention This member is <b>not</b> part of the scripting API!" \
+                         "tostringoperator=@note This function is available using the lua @c tostring function"
 
 # This tag can be used to specify a number of word-keyword mappings (TCL only).
 # A mapping has the form "name=value". For example adding "class=itcl::class"
