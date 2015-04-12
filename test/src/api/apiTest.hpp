@@ -19,7 +19,7 @@ public:
 class LuaFileTest : public LuaStateTest
 {
 public:
-    void executeScript(const char* script);
+    void executeScript(const char* script, ScriptingApi apiVersion = ScriptingApi::InvalidVersion);
 };
 
 class ScopedLuaStackTest

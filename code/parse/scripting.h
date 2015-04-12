@@ -132,14 +132,17 @@ private:
 	int Langs;
 	struct lua_State *LuaState;
 	const struct script_lua_lib_list *LuaLibs;
+    int environmentSetupHandle = LUA_NOREF;
 
 	//Utility variables
 	SCP_vector<image_desc> ScriptImages;
 	SCP_vector<ConditionedHook> ConditionalHooks;
 
+    int loadFunction(lua_State* L, const char* s, size_t len, const char* name, ScriptingApi apiVersion);
+
 private:
 
-    void ParseChunkSub(int *out_lang, int *out_index, char* debug_str, int apiVersion);
+    void ParseChunkSub(int *out_lang, int *out_index, char* debug_str, ScriptingApi apiVersion);
 	int RunBytecodeSub(int in_lang, int in_idx, char format='\0', void *data=NULL);
 
 	void SetLuaSession(struct lua_State *L);
@@ -189,8 +192,9 @@ public:
 	void RemHookVars(unsigned int num, ...);
 
 	//***Hook creation functions
-	bool EvalString(char* string, char *format=NULL, void *rtn=NULL, char *debug_str=NULL);
-    void ParseChunk(script_hook *dest, char* debug_str, int apiVersion);
+    bool EvalString(const char* string, const char *format = NULL, void *rtn = NULL, const char *debug_str = NULL,
+        ScriptingApi apiVersion = ScriptingApi::InvalidVersion);
+    void ParseChunk(script_hook *dest, char* debug_str, ScriptingApi apiVersion);
 	bool ParseCondition(const char *filename="<Unknown>");
 
 	//***Hook running functions

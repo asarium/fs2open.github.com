@@ -39,6 +39,7 @@ set(file_root_lua_libs
 
 set(file_root_lua_libs_base
     lua/libs/base/base_getFrametime.lua
+    lua/libs/base/base_GameEvents.lua
 )
 
 set(file_root_lua

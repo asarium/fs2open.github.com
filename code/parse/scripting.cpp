@@ -17,62 +17,7 @@
 #include "weapon/beam.h"
 #include "mod_table/mod_table.h"
 
-#include <boost/algorithm/string.hpp>
-
-#include <luabind/luabind.hpp>
-#include <luabind/object.hpp>
-#include <luabind/operator.hpp>
-#include <luabind/make_function.hpp>
-
 #include "def_files/apiCompat.lua.h"
-
-namespace
-{
-    int environmentSetterHandle = LUA_NOREF;
-    
-    int loadFunction(lua_State* L, const char* s, size_t len, const char* name, int apiVersion)
-    {
-        // Only try to load if we have a lower API version
-        if (apiVersion < 2 && environmentSetterHandle == LUA_NOREF)
-        {
-            auto res = luaL_loadbuffer(L, Default_apiCompat_lua, strlen(Default_apiCompat_lua), "API Compatibility");
-
-            if (res)
-            {
-                LuaError(L);
-
-                return LUA_ERRSYNTAX;
-            }
-
-            // Call loader to get the actual function
-            if (lua_pcall(L, 0, 1, 0))
-            {
-                LuaError(L);
-                return LUA_ERRSYNTAX;
-            }
-
-            environmentSetterHandle = luaL_ref(L, LUA_REGISTRYINDEX);
-        }
-
-        auto ret = luaL_loadbuffer(L, s, len, name);
-
-        if (ret)
-        {
-            return ret;
-        }
-
-        // Only execute that function if the API version requires it
-        if (apiVersion < 2)
-        {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, environmentSetterHandle);
-            // Push function
-            lua_pushvalue(L, -2);
-            lua_call(L, 1, 0);
-        }
-
-        return ret;
-    }
-}
 
 //tehe. Declare the main event
 script_state Script_system("FS2_Open Scripting");
@@ -1136,8 +1081,58 @@ int script_state::OutputMeta(char *filename)
 	return 1;
 }
 
-bool script_state::EvalString(char* string, char *format, void *rtn, char *debug_str)
+int script_state::loadFunction(lua_State* L, const char* s, size_t len, const char* name, ScriptingApi apiVersion)
 {
+    // Only try to load if we have a lower API version
+    if (apiVersion < ScriptingApi::Version2 && environmentSetupHandle == LUA_NOREF)
+    {
+        auto res = luaL_loadbuffer(L, Default_apiCompat_lua, strlen(Default_apiCompat_lua), "API Compatibility");
+
+        if (res)
+        {
+            LuaError(L);
+
+            return LUA_ERRSYNTAX;
+        }
+
+        // Call loader to get the actual function
+        if (lua_pcall(L, 0, 1, 0))
+        {
+            LuaError(L);
+            return LUA_ERRSYNTAX;
+        }
+
+        environmentSetupHandle = luaL_ref(L, LUA_REGISTRYINDEX);
+    }
+
+    auto ret = luaL_loadbuffer(L, s, len, name);
+
+    if (ret)
+    {
+        return ret;
+    }
+
+    // Only execute that function if the API version requires it
+    if (apiVersion < ScriptingApi::Version2)
+    {
+        lua_rawgeti(L, LUA_REGISTRYINDEX, environmentSetupHandle);
+        // Push function
+        lua_pushvalue(L, -2);
+        lua_call(L, 1, 0);
+    }
+
+    return ret;
+}
+
+bool script_state::EvalString(const char* string, const char *format, void *rtn, const char *debug_str, ScriptingApi apiVersion)
+{
+    if (apiVersion == ScriptingApi::InvalidVersion)
+    {
+        apiVersion = Scripting_ApiVersion;
+    }
+
+    Assertion(apiVersion >= ScriptingApi::MinVersion && apiVersion < ScriptingApi::MaxVersion, "Invalid scripting API version!");
+
 	char lastchar = string[strlen(string)-1];
 
 	if(string[0] == '{')
@@ -1176,7 +1171,7 @@ bool script_state::EvalString(char* string, char *format, void *rtn, char *debug
 	//WMC - Push error handling function
 	lua_pushcfunction(LuaState, ade_friendly_error);
 	//Parse string
-    int rval = loadFunction(LuaState, s, strlen(s), debug_str, Scripting_ApiVersion);
+    int rval = loadFunction(LuaState, s, strlen(s), debug_str, apiVersion);
 	//We don't need s anymore.
 	delete[] s;
 	//Call function
@@ -1218,7 +1213,7 @@ bool script_state::EvalString(char* string, char *format, void *rtn, char *debug
 	return true;
 }
 
-void script_state::ParseChunkSub(int *out_lang, int *out_index, char* debug_str, int apiVersion)
+void script_state::ParseChunkSub(int *out_lang, int *out_index, char* debug_str, ScriptingApi apiVersion)
 {
 	Assert(out_lang != NULL);
 	Assert(out_index != NULL);
@@ -1340,7 +1335,7 @@ void script_state::ParseChunkSub(int *out_lang, int *out_index, char* debug_str,
 	}
 }
 
-void script_state::ParseChunk(script_hook *dest, char *debug_str, int apiVersion)
+void script_state::ParseChunk(script_hook *dest, char *debug_str, ScriptingApi apiVersion)
 {
 	static int total_parse_calls = 0;
 	char debug_buf[128];
@@ -1396,19 +1391,21 @@ bool script_state::ParseCondition(const char *filename)
 	ConditionedHook *chp = NULL;
 	int condition;
 
-    int apiVersion = Scripting_ApiVersion;
+    ScriptingApi apiVersion = Scripting_ApiVersion;
     if (optional_string("$API Version:"))
     {
         int temp;
         stuff_int(&temp);
 
-        if (temp < 1 || temp > 2)
+        auto version = static_cast<ScriptingApi>(temp);
+
+        if (version < ScriptingApi::MinVersion || version > ScriptingApi::MaxVersion)
         {
             error_display(0, "Invalid API version %d!", temp);
         }
         else
         {
-            apiVersion = temp;
+            apiVersion = static_cast<ScriptingApi>(temp);
         }
     }
 

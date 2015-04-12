@@ -1,4 +1,6 @@
 
+#include <iostream>
+
 #include "apiTest.hpp"
 
 void LuaStateTest::SetUp()
@@ -15,13 +17,15 @@ void LuaStateTest::TearDown()
     state = nullptr;
 }
 
-void LuaFileTest::executeScript(const char* script)
+void LuaFileTest::executeScript(const char* script, ScriptingApi apiVersion)
 {
-    luaL_loadstring(L, script);
+    const ::testing::TestInfo* const test_info =
+        ::testing::UnitTest::GetInstance()->current_test_info();
 
-    int err = lua_pcall(L, 0, 0, 0);
+    std::stringstream ss;
+    ss << test_info->test_case_name() << ": " << test_info->name();
 
-    if (err)
+    if (!state->EvalString(script, nullptr, nullptr, ss.str().c_str(), apiVersion))
     {
         const char* error = lua_tostring(L, -1);
         FAIL() << error << "\n";
