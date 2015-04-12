@@ -5,6 +5,7 @@
 #include "api/types/enum.h"
 #include "api/types/gameevent.h"
 #include "api/types/gamestate.h"
+#include "api/types/player.h"
 
 namespace api
 {
@@ -40,6 +41,8 @@ namespace api
             static void setTips(bool enable);
 
             static bool postGameEvent(const types::gameevent& event);
+
+            static types::player getCurrentPlayer();
 
             class GameEvents : public library
             {

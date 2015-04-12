@@ -221,6 +221,11 @@ namespace api
             return true;
         }
 
+        types::player base::getCurrentPlayer()
+        {
+            return types::player(Player_num);
+        }
+
         luabind::scope base::registerScope()
         {
             using namespace luabind;

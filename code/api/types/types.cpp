@@ -6,6 +6,7 @@
 #include "enum.h"
 #include "gameevent.h"
 #include "gamestate.h"
+#include "player.h"
 
 #include <luabind/luabind.hpp>
 
@@ -20,7 +21,8 @@ namespace api
                 matrix::registerScope(),
                 luaenum::registerScope(),
                 gameevent::registerScope(),
-                gamestate::registerScope()
+                gamestate::registerScope(),
+                player::registerScope()
             ];
         }
     }
