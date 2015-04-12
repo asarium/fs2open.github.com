@@ -5,7 +5,7 @@ ENDIF(NOT FSO_BUILD_INCLUDED_LIBS)
 
 IF (FSO_BUILD_INCLUDED_LIBS OR NOT ZLIB_FOUND)
 	MESSAGE(STATUS "Building zlib from source")
-	
+
 	SET(ZLIB_SOURCES
 		adler32.c
 		compress.c
@@ -30,30 +30,26 @@ IF (FSO_BUILD_INCLUDED_LIBS OR NOT ZLIB_FOUND)
 		zutil.h)
 
 	ADD_LIBRARY(zlib ${ZLIB_SOURCES})
-	
-	INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-	
+
+	target_include_directories(zlib PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+
 	set_target_properties(zlib
 		PROPERTIES
 			FOLDER "3rdparty"
-			INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_CURRENT_LIST_DIR}"
 			DEFINE_SYMBOL ZLIB_DLL # This will only be defined if we are building a shared library
 	)
 
 	IF(BUILD_SHARED_LIBS)
-		set_target_properties(zlib
-			PROPERTIES
-				INTERFACE_COMPILE_DEFINITIONS ZLIB_DLL
-		)
+		target_compile_definitions(zlib INTERFACE ZLIB_DLL)
 	ENDIF(BUILD_SHARED_LIBS)
-	
+
 	IF(MSVC)
 		set_target_properties(zlib
 			PROPERTIES
 				STATIC_LIBRARY_FLAGS "/LTCG"
 		)
 	ENDIF(MSVC)
-	
+
 	IF(FSO_COPY_EXE AND BUILD_SHARED_LIBS)
 		INSTALL(
 			TARGETS zlib
