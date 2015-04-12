@@ -32,6 +32,11 @@ namespace api
             return GS_event_text[m_index];
         }
 
+        bool gameevent::isValid() const
+        {
+            return m_index >= 0 && m_index < Num_gs_event_text;
+        }
+
         luabind::scope gameevent::registerScope()
         {
             using namespace luabind;

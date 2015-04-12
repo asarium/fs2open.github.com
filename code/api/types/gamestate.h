@@ -10,13 +10,13 @@ namespace api
 {
     namespace types
     {
-        class gameevent
+        class gamestate
         {
         private:
             int m_index;
 
         public:
-            explicit gameevent(int index);
+            explicit gamestate(int index);
 
             const char* tostring() const;
 

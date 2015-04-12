@@ -754,6 +754,17 @@ typedef struct script_hook
 extern void script_hook_init(script_hook *hook);
 extern bool script_hook_valid(script_hook *hook);
 
+enum class ScriptingApi
+{
+    Version1 = 1,
+    Version2 = 2,
+
+    MinVersion = Version1,
+    MaxVersion = Version2,
+
+    InvalidVersion = -1
+};
+
 class camid
 {
 private:

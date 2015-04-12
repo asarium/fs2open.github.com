@@ -4,6 +4,7 @@
 #include "api/types/matrix.h"
 #include "api/types/enum.h"
 #include "api/types/gameevent.h"
+#include "api/types/gamestate.h"
 
 namespace api
 {
@@ -26,6 +27,8 @@ namespace api
 
             static float getFrametime(bool adjustForTimeCompression);
 
+            static types::gamestate getCurrentGameState(int depth);
+
             static const char* getCurrentMPStatus();
 
             static const char* setControlMode(const types::luaenum& e);
@@ -36,6 +39,8 @@ namespace api
 
             static void setTips(bool enable);
 
+            static bool postGameEvent(const types::gameevent& event);
+
             class GameEvents : public library
             {
             public:
@@ -43,6 +48,17 @@ namespace api
 
                 static types::gameevent get(const char* key);
                 static types::gameevent get(int index);
+
+                static size_t count();
+            };
+
+            class GameStates : public library
+            {
+            public:
+                ~GameStates() {}
+
+                static types::gamestate get(const char* key);
+                static types::gamestate get(int index);
 
                 static size_t count();
             };

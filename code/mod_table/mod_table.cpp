@@ -26,7 +26,7 @@ bool Full_color_head_anis = false;
 bool Weapons_inherit_parent_collision_group = false;
 bool Flight_controls_follow_eyepoint_orientation = false;
 int FS2NetD_port = 0;
-int Scripting_ApiVersion = 1;
+ScriptingApi Scripting_ApiVersion = ScriptingApi::Version1;
 
 
 void parse_mod_table(const char *filename)
@@ -177,13 +177,15 @@ void parse_mod_table(const char *filename)
         int temp;
         stuff_int(&temp);
 
-        if (temp < 1 || temp > 2)
+        auto version = static_cast<ScriptingApi>(temp);
+
+        if (version < ScriptingApi::MinVersion || version > ScriptingApi::MaxVersion)
         {
             error_display(0, "Invalid scripting API version %d!", temp);
         }
         else
         {
-            Scripting_ApiVersion = temp;
+            Scripting_ApiVersion = version;
         }
     }
 

@@ -11347,17 +11347,6 @@ ADE_FUNC(stopMusic, l_Audio, "int audiohandle, [bool fade = false]", "Stops a pl
 //**********LIBRARY: Base
 ade_lib l_Base("Base", NULL, "ba", "Base FreeSpace 2 functions");
 
-ADE_FUNC(getCurrentGameState, l_Base, "[Depth (number)]", "Gets current FreeSpace state; if a depth is specified, the state at that depth is returned. (IE at the in-game options game, a depth of 1 would give you the game state, while the function defaults to 0, which would be the options screen.", "gamestate", "Current game state at specified depth, or invalid handle if no game state is active yet")
-{
-	int depth = 0;
-	ade_get_args(L, "|i", &depth);
-
-	if(depth > gameseq_get_depth())
-		return ade_set_args(L, "o", l_GameState.Set(gamestate_h()));
-
-	return ade_set_args(L, "o", l_GameState.Set(gamestate_h(gameseq_get_state(depth))));
-}
-
 ADE_FUNC(getCurrentPlayer, l_Base, NULL, "Gets a handle of the currently used player.<br><b>Note:</b> If there is no current player then the first player will be returned, check the game state to make sure you have a valid player handle.", "player", "Player handle")
 {
 	return ade_set_args(L, "o", l_Player.Set(Player_num));
@@ -11366,84 +11355,6 @@ ADE_FUNC(getCurrentPlayer, l_Base, NULL, "Gets a handle of the currently used pl
 ADE_FUNC(getControlInfo, l_Base, NULL, "Gets the control info handle.", "control info", "control info handle")
 {
 	return ade_set_args(L, "o", l_Control_Info.Set(1));
-}
-
-ADE_FUNC(postGameEvent, l_Base, "gameevent Event", "Sets current game event. Note that you can crash FreeSpace 2 by posting an event at an improper time, so test extensively if you use it.", "boolean", "True if event was posted, false if passed event was invalid")
-{
-	gameevent_h *gh = NULL;
-	if(!ade_get_args(L, "o", l_GameEvent.GetPtr(&gh)))
-		return ade_set_error(L, "b", false);
-
-	if(!gh->IsValid())
-		return ade_set_error(L, "b", false);
-
-	if (Om_tracker_flag)
-		Multi_options_g.protocol = NET_TCP;
-	psnet_use_protocol(Multi_options_g.protocol);
-
-	gameseq_post_event(gh->Get());
-
-	return ADE_RETURN_TRUE;
-}
-
-//**********SUBLIBRARY: Base/Events
-ade_lib l_Base_Events("GameEvents", &l_Base, NULL, "Freespace 2 game events");
-
-ADE_INDEXER(l_Base_Events, "number Index/string Name", "Array of game events", "gameevent", "Game event, or invalid gameevent handle if index is invalid")
-{
-	char *name;
-	if(!ade_get_args(L, "*s", &name))
-		return ade_set_error(L, "o", l_GameEvent.Set(gameevent_h()));
-
-	int idx = gameseq_get_event_idx(name);
-
-	if(idx < 0)
-	{
-		idx = atoi(name);
-
-		//Lua-->FS2
-		idx--;
-
-		if(idx < 0 || idx >= Num_gs_event_text)
-			return ade_set_error(L, "o", l_GameEvent.Set(gameevent_h()));
-	}
-
-	return ade_set_args(L, "o", l_GameEvent.Set(gameevent_h(idx)));
-}
-
-ADE_FUNC(__len, l_Base_Events, NULL, "Number of events", "number", "Number of events")
-{
-	return ade_set_args(L, "i", Num_gs_event_text);
-}
-
-//**********SUBLIBRARY: Base/States
-ade_lib l_Base_States("GameStates", &l_Base, NULL, "Freespace 2 states");
-
-ADE_INDEXER(l_Base_States, "number Index/string Name", "Array of game states", "gamestate", "Game state, or invalid gamestate handle if index is invalid")
-{
-	char *name;
-	if(!ade_get_args(L, "*s", &name))
-		return ade_set_error(L, "o", l_GameState.Set(gamestate_h()));
-
-	int idx = gameseq_get_state_idx(name);
-
-	if(idx < 0)
-	{
-		idx = atoi(name);
-
-		//Lua-->FS2
-		idx--;
-
-		if(idx < 0 || idx >= Num_gs_state_text)
-			return ade_set_error(L, "o", l_GameState.Set(gamestate_h()));
-	}
-
-	return ade_set_args(L, "o", l_GameState.Set(gamestate_h(idx)));
-}
-
-ADE_FUNC(__len, l_Base_States, NULL, "Number of states", "number", "Number of states")
-{
-	return ade_set_args(L, "i", Num_gs_state_text);
 }
 
 //**********LIBRARY: CFILE
@@ -14660,7 +14571,7 @@ bool Ade_get_args_lfunction = false;
 //from the stack in series, so it can easily be used
 //to get the return values from a chunk of Lua code
 //after it has been executed. See RunByteCode()
-int ade_get_args(lua_State *L, char *fmt, ...)
+int ade_get_args(lua_State *L, const char *fmt, ...)
 {
 	//Check that we have all the arguments that we need
 	//If we don't, return 0
@@ -14860,7 +14771,7 @@ int ade_get_args(lua_State *L, char *fmt, ...)
 //
 //NOTE: You can also use this to push arguments
 //on to the stack in series. See script_state::SetHookVar
-int ade_set_args(lua_State *L, char *fmt, ...)
+int ade_set_args(lua_State *L, const char *fmt, ...)
 {
 	//Start throught
 	va_list vl;

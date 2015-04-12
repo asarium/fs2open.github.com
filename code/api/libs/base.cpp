@@ -52,6 +52,11 @@ namespace
     {
         base::setTips(false);
     }
+
+    gamestate getCurrentGameState0()
+    {
+        return base::getCurrentGameState(0);
+    }
 }
 
 namespace api
@@ -90,6 +95,14 @@ namespace api
         float base::getFrametime(bool adjustForTimeCompression)
         {
             return adjustForTimeCompression ? flRealframetime : flFrametime;
+        }
+
+        types::gamestate base::getCurrentGameState(int depth)
+        {
+            if (depth > gameseq_get_depth())
+                return types::gamestate(-1);
+
+            return types::gamestate(gameseq_get_state(depth));
         }
 
         const char* base::getCurrentMPStatus()
@@ -193,6 +206,21 @@ namespace api
                 Player->tips = 0;
         }
 
+        bool base::postGameEvent(const gameevent& event)
+        {
+            if (event.isValid())
+                return false;
+
+            if (Om_tracker_flag)
+                Multi_options_g.protocol = NET_TCP;
+
+            psnet_use_protocol(Multi_options_g.protocol);
+
+            gameseq_post_event(event.getIndex());
+
+            return true;
+        }
+
         luabind::scope base::registerScope()
         {
             using namespace luabind;
@@ -215,6 +243,9 @@ namespace api
                         def("getFrametime", &getFrametimeFalse),
                         def("getFrametime", &base::getFrametime),
 
+                        def("getCurrentGameState", &base::getCurrentGameState),
+                        def("getCurrentGameState", &getCurrentGameState0),
+
                         def("getCurrentMPStatus", &base::getCurrentMPStatus),
 
                         def("setControlMode", static_cast<const char*(*)()>(&base::setControlMode)),
@@ -226,11 +257,20 @@ namespace api
                         def("setTips", &base::setTips),
                         def("setTips", &setTipsFalse),
 
+                        def("postGameEvent", &base::postGameEvent),
+
                         class_<GameEvents>("GameEvents")
                         .scope[
                             def("get", static_cast<gameevent(*)(const char*)>(&GameEvents::get)),
                                 def("get", static_cast<gameevent(*)(int)>(&GameEvents::get)),
                             def("count", &GameEvents::count)
+                        ],
+
+                        class_<GameStates>("GameStates")
+                        .scope[
+                            def("get", static_cast<gamestate(*)(const char*)>(&GameStates::get)),
+                                def("get", static_cast<gamestate(*)(int)>(&GameStates::get)),
+                                def("count", &GameStates::count)
                         ]
                 ];
         }
@@ -245,6 +285,20 @@ namespace api
         }
 
         size_t base::GameEvents::count()
+        {
+            return Num_gs_event_text;
+        }
+
+        gamestate base::GameStates::get(const char* key)
+        {
+            return gamestate(gameseq_get_state_idx(key));
+        }
+        gamestate base::GameStates::get(int index)
+        {
+            return gamestate(index);
+        }
+
+        size_t base::GameStates::count()
         {
             return Num_gs_event_text;
         }

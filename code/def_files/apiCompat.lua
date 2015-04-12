@@ -5,6 +5,10 @@ local redirects = {
         GameEvents = {
             __index = "get",
             __len = "count"
+        },
+        GameStates = {
+            __index = "get",
+            __len = "count"
         }
     }
 }

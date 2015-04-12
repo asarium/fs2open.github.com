@@ -48,8 +48,12 @@ set(file_root_api_types
 	api/types/enum.h
 	api/types/gameevent.cpp
 	api/types/gameevent.h
+	api/types/gamestate.cpp
+	api/types/gamestate.h
 	api/types/matrix.cpp
 	api/types/matrix.h
+	api/types/player.cpp
+	api/types/player.h
 	api/types/types.cpp
 	api/types/types.h
 	api/types/vector.cpp
