@@ -192,10 +192,17 @@ namespace chromium
 		return false;
 	}
 
-	bool ClientImpl::OnBeforePopup(CefRefPtr<CefBrowser> browser, CefRefPtr<CefFrame> frame,
-		const CefString& target_url, const CefString& target_frame_name, const CefPopupFeatures& popupFeatures,
-		CefWindowInfo& windowInfo, CefRefPtr<CefClient>& client, CefBrowserSettings& settings,
-		bool* no_javascript_access)
+    bool ClientImpl::OnBeforePopup(CefRefPtr<CefBrowser> browser,
+        CefRefPtr<CefFrame> frame,
+        const CefString& target_url,
+        const CefString& target_frame_name,
+        CefLifeSpanHandler::WindowOpenDisposition target_disposition,
+        bool user_gesture,
+        const CefPopupFeatures& popupFeatures,
+        CefWindowInfo& windowInfo,
+        CefRefPtr<CefClient>& client,
+        CefBrowserSettings& settings,
+        bool* no_javascript_access)
 	{
 		return true; // Always dissallow creating of popups
 	}
@@ -262,12 +269,7 @@ namespace chromium
 		{
 			mPaintingPopup = true;
 
-#if CEF_REVISION < 1750
-			CefRect client_popup_rect(0, 0, mPopupRect.width, mPopupRect.height);
-			browser->GetHost()->Invalidate(client_popup_rect, PET_POPUP);
-#else
 			browser->GetHost()->Invalidate(PET_POPUP);
-#endif
 
 			mPaintingPopup = false;
 		}
@@ -293,14 +295,8 @@ namespace chromium
 	{
 		if (!show)
 		{
-#if CEF_REVISION < 1750
-			CefRect dirty_rect = mPopupRect;
-			ClearPopupRects();
-			browser->GetHost()->Invalidate(dirty_rect, PET_VIEW);
-#else
 			ClearPopupRects();
 			browser->GetHost()->Invalidate(PET_VIEW);
-#endif
 		}
 	}
 

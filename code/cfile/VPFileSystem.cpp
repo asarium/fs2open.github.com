@@ -25,7 +25,7 @@ namespace cfile
 	};
 
 	VPFileSystem::VPFileSystem(const boost::filesystem::path& filePathIn, const std::string& rootPathIn)
-		: rootPath(rootPathIn), vpStream(filePathIn, std::ios::binary), filePath(filePathIn)
+		: ArchiveFileSystem(filePathIn), rootPath(rootPathIn), vpStream(filePathIn, std::ios::binary)
 	{
 		VP_FILE_HEADER header;
 		vpStream.read(reinterpret_cast<char*>(&header), sizeof(header));

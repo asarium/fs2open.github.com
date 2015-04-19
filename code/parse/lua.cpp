@@ -15813,7 +15813,7 @@ int ade_get_args(lua_State *L, char *fmt, ...)
 						else
 						{
 							// If we were successful, set our error function
-							od->setErrorFunction(ade_friendly_error);
+							od->setErrorFunction(luacpp::LuaFunction::createFromCFunction(L, ade_friendly_error));
 						}
 					}
 					else

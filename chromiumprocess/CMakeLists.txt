@@ -28,21 +28,17 @@ source_group(Resources FILES resources/fsoExtension.js)
 SET_TARGET_PROPERTIES(chromiumprocess PROPERTIES OUTPUT_NAME "chromiumprocess_${FSO_BINARY_SUFFIX}")
 SET_TARGET_PROPERTIES(chromiumprocess PROPERTIES DEBUG_POSTFIX "-DEBUG")
 
-IF(MSVC)
-	set_target_properties(chromiumprocess PROPERTIES
-		COMPILE_DEFINITIONS_DEBUG "_DEBUG"
-	)
-ELSEIF(UNIX)
-	target_link_libraries(chromiumprocess pthread)
-ENDIF(MSVC)
+target_compile_definitions(chromiumprocess PUBLIC "$<$<CONFIG:Debug>:_DEBUG>")
+
+IF(UNIX)
+	target_link_libraries(chromiumprocess PUBLIC pthread)
+ENDIF()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CODE_HEADERS}/chromium/jsapi)
 include_directories(${GENERATED_SOURCE_DIR}/chromiumprocess)
 
-find_package(Boost REQUIRED)
-
-include_directories(${Boost_INCLUDE_DIRS})
+target_link_libraries(chromiumprocess PUBLIC boost)
 
 add_definitions(-DBUILDING_CHROMIUMPROCESS)
 

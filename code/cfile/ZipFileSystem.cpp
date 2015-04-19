@@ -30,7 +30,7 @@ namespace cfile
 {
 
 	ZipFileSystem::ZipFileSystem(const boost::filesystem::path& filePathIn)
-		: filePath(filePathIn), zipFile(NULL)
+		: ArchiveFileSystem(filePathIn), zipFile(NULL)
 	{
 		zipFile = unzOpen64(filePathIn.string().c_str());
 

@@ -455,7 +455,7 @@ Application::Application()
 void Application::AddAPICallbackFunction(int id, CefRefPtr<CefV8Value> function, CefRefPtr<CefV8Context> context)
 {
 	// Make sure we are here only once
-	AutoLock guard(this);
+	base::AutoLock guard(m_lock);
 
 	mApiCallbackMap.insert(std::make_pair(id, std::make_pair(function, context)));
 }
@@ -463,7 +463,7 @@ void Application::AddAPICallbackFunction(int id, CefRefPtr<CefV8Value> function,
 int Application::AddApplicationCallback(const CefString& name, CefRefPtr<CefV8Value> function, CefRefPtr<CefV8Context> context)
 {
 	// Make sure we are here only once
-	AutoLock guard(this);
+	base::AutoLock guard(m_lock);
 
 	int id = mApplicationCallbackIdProvider.getAndIncrement();
 
@@ -475,7 +475,7 @@ int Application::AddApplicationCallback(const CefString& name, CefRefPtr<CefV8Va
 bool Application::RemoveApplicationCallback(int id)
 {
 	// Make sure we are here only once
-	AutoLock guard(this);
+	base::AutoLock guard(m_lock);
 
 	// We sadly need to use this O(n) algorithm
 	for (auto it = mApplicationCallbackMap.cbegin(); it != mApplicationCallbackMap.cend();)
@@ -500,7 +500,7 @@ bool Application::RemoveApplicationCallback(int id)
 void Application::ExecuteCallback(const CefString& callbackName, CefRefPtr<CefListValue> argList, int argListIndex)
 {
 	// Make sure we are here only once
-	AutoLock guard(this);
+	base::AutoLock guard(m_lock);
 
 	for (auto it = mApplicationCallbackMap.cbegin(); it != mApplicationCallbackMap.cend(); ++it)
 	{
@@ -536,8 +536,8 @@ bool Application::OnProcessMessageReceived(CefRefPtr<CefBrowser> browser, CefPro
 		int id = argList->GetInt(0);
 		bool successfull = argList->GetBool(1);
 
-		// Lock the callback map so we get a consistens view
-		AutoLock guard(this);
+		// Lock the callback map so we get a consistent view
+		base::AutoLock guard(m_lock);
 
 		auto iter = mApiCallbackMap.find(id);
 

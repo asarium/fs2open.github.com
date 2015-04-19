@@ -96,7 +96,7 @@ namespace chromium
 			return false;
 		}
 
-		if (!io::mouse::CursorManager::get()->isCursorShown())
+		if (!::io::mouse::CursorManager::get()->isCursorShown())
 		{
 			// Mouse is not shown, don't report mouse events
 			return false;
@@ -311,15 +311,6 @@ namespace chromium
 
 		CefBrowserSettings settings;
 		
-#if CEF_REVISION < 1750
-		#ifdef WIN32
-			info.SetAsOffScreen(wmInfo.info.win.window);
-		#else
-			info.SetAsOffScreen(0);
-		#endif
-		
-		info.SetTransparentPainting(mTransparent);
-#else
 		#ifdef WIN32
 			info.SetAsWindowless(wmInfo.info.win.window, mTransparent);
 		#else
@@ -327,7 +318,6 @@ namespace chromium
 		#endif
 		
 		settings.windowless_frame_rate = 60;
-#endif
 		
 		settings.java = STATE_DISABLED;
 		settings.javascript_close_windows = STATE_DISABLED;
