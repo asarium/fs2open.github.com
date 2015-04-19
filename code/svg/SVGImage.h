@@ -2,6 +2,7 @@
 #pragma once
 
 #include <memory>
+#include <exception>
 
 #include "globalincs/pstypes.h"
 #include "graphics/paths/PathRenderer.h"
@@ -9,6 +10,12 @@
 struct NSVGimage;
 namespace svg
 {
+    class SVGLoadException : public std::runtime_error
+    {
+    public:
+        explicit SVGLoadException(const std::string& err) : std::runtime_error(err) {}
+    };
+
     class SVGImage
     {
     private:

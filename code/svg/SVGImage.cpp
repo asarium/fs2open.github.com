@@ -1,10 +1,13 @@
 
+#include <sstream>
+
 #include "svg/SVGImage.h"
 #include "cfile/cfile.h"
 
 #include "svg/nanosvg/nanosvg.h"
 
 using namespace graphics::paths;
+using namespace svg;
 
 namespace
 {
@@ -20,21 +23,10 @@ namespace
         return c;
     }
 
-    /*
     DrawPaint getLinearGradient(PathRenderer* renderer, NSVGshape* shape, NSVGgradient* gradient)
     {
-        float sx = shape->bounds[0];
-        float sy = shape->bounds[1];
-
-        float ex = shape->bounds[2];
-        float ey = shape->bounds[3];
-
-        auto startGradient = screenToGradientSpace(gradient, 0.f, 0.f);
-        auto endGradient = screenToGradientSpace(gradient, ex - sx, ey - sy);
-
-        return renderer->createLinearGradient(;
+        return renderer->createLinearGradient(0.0f, 0.0f, 0.0f, 0.0f, getFSColor(gradient->stops[0].color), getFSColor(gradient->stops[1].color));
     }
-    */
 
     void setFillState(PathRenderer* renderer, NSVGshape* shape)
     {
@@ -44,7 +36,7 @@ namespace
         }
         else if (shape->fill.type == NSVG_PAINT_LINEAR_GRADIENT)
         {
-            //renderer->setFillPaint(getLinearGradient(renderer, shape, shape->fill.gradient));
+            renderer->setFillPaint(getLinearGradient(renderer, shape, shape->fill.gradient));
         }
         else
         {
@@ -94,6 +86,34 @@ namespace
         else
         {
             mprintf(("  SVG: Sorry, only flat colors are supported right now..."));
+        }
+    }
+
+    void checkSVGImage(NSVGimage* img)
+    {
+        for (auto shape = img->shapes; shape != NULL; shape = shape->next)
+        {
+            if (shape->fill.type == NSVG_PAINT_NONE && shape->stroke.type == NSVG_PAINT_NONE)
+            {
+                continue;
+            }
+
+            if (shape->fill.type == NSVG_PAINT_RADIAL_GRADIENT || shape->stroke.type == NSVG_PAINT_RADIAL_GRADIENT)
+            {
+                std::stringstream ss;
+                ss << "The shape ";
+                if (strlen(shape->id) <= 0)
+                {
+                    ss << "(unnamed shape)";
+                }
+                else
+                {
+                    ss << shape->id;
+                }
+                ss << " uses a radial gradient. That is currently not supported.";
+
+                throw SVGLoadException(ss.str());
+            }
         }
     }
 }
@@ -176,8 +196,10 @@ namespace svg
 
         if (image->m_image == nullptr)
         {
-            throw std::runtime_error("Failed to load SVG image!");
+            throw SVGLoadException("Failed to load SVG image!");
         }
+
+        checkSVGImage(image->m_image);
 
         return image;
     }
