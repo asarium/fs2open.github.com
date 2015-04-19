@@ -2318,7 +2318,15 @@ static void nsvg__parseGradient(NSVGparser* p, const char** attr, char type)
 				else if (strcmp(attr[i+1], "repeat") == 0)
 					grad->spread = NSVG_SPREAD_REPEAT;
 			} else if (strcmp(attr[i], "xlink:href") == 0) {
-				strncpy(grad->ref, attr[i+1], 63);
+                if (*attr[i+1] == '#')
+                {
+                    // skip the #
+                    strncpy(grad->ref, attr[i+1] + 1, 63);
+                }
+                else
+                {
+                    strncpy(grad->ref, attr[i+1], 63);
+                }
 				grad->ref[63] = '\0';
 			}
 		}
