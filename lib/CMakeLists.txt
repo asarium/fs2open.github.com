@@ -1,6 +1,8 @@
 
 INCLUDE(util)
 
+include(boost.cmake)
+
 IF(APPLE)
 	ADD_SUBDIRECTORY(mac)
 ENDIF(APPLE)
