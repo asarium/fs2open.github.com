@@ -1,6 +1,11 @@
 
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0.0)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+# Set a few policies
+cmake_policy(SET CMP0051 OLD)
+cmake_policy(SET CMP0053 NEW)
+cmake_policy(SET CMP0054 NEW)
 
 SET(FSO_VERSION_MAJOR 3)
 SET(FSO_VERSION_MINOR 7)
@@ -45,7 +50,7 @@ IF(RESET_INSTALL_PREFIX)
 			FILE(TO_CMAKE_PATH ${CMAKE_INSTALL_PREFIX} CMAKE_INSTALL_PREFIX)
 		ENDIF(NOT IS_DIRECTORY $ENV{FS2PATH})
 	ELSE(NOT $ENV{FS2PATH} STREQUAL "")
-		MESSAGE(STATUS "NO FS2PATH environment variable found, you can define this to point to your freespace install but it it not required.")
+		MESSAGE(STATUS "NO FS2PATH environment variable found, you can define this to point to your freespace install but it is not required.")
 	ENDIF(NOT $ENV{FS2PATH} STREQUAL "")
 ENDIF(RESET_INSTALL_PREFIX)
 
@@ -59,10 +64,10 @@ if(NOT CMAKE_BUILD_TYPE AND NOT DEFINED CMAKE_CONFIGURATION_TYPES)
 	set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Default build configuration used." FORCE)
 	message(WARNING "CMAKE_BUILD_TYPE was not specified, defaulting to Release configuration.")
 endif(NOT CMAKE_BUILD_TYPE AND NOT DEFINED CMAKE_CONFIGURATION_TYPES)
-	
+
 IF (WIN32)
 	OPTION(FSO_USE_SPEECH "Use Windows specific text-to-speach libraries" OFF)
-	
+
 	OPTION(FSO_USE_VOICEREC "Enable voice recognition support" OFF)
 
 	OPTION(FSO_BUILD_FRED2 "Build FRED2 binary" OFF)
@@ -99,7 +104,7 @@ LIST(FIND POSSIBLE_INSTUCTION_SETS "${FSO_INSTRUCTION_SET}" SET_INDEX)
 IF (SET_INDEX LESS 0)
 
 	MESSAGE(WARNING "Unrecognized instruction set '${FSO_INSTRUCTION_SET}'! Possible values: ${POSSIBLE_INSTUCTION_SETS}. Defaulting to no optionizations.")
-	
+
 	SET(FSO_INSTRUCTION_SET "")
 ENDIF(SET_INDEX LESS 0)
 
@@ -117,7 +122,7 @@ MARK_AS_ADVANCED(FORCE FSO_DEVELOPMENT_MODE)
 MARK_AS_ADVANCED(FORCE COTIRE_ENABLE)
 
 IF(COTIRE_ENABLE)
-	# Include cotire file from https://github.com/sakra/cotire/ 
+	# Include cotire file from https://github.com/sakra/cotire/
 	include(cotire)
 ENDIF(COTIRE_ENABLE)
 

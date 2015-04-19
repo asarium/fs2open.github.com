@@ -16,6 +16,11 @@
 #include "osapi/osapi.h"
 #include "SDL.h"
 
+// For some reason this gets defined in some header
+#ifdef JOYSTICKID1
+#undef JOYSTICKID1
+#endif
+
 static int Joy_inited = 0;
 static int joy_num_sticks = 0;
 static int joy_num_buttons = 0;
