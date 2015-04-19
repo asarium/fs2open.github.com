@@ -105,9 +105,7 @@ namespace chromium
 		}
 		
 		
-#if CEF_REVISION >= 1750
 		settings.windowless_rendering_enabled = true;
-#endif
 		settings.multi_threaded_message_loop = false;
 		settings.remote_debugging_port = 12345;
 
