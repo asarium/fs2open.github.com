@@ -11,6 +11,7 @@
 #include "weapon/weapon.h"
 #include "stats/medals.h"
 #include "menuui/techmenu.h"
+#include "cutscene/cutscenes.h"
 
 #include <iostream>
 #include <sstream>
@@ -438,11 +439,14 @@ void pilotfile_convert::csg_import_red_alert()
 		for (j = 0; j < 3; j++) {
 			i = cfile::io::read<int>(cfp);
 
-			if (i >= weapon_list_size || i < 0) {
+			if (i >= weapon_list_size || i < -1) {
 				throw std::runtime_error("Data check failure (RedAlert-weapon)!");
+			} else if (i >= 0) {
+				weapons.index = csg->weapon_list[i].index;
+			} else {
+				weapons.index = -1;
 			}
 
-			weapons.index = csg->weapon_list[i].index;
 			weapons.count = cfile::io::read<int>(cfp);
 
 			if (weapons.index >= 0) {
@@ -455,11 +459,14 @@ void pilotfile_convert::csg_import_red_alert()
 		for (j = 0; j < 4; j++) {
 			i = cfile::io::read<int>(cfp);
 
-			if (i >= weapon_list_size) {
+			if (i >= weapon_list_size || i < -1) {
 				throw std::runtime_error("Data check failure (RedAlert-weapon)!");
+			} else if (i >= 0) {
+				weapons.index = csg->weapon_list[i].index;
+			} else {
+				weapons.index = -1;
 			}
 
-			weapons.index = csg->weapon_list[i].index;
 			weapons.count = cfile::io::read<int>(cfp);
 
 			if (weapons.index >= 0) {
@@ -684,6 +691,9 @@ void pilotfile_convert::csg_export_flags()
 
 	// tips
 	cfile::io::write<ubyte>((ubyte)plr->tips, cfp);
+
+	// special rank
+	cfile::io::write<int>(csg->stats.rank, cfp);
 
 	endSection();
 }
@@ -1092,6 +1102,34 @@ void pilotfile_convert::csg_export_variables()
 	endSection();
 }
 
+void pilotfile_convert::csg_export_cutscenes() {
+	SCP_vector<cutscene_info>::iterator cut;
+
+	startSection(Section::Cutscenes);
+
+	// convert the old int bitfield to the new vector
+	// the 32 is the size-in-bits of the old int on all platforms
+	// supported by FSO prior to 3.7.0
+	size_t size = Cutscenes.size();
+	size_t viewableScenes = 0;
+	for (size_t j=0; j<size && j<32; ++j) {
+		if ( csg->cutscenes & (1<<j) ) {
+			Cutscenes.at(j).viewable = true;
+			viewableScenes++;
+		}
+	}
+
+	// output cutscene data in new format
+	cfile::io::write<uint>(viewableScenes, cfp);
+
+	for(cut = Cutscenes.begin(); cut != Cutscenes.end(); ++cut) {
+		if(cut->viewable)
+			cfile::io::writeStringLen(cut->filename, cfp);
+	}
+
+	endSection();
+}
+
 void pilotfile_convert::csg_export()
 {
 	Assert( cfp != NULL );
@@ -1112,7 +1150,7 @@ void pilotfile_convert::csg_export()
 	csg_export_redalert();
 	csg_export_hud();
 	csg_export_variables();
-
+	csg_export_cutscenes();
 
 	// and... we're done! :)
 }

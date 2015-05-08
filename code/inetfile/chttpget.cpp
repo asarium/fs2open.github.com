@@ -107,6 +107,9 @@ void ChttpGet::GetFile(char *URL,char *localfile)
 		return;
 	}
 
+//	uint arg = 1;
+//	ioctlsocket( m_DataSock, FIONBIO, &arg );
+
 	char *pURL = URL;
 	if(strnicmp(URL,"http:",5)==0)
 	{
@@ -169,6 +172,8 @@ ChttpGet::~ChttpGet()
 	if (thread_id)
 		SDL_WaitThread(thread_id, NULL);
 
+	fclose(LOCALFILE);
+    
 	if (m_DataSock != INVALID_SOCKET) {
 		shutdown(m_DataSock, 2);
 		closesocket(m_DataSock);

@@ -13,4 +13,6 @@
 
 #cmakedefine HAS_CXX11_NOEXCEPT
 
+#cmakedefine HAS_CXX11_OVERRIDE
+
 #endif // __COMPILER_H

@@ -25,6 +25,9 @@
 
 extern int Game_mode;
 
+const char *movie_ext_list[] = { ".ogg", ".mve" };
+const int NUM_MOVIE_EXT = sizeof(movie_ext_list) / sizeof(char*);
+
 
 #define MOVIE_NONE	-1
 #define MOVIE_OGG	0
@@ -41,8 +44,6 @@ int movie_find(char *filename, char *out_name)
 {
 	char full_path[MAX_PATH];
 	char tmp_name[MAX_PATH];
-	const int NUM_EXT = 2;
-	const char *movie_ext[NUM_EXT] = { ".ogg", ".mve" };
 
 	if (out_name == NULL)
 		return MOVIE_NONE;
@@ -59,7 +60,7 @@ int movie_find(char *filename, char *out_name)
 	SCP_string outName;
 	size_t extIndex;
 
-	if (!cfile::findFile(tmp_name, outName, cfile::TYPE_ANY, movie_ext, NUM_EXT, &extIndex))
+	if (!cfile::findFile(tmp_name, outName, cfile::TYPE_ANY, movie_ext_list, NUM_MOVIE_EXT, &extIndex))
 	{
 		return MOVIE_NONE;
 	}

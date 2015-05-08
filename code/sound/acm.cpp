@@ -16,46 +16,51 @@
 #define WAVE_FORMAT_ADPCM	2
 #endif
 
+// Hack to avoid multiple definitions of types defined in mmreg.h
+namespace adpcm
+{
+	typedef struct adpcmcoef_tag {
+		short iCoef1;
+		short iCoef2;
+	} ADPCMCOEFSET;
 
-typedef struct adpcmcoef_tag {
-	short iCoef1;
-	short iCoef2;
-} ADPCMCOEFSET;
+	typedef struct adpcmwaveformat_tag {
+		WAVEFORMATEX wav;
+		WORD wSamplesPerBlock;
+		WORD wNumCoef;
+		ADPCMCOEFSET *aCoef;
+	} ADPCMWAVEFORMAT;
 
-typedef struct adpcmblockheader_tag {
-	ubyte bPredictor;
-	ushort iDelta;
-	short iSamp1;
-	short iSamp2;
-} ADPCMBLOCKHEADER;
+	typedef struct adpcmblockheader_tag {
+		ubyte bPredictor;
+		ushort iDelta;
+		short iSamp1;
+		short iSamp2;
+	} ADPCMBLOCKHEADER;
 
-typedef struct adpcmwaveformat_tag {
-	WAVEFORMATEX wav;
-	WORD wSamplesPerBlock;
-	WORD wNumCoef;
-	ADPCMCOEFSET *aCoef;
-} ADPCMWAVEFORMAT;
 
-typedef struct ADPCM_FMT_T {
-	ADPCMWAVEFORMAT adpcm;
-	ADPCMBLOCKHEADER *header;
+	typedef struct ADPCM_FMT_T {
+		ADPCMBLOCKHEADER *header;
+		ADPCMWAVEFORMAT adpcm;
 
-	int bytes_remaining;
-	uint bytes_processed;
-	uint buffer_size;
-	uint sample_frame_size;
-	uint samples_left_in_block;
-	int nibble_state;
-	ubyte nibble;
+		int bytes_remaining;
+		uint bytes_processed;
+		uint buffer_size;
+		uint sample_frame_size;
+		uint samples_left_in_block;
+		int nibble_state;
+		ubyte nibble;
 
-	ushort dest_bps;
-} adpcm_fmt_t;
+		ushort dest_bps;
+	} adpcm_fmt_t;
 
-typedef struct acm_stream_t {
-	adpcm_fmt_t *fmt;
-	ushort dest_bps;
-	ushort src_bps;
-} acm_stream_t;
+	typedef struct acm_stream_t {
+		adpcm_fmt_t *fmt;
+		ushort dest_bps;
+		ushort src_bps;
+	} acm_stream_t;
+}
+using namespace adpcm;
 
 
 // similar to BIAL_IF_MACRO in SDL_sound
@@ -398,7 +403,7 @@ int ACM_convert_ADPCM_to_PCM(WAVEFORMATEX *pwfxSrc, ubyte *src, int src_len, uby
 	IF_ERR2(!read_word_s(hdr, &fmt->adpcm.wNumCoef), goto Error);
 
 	// allocate memory for COEF struct and fill it
-	fmt->adpcm.aCoef = (ADPCMCOEFSET *)vm_malloc(sizeof(ADPCMCOEFSET) * fmt->adpcm.wNumCoef);
+	fmt->adpcm.aCoef = (adpcm::ADPCMCOEFSET *)vm_malloc(sizeof(adpcm::ADPCMCOEFSET) * fmt->adpcm.wNumCoef);
 	IF_ERR2(fmt->adpcm.aCoef == NULL, goto Error);
 
 	for (i = 0; i < fmt->adpcm.wNumCoef; i++) {
@@ -536,7 +541,7 @@ int ACM_stream_open(WAVEFORMATEX *pwfxSrc, WAVEFORMATEX *pwfxDest, void **stream
 	IF_ERR2(!read_word_s(hdr, &fmt->adpcm.wNumCoef), goto Error);
 
 	// allocate memory for COEF struct and fill it
-	fmt->adpcm.aCoef = (ADPCMCOEFSET *)vm_malloc(sizeof(ADPCMCOEFSET) * fmt->adpcm.wNumCoef);
+	fmt->adpcm.aCoef = (adpcm::ADPCMCOEFSET *)vm_malloc(sizeof(adpcm::ADPCMCOEFSET) * fmt->adpcm.wNumCoef);
 	IF_ERR2(fmt->adpcm.aCoef == NULL, goto Error);
 
 	for (i = 0; i < fmt->adpcm.wNumCoef; i++) {

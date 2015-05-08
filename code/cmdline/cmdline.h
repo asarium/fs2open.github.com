@@ -95,6 +95,7 @@ extern int Cmdline_ship_choice_3d;
 extern int Cmdline_weapon_choice_3d;
 extern int Cmdline_warp_flash;
 extern int Cmdline_autopilot_interruptable;
+extern int Cmdline_stretch_menu;
 
 // Audio related
 extern int Cmdline_query_speech;
@@ -127,6 +128,7 @@ extern int Cmdline_no_3d_sound;
 extern int Cmdline_no_glsl_model_rendering;
 extern int Cmdline_drawelements;
 extern char* Cmdline_keyboard_layout;
+extern bool Cmdline_gl_finish;
 extern bool Cmdline_use_md5;
 
 // Developer/Testing related

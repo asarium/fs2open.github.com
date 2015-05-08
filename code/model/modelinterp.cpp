@@ -33,6 +33,7 @@
 #include "graphics/gropengllight.h"
 #include "ship/shipfx.h"
 #include "gamesequence/gamesequence.h"
+#include "debugconsole/console.h"
 
 #include <limits.h>
 
@@ -759,15 +760,6 @@ void model_interp_tmappoly(ubyte * p,polymodel * pm)
 	texture_info *tbase = &tmap->textures[TM_BASE_TYPE];
 	texture_info *tglow = &tmap->textures[TM_GLOW_TYPE];
 	int rt_begin_index = tmap_num*TM_NUM_TYPES;
-
-	// Goober5000
-	Interp_base_frametime = 0;
-	if (Interp_objnum >= 0)
-	{
-		object *objp = &Objects[Interp_objnum];
-		if (objp->type == OBJ_SHIP)
-			Interp_base_frametime = Ships[objp->instance].base_texture_anim_frametime;
-	}
 
 	int is_invisible = 0;
 
@@ -1941,22 +1933,23 @@ float Interp_depth_scale = 1500.0f;
 
 DCF(model_darkening,"Makes models darker with distance")
 {
-	if ( Dc_command )	{
-		dc_get_arg(ARG_FLOAT);
-		Interp_depth_scale = Dc_arg_float;
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf( "Usage: model_darkening <float>\n" );
+		dc_printf("Sets the distance at which to start blacking out models (namely asteroids).\n");
+		return;
 	}
 
-	if ( Dc_help )	{
-		dc_printf( "Usage: model_darkening float\n" );
-		Dc_status = 0;	// don't print status if help is printed.  Too messy.
-	}
-
-	if ( Dc_status )	{
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
 		dc_printf( "model_darkening = %.1f\n", Interp_depth_scale );
+		return;
 	}
+
+	dc_stuff_float(&Interp_depth_scale);
+
+	dc_printf("model_darkening set to %.1f\n", Interp_depth_scale);
 }
 
-void model_render(int model_num, matrix *orient, vec3d * pos, uint flags, int objnum, int lighting_skip, int *replacement_textures)
+void model_render(int model_num, matrix *orient, vec3d * pos, uint flags, int objnum, int lighting_skip, int *replacement_textures, const bool is_skybox)
 {
 	int cull = 0;
 	// replacement textures - Goober5000
@@ -1964,27 +1957,28 @@ void model_render(int model_num, matrix *orient, vec3d * pos, uint flags, int ob
 
 	polymodel *pm = model_get(model_num);
 
-
 	model_do_dumb_rotation(model_num);
 
 	if (flags & MR_FORCE_CLAMP)
 		gr_set_texture_addressing(TMAP_ADDRESS_CLAMP);
 
 	int time = timestamp();
+
 	for (int i = 0; i < pm->n_glow_point_banks; i++ ) { //glow point blink code -Bobboau
 		glow_point_bank *bank = &pm->glow_point_banks[i];
+
 		if (bank->glow_timestamp == 0)
-			bank->glow_timestamp=time;
-		if(bank->off_time){
-			if(bank->is_on){
-				if( (bank->on_time) > ((time - bank->disp_time) % (bank->on_time + bank->off_time)) ){
-					bank->glow_timestamp=time;
-					bank->is_on=0;
+			bank->glow_timestamp = time;
+		if (bank->off_time) {
+			if (bank->is_on) {
+				if ( (bank->on_time) > ((time - bank->disp_time) % (bank->on_time + bank->off_time)) ) {
+					bank->glow_timestamp = time;
+					bank->is_on = false;
 				}
-			}else{
-				if( (bank->off_time) < ((time - bank->disp_time) % (bank->on_time + bank->off_time)) ){
-					bank->glow_timestamp=time;
-					bank->is_on=1;
+			} else {
+				if ( (bank->off_time) < ((time - bank->disp_time) % (bank->on_time + bank->off_time)) ) {
+					bank->glow_timestamp = time;
+					bank->is_on = true;
 				}
 			}
 		}
@@ -1995,7 +1989,24 @@ void model_render(int model_num, matrix *orient, vec3d * pos, uint flags, int ob
 		cull = gr_set_cull(0);
 	}
 
-	Interp_objnum = objnum;
+	// Goober5000
+	Interp_base_frametime = 0;
+
+	if (objnum >= 0) {
+		object *objp = &Objects[objnum];
+
+		if (objp->type == OBJ_SHIP) {
+			Interp_base_frametime = Ships[objp->instance].base_texture_anim_frametime;
+		}
+	} else if (is_skybox) {
+		Interp_base_frametime = Skybox_timestamp;
+	}
+
+
+	if (flags & MR_ATTACHED_MODEL)
+		Interp_objnum = -1;
+	else
+		Interp_objnum = objnum;
 
 	if ( flags & MR_NO_LIGHTING )	{
 		Interp_light = 1.0f;
@@ -2116,8 +2127,13 @@ float model_find_closest_point( vec3d *outpnt, int model_num, int submodel_num, 
 }
 
 int tiling = 1;
-DCF(tiling, "")
+DCF(tiling, "Toggles rendering of tiled textures (default is on)")
 {
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
+		dc_printf("Tiled textures are %s", tiling ? "ON" : "OFF");
+		return;
+	}
+
 	tiling = !tiling;
 	if(tiling){
 		dc_printf("Tiled textures\n");
@@ -2324,7 +2340,7 @@ void model_render_thrusters(polymodel *pm, int objnum, ship *shipp, matrix *orie
 
 			// fade them in the nebula as well
 			if (The_mission.flags & MISSION_FLAG_FULLNEB) {
-				vm_vec_rotate(&npnt, &gpt->pnt, orient);
+				vm_vec_unrotate(&npnt, &gpt->pnt, orient);
 				vm_vec_add2(&npnt, pos);
 
 				fog_int = (1.0f - (neb2_get_fog_intensity(&npnt)));
@@ -2538,10 +2554,33 @@ void model_render_glow_points(polymodel *pm, ship *shipp, matrix *orient, vec3d 
 					vm_vec_add2(&world_pnt, pos);
 
 					vm_vec_unrotate(&world_norm, &loc_norm, orient);
-					
-					if ( (shipp != NULL) && (shipp->flags & (SF_ARRIVING | SF_DEPART_WARP) ) && (shipp->warpin_effect) && Ship_info[shipp->ship_info_index].warpin_type != WT_HYPERSPACE) {
-						if (g3_point_behind_user_plane(&world_pnt))
-							continue;
+
+					if ( shipp != NULL ) {
+						if ( (shipp->flags & (SF_ARRIVING) ) && (shipp->warpin_effect) && Ship_info[shipp->ship_info_index].warpin_type != WT_HYPERSPACE) {
+							vec3d warp_pnt, tmp;
+							matrix warp_orient;
+
+							shipp->warpin_effect->getWarpPosition(&warp_pnt);
+							shipp->warpin_effect->getWarpOrientation(&warp_orient);
+							vm_vec_sub( &tmp, &world_pnt, &warp_pnt );
+
+							if ( vm_vec_dot( &tmp, &warp_orient.vec.fvec ) < 0.0f ) {
+								continue;
+							}
+						}
+
+						if ( (shipp->flags & (SF_DEPART_WARP) ) && (shipp->warpout_effect) && Ship_info[shipp->ship_info_index].warpout_type != WT_HYPERSPACE) {
+							vec3d warp_pnt, tmp;
+							matrix warp_orient;
+
+							shipp->warpout_effect->getWarpPosition(&warp_pnt);
+							shipp->warpout_effect->getWarpOrientation(&warp_orient);
+							vm_vec_sub( &tmp, &world_pnt, &warp_pnt );
+
+							if ( vm_vec_dot( &tmp, &warp_orient.vec.fvec ) > 0.0f ) {
+								continue;
+							}
+						}
 					}
 
 					switch (bank->type)
@@ -2611,6 +2650,8 @@ void model_render_glow_points(polymodel *pm, ship *shipp, matrix *orient, vec3d 
 						{
 							vertex verts[4];
 							vec3d fvec, top1, bottom1, top2, bottom2, start, end;
+                            
+							memset(verts, 0, sizeof(verts));
 
 							vm_vec_add2(&loc_norm, &loc_offset);
 
@@ -2692,9 +2733,11 @@ void model_really_render(int model_num, matrix *orient, vec3d * pos, uint flags,
 	bool draw_thrusters = false;
 
 	// just to be on the safe side
-	Assert( Interp_objnum == objnum );
+	// If we're dealing with an attached model (i.e. an external weapon model) we need the object number
+	// of the ship that the weapon is attached to, but nothing else
+	Assert( (Interp_objnum == objnum) || (flags & MR_ATTACHED_MODEL) );
 
-	if (objnum >= 0) {
+	if (objnum >= 0 && !(flags & MR_ATTACHED_MODEL)) {
 		objp = &Objects[objnum];
 
 		if (objp->type == OBJ_SHIP) {
@@ -2782,34 +2825,43 @@ void model_really_render(int model_num, matrix *orient, vec3d * pos, uint flags,
 
 	vec3d closest_pos;
 	float depth = model_find_closest_point( &closest_pos, model_num, -1, orient, pos, &Eye_position );
+
+	if ( !(Interp_flags & MR_LOCK_DETAIL) ) {
+		#if MAX_DETAIL_LEVEL != 4
+		#error Code in modelInterp.cpp assumes MAX_DETAIL_LEVEL == 4
+		#endif
+
+		switch( Detail.detail_distance )	{
+		case 0:		// lowest
+			depth /= The_mission.ai_profile->detail_distance_mult[0];
+			break;
+		case 1:		// lower than normal
+			depth /= The_mission.ai_profile->detail_distance_mult[1];
+			break;
+		case 2:		// default
+			depth /= The_mission.ai_profile->detail_distance_mult[2];
+			break;
+		case 3:		// above normal
+			depth /= The_mission.ai_profile->detail_distance_mult[3];
+			break;
+		case 4:		// even more normal
+			depth /= The_mission.ai_profile->detail_distance_mult[4];
+			break;
+		}
+
+		// If we're rendering attached weapon models, check against the ships' tabled Weapon Model Draw Distance (which defaults to 200)
+		if (Interp_flags & MR_ATTACHED_MODEL) {
+			if (depth > Ship_info[Ships[Objects[objnum].instance].ship_info_index].weapon_model_draw_distance) {
+				g3_done_instance(use_api);
+				return;
+			}
+		}
+	}
 	if ( pm->n_detail_levels > 1 )	{
 
 		if ( Interp_flags & MR_LOCK_DETAIL )	{
 			i = Interp_detail_level_locked+1;
 		} else {
-
-			#if MAX_DETAIL_LEVEL != 4
-			#error Code in modelInterp.cpp assumes MAX_DETAIL_LEVEL == 4
-			#endif
-
-			switch( Detail.detail_distance )	{
-			case 0:		// lowest
-				depth /= The_mission.ai_profile->detail_distance_mult[0];
-				break;
-			case 1:		// lower than normal
-				depth /= The_mission.ai_profile->detail_distance_mult[1];
-				break;
-			case 2:		// default
-				depth /= The_mission.ai_profile->detail_distance_mult[2];
-				break;
-			case 3:		// above normal
-				depth /= The_mission.ai_profile->detail_distance_mult[3];
-				break;
-			case 4:		// even more normal
-				depth /= The_mission.ai_profile->detail_distance_mult[4];
-				break;
-			}
-
 			// nebula ?
 			if(The_mission.flags & MISSION_FLAG_FULLNEB){
 				depth *= neb2_get_lod_scale(Interp_objnum);
@@ -2946,13 +2998,6 @@ void model_really_render(int model_num, matrix *orient, vec3d * pos, uint flags,
 		cull = gr_set_cull(0);
 	} else {
 		cull = gr_set_cull(1);
-	}
-
-	// Goober5000
-	Interp_base_frametime = 0;
-
-	if ( (objp != NULL) && (objp->type == OBJ_SHIP) ) {
-		Interp_base_frametime = Ships[objp->instance].base_texture_anim_frametime;
 	}
 
 	if ( !(Interp_flags & MR_NO_LIGHTING) ) {
@@ -4809,8 +4854,7 @@ int model_interp_get_texture(texture_info *tinfo, fix base_frametime)
 
 		// get animation frame
 		frame = fl2i((cur_time * num_frames) / total_time);
-		if (frame < 0) frame = 0;
-		if (frame >= num_frames) frame = num_frames - 1;
+		CLAMP(frame, 0, num_frames - 1);
 
 		// advance to the correct frame
 		texture += frame;
@@ -4872,7 +4916,7 @@ int texture_info::LoadTexture(char *filename, char *dbg_name = "<UNKNOWN>")
 {
 	if (strlen(filename) + 4 >= NAME_LENGTH) //Filenames are passed in without extension
 	{
-		mprintf(("Generated texture name %s is too long. Skipping...\n"));
+		mprintf(("Generated texture name %s is too long. Skipping...\n", filename));
 		return -1;
 	}
 	this->original_texture = bm_load_either(filename, NULL, NULL, NULL, 1, cfile::TYPE_MAPS);

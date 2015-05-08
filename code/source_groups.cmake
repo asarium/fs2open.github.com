@@ -128,44 +128,38 @@ set (file_root_debris
 # DebugConsole files
 set (file_root_debugconsole
 	debugconsole/console.cpp
+	debugconsole/console.h
+	debugconsole/consolecmds.cpp
+	debugconsole/consoleparse.cpp
+	debugconsole/consoleparse.h
 	debugconsole/timerbar.cpp
 	debugconsole/timerbar.h
 )
 
 SET(file_root_def_files
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/ai_profiles.tbl
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/autopilot.tbl
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/blur-f.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/brightpass-f.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/controlconfigdefaults.tbl
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/fonts.tbl
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/fxaa-f.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/fxaa-v.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/fxaapre-f.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/game_settings.tbl
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/iff_defs.tbl
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/ls-f.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/main-f.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/main-v.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/objecttypes.tbl
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/particle-f.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/particle-v.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/post-f.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/post-v.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/post_processing.tbl
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/species_defs.tbl
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/video-f.sdr
-	${CMAKE_CURRENT_SOURCE_DIR}/def_files/video-v.sdr)
-
-# DirectX files
-set (file_root_directx
-	directx/vasync.h
-	directx/vdinput.h
-	directx/vdplay.h
-	directx/vdplobby.h
-	directx/vdsetup.h
-	directx/vdvp.h
-)
+	def_files/ai_profiles.tbl
+	def_files/autopilot.tbl
+	def_files/blur-f.sdr
+	def_files/brightpass-f.sdr
+	def_files/controlconfigdefaults.tbl
+	def_files/fonts.tbl
+	def_files/fxaa-f.sdr
+	def_files/fxaa-v.sdr
+	def_files/fxaapre-f.sdr
+	def_files/game_settings.tbl
+	def_files/iff_defs.tbl
+	def_files/ls-f.sdr
+	def_files/main-f.sdr
+	def_files/main-v.sdr
+	def_files/objecttypes.tbl
+	def_files/particle-f.sdr
+	def_files/particle-v.sdr
+	def_files/post-f.sdr
+	def_files/post-v.sdr
+	def_files/post_processing.tbl
+	def_files/species_defs.tbl
+	def_files/video-f.sdr
+	def_files/video-v.sdr)
 
 # ExceptionHandler files
 set (file_root_exceptionhandler
@@ -246,6 +240,7 @@ set (file_root_globalincs
 	globalincs/version.cpp
 	globalincs/version.h
 	globalincs/vmallocator.h
+	globalincs/scp_defines.h
 )
 
 IF (WIN32)
@@ -379,17 +374,13 @@ set (file_root_io
 	io/timer.h
 	io/joy.h
 	io/joy_ff.h
-)	
+)
 
 IF(WIN32)
 	set (file_root_io
 		${file_root_io}
 		io/joy-sdl.cpp
 		io/joy_ff-sdl.cpp
-		io/sw_error.hpp
-		io/sw_force.h
-		io/sw_guid.hpp
-		io/swff_lib.cpp
 	)
 ELSEIF(UNIX)
 	set (file_root_io
@@ -942,11 +933,6 @@ source_group("ddsutils"                           FILES ${file_root_ddsutils})
 source_group("Debris"                             FILES ${file_root_debris})
 source_group("DebugConsole"                       FILES ${file_root_debugconsole})
 SOURCE_GROUP("Default files"                      FILES ${file_root_def_files})
-
-IF(WIN32)
-	source_group("DirectX"                        FILES ${file_root_directx})
-ENDIF(WIN32)
-
 source_group("ExceptionHandler"                   FILES ${file_root_exceptionhandler})
 source_group("ExternalDLL"                        FILES ${file_root_externaldll})
 source_group("Fireball"                           FILES ${file_root_fireball})
@@ -1078,7 +1064,3 @@ set (file_root
 	${file_root_weapon}
 	${file_root_windows_stubs}
 )
-
-IF(WIN32)
-	set (file_root ${file_root} ${file_root_directx})
-ENDIF(WIN32)

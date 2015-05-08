@@ -236,7 +236,7 @@ macro(_launcher_create_target_launcher)
 					"${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${_fn}"
 					@ONLY)
 	
-	file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/launch-${_targetname}-$<CONFIG>.${_suffix}"
+	file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/launch-${_targetname}-$<CONFIGURATION>.${_suffix}"
 			INPUT "${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/${_fn}")
 endmacro()
 

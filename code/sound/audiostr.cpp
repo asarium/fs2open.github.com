@@ -45,6 +45,10 @@ ubyte *Compressed_service_buffer = NULL;	// Used to read in compressed data duri
 
 #define AS_HIGHEST_MAX	999999999	// max uncompressed filesize supported is 999 meg
 
+// Globalize the list of audio extensions for use in several sound related files
+const char *audio_ext_list[] = { ".ogg", ".wav" };
+const int NUM_AUDIO_EXT = sizeof(audio_ext_list) / sizeof(char*);
+
 
 int Audiostream_inited = 0;
 
@@ -244,6 +248,7 @@ public:
 	int	Is_looping() { return m_bLooping; }
 	int	status;
 	int	type;
+	bool paused_via_sexp_or_script;
 	ushort m_bits_per_sample_uncompressed;
 
 protected:
@@ -407,8 +412,6 @@ bool WaveFile::Open(char *pszFilename, bool keep_ext)
 	bool fRtn = true;    // assume success
 	PCMWAVEFORMAT pcmwf;
 	char filename[MAX_FILENAME_LEN];
-	const int NUM_EXT = 2;
-	const char *audio_ext[NUM_EXT] = { ".ogg", ".wav" };
 
 	m_total_uncompressed_bytes_read = 0;
 	m_max_uncompressed_bytes_to_read = AS_HIGHEST_MAX;
@@ -420,8 +423,8 @@ bool WaveFile::Open(char *pszFilename, bool keep_ext)
 	SCP_string fullName;
 	// if we are supposed to load the file as passed...
 	if (keep_ext) {
-		for (int i = 0; i < NUM_EXT; i++) {
-			if ( stristr(pszFilename, audio_ext[i]) ) {
+		for (int i = 0; i < NUM_AUDIO_EXT; i++) {
+			if ( stristr(pszFilename, audio_ext_list[i]) ) {
 				rc = i;
 				break;
 			}
@@ -437,7 +440,7 @@ bool WaveFile::Open(char *pszFilename, bool keep_ext)
 	else {
 		size_t extIndex;
 
-		if (!cfile::findFile(pszFilename, fullName, cfile::TYPE_ANY, audio_ext, NUM_EXT, &extIndex))
+		if (!cfile::findFile(pszFilename, fullName, cfile::TYPE_ANY, audio_ext_list, NUM_AUDIO_EXT, &extIndex))
 		{
 			rc = -1;
 		}
@@ -451,7 +454,7 @@ bool WaveFile::Open(char *pszFilename, bool keep_ext)
 		goto OPEN_ERROR;
 	} else {
 		// set proper filename for later use (assumes that it doesn't already have an extension)
-		strcat_s( filename, audio_ext[rc] );
+		strcat_s( filename, audio_ext_list[rc] );
 	}
 
 	m_snd_info.cfp = cfile::io::open(fullName, cfile::MODE_READ, cfile::OPEN_NORMAL);
@@ -1616,6 +1619,7 @@ void audiostream_init()
 		Audio_streams[i].Init_Data();
 		Audio_streams[i].status = ASF_FREE;
 		Audio_streams[i].type = ASF_NONE;
+		Audio_streams[i].paused_via_sexp_or_script = false;
 	}
 
 	SDL_InitSubSystem(SDL_INIT_TIMER);
@@ -1909,7 +1913,7 @@ int audiostream_is_inited()
 	return Audiostream_inited;
 }
 
-void audiostream_pause(int i)
+void audiostream_pause(int i, bool via_sexp_or_script)
 {
 	if ( i == -1 )
 		return;
@@ -1921,21 +1925,12 @@ void audiostream_pause(int i)
 
 	if ( audiostream_is_playing(i) == (int)true )
 		audiostream_stop(i, 0, 1);
+
+	if (via_sexp_or_script)
+		Audio_streams[i].paused_via_sexp_or_script = true;
 }
 
-void audiostream_pause_all()
-{
-	int i;
-
-	for ( i = 0; i < MAX_AUDIO_STREAMS; i++ ) {
-		if ( Audio_streams[i].status == ASF_FREE )
-			continue;
-
-		audiostream_pause(i);
-	}
-}
-
-void audiostream_unpause(int i)
+void audiostream_unpause(int i, bool via_sexp_or_script)
 {
 	if ( i == -1 )
 		return;
@@ -1948,9 +1943,12 @@ void audiostream_unpause(int i)
 	if ( audiostream_is_paused(i) == (int)true ) {
 		audiostream_play(i, Audio_streams[i].Get_Volume(), Audio_streams[i].Is_looping());
 	}
+
+	if (via_sexp_or_script)
+		Audio_streams[i].paused_via_sexp_or_script = false;
 }
 
-void audiostream_unpause_all()
+void audiostream_pause_all(bool via_sexp_or_script)
 {
 	int i;
 
@@ -1958,6 +1956,22 @@ void audiostream_unpause_all()
 		if ( Audio_streams[i].status == ASF_FREE )
 			continue;
 
-		audiostream_unpause(i);
+		audiostream_pause(i, via_sexp_or_script);
+	}
+}
+
+void audiostream_unpause_all(bool via_sexp_or_script)
+{
+	int i;
+
+	for ( i = 0; i < MAX_AUDIO_STREAMS; i++ ) {
+		if ( Audio_streams[i].status == ASF_FREE )
+			continue;
+
+		// if we explicitly paused this and we are not explicitly unpausing, skip this stream
+		if ( Audio_streams[i].paused_via_sexp_or_script && !via_sexp_or_script )
+			continue;
+
+		audiostream_unpause(i, via_sexp_or_script);
 	}
 }

@@ -54,10 +54,8 @@ set_target_properties(VFSPP
 		FOLDER "3rdparty"
 )
 
-find_package(Boost COMPONENTS filesystem system iostreams regex REQUIRED)
-
-MAKE_CACHE_INTERNAL(Boost_LIBRARIES)
-
 IF(MSVC60 OR MSVC70)
 	INCLUDE(stlport.cmake)
 ENDIF(MSVC60 OR MSVC70)
+
+include(boost.cmake)

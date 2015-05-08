@@ -76,7 +76,7 @@ void do_binary_content(std::ifstream& file_in, std::ofstream& file_out,
 		file_out << "#include <wx/bitmap.h>" << std::endl;
 		file_out << std::endl;
 	}
-	
+
 	file_out << "static const unsigned char " << field_name << "[] = " << std::endl;
 	file_out << "{" << std::endl;
 	file_out << "\t";
@@ -124,10 +124,10 @@ void do_text_content(std::ifstream& file_in, std::ofstream& file_out,
 
 	file_content.assign((std::istreambuf_iterator<char>(file_in)),
 				std::istreambuf_iterator<char>());
-	
+
 	file_out << "char *" << field_name << " = " << std::endl;
 	file_out << "\"";
-	
+
 	size_t pos = 0;
 	const char* str = file_content.c_str();
 
@@ -166,7 +166,7 @@ void do_text_content(std::ifstream& file_in, std::ofstream& file_out,
 				// Discard this character, possibly breaks on mac but whatever...
 				break;
 			default:
-				std::cerr << "Invalid character encountered!" << std::endl;
+				std::cout << "ERROR: Invalid character encountered!" << std::endl;
 			}
 
 			pos = found_pos + 1;
@@ -180,7 +180,7 @@ int main( int argc, char* argv[] )
 {
 	if (argc < 4 || argc > 6)
 	{
-		std::cerr << "Usage: embedfile [-wx] [-text] <inout> <output> <fieldname>" << std::endl;
+		std::cout << "Usage: embedfile [-wx] [-text] <inout> <output> <fieldname>" << std::endl;
 
 		return error_invalidargs;
 	}
@@ -217,7 +217,7 @@ int main( int argc, char* argv[] )
 	std::ifstream file_in(input_file.c_str(), std::ios::binary);
 	if( file_in.bad() )
 	{
-		std::cerr << "Error opening file: " << input_file << std::endl;
+		std::cout << "ERROR: Error opening input file: " << input_file << std::endl;
 		return error_cantopenfile;
 	}
 
@@ -231,7 +231,7 @@ int main( int argc, char* argv[] )
 	}
 	else
 	{
-		std::cerr << "Failed to get size of input file: " << input_file << std::endl;
+		std::cout << "ERROR: Failed to get size of input file: " << input_file << std::endl;
 		file_in.close();
 		return error_ioerror;
 	}
@@ -242,7 +242,7 @@ int main( int argc, char* argv[] )
 	std::ofstream file_out(output_file.c_str());
 	if(file_out.bad())
 	{
-		std::cerr << "Error opening file: " << output_file << std::endl;
+		std::cout << "ERROR: Error opening output file: " << output_file << std::endl;
 		file_in.close();
 		return error_cantoutputfile;
 	}
@@ -261,4 +261,3 @@ int main( int argc, char* argv[] )
 
 	return error_none;
 }
-

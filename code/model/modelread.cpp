@@ -34,7 +34,6 @@
 #include "cfile/cfile.h"
 #include "parse/parselo.h"
 #include "cmdline/cmdline.h"
-#include "osapi/osapi.h"
 
 
 #include "gamesnd/gamesnd.h"
@@ -1772,7 +1771,7 @@ int read_model_file(polymodel * pm, const char *filename, int n_subsystems, mode
 				{
 					glow_point_bank *bank = &pm->glow_point_banks[gpb];
 
-					bank->is_on = 1;
+					bank->is_on = true;
 					bank->glow_timestamp = 0;
 					bank->disp_time = cfile::io::read<int>(fp);
 					bank->on_time = cfile::io::read<int>(fp);
@@ -1786,8 +1785,8 @@ int read_model_file(polymodel * pm, const char *filename, int n_subsystems, mode
 					if (bank->num_points > 0)
 						bank->points = (glow_point *) vm_malloc(sizeof(glow_point) * bank->num_points);
 
-					if((bank->off_time > 0) && (bank->disp_time > 0))
-						bank->is_on = 0;
+					if ((bank->off_time > 0) && (bank->disp_time > 0))
+						bank->is_on = false;
 	
 					cfile::io::readStringLen(props, MAX_PROP_LEN, fp);
 					// look for $glow_texture=xxx
@@ -1944,17 +1943,18 @@ int read_model_file(polymodel * pm, const char *filename, int n_subsystems, mode
 
 			case ID_TGUN:
 			case ID_TMIS: {
-				int n_banks, n_slots, parent;
-				model_subsystem *subsystemp;
-				int snum=-1;
-	
-				n_banks = cfile::io::read<int>(fp);				// number of turret points
+				int n_banks = cfile::io::read<int>(fp);			// Number of turrets
+
 				for ( i = 0; i < n_banks; i++ ) {
-					int physical_parent;			// who are we attached to?
-					parent = cfile::io::read<int>( fp );			// get the turret parent of the object
+					int parent;							// The parent subobj of the turret (the gun base)
+					int physical_parent;				// The subobj that the firepoints are physically attached to (the gun barrel)
+					int n_slots;						// How many firepoints the turret has
+					model_subsystem *subsystemp;		// The actual turret subsystem
 
-					physical_parent = cfile::io::read<int>(fp);	// The parent subobj that this is physically attached to
+					parent = cfile::io::read<int>(fp);
+					physical_parent = cfile::io::read<int>(fp);
 
+					int snum=-1;
 					if ( subsystems ) {
 						for ( snum = 0; snum < n_subsystems; snum++ ) {
 							subsystemp = &subsystems[snum];
@@ -1968,7 +1968,7 @@ int read_model_file(polymodel * pm, const char *filename, int n_subsystems, mode
 								n_slots = cfile::io::read<int>( fp );
 								subsystemp->turret_gun_sobj = physical_parent;
 								if(n_slots > MAX_TFP) {
-									Warning(LOCATION, "Model %s has too many turret firing points on subsystem %s", subsystemp->name);
+									Warning(LOCATION, "Model %s has %i turret firing points on subsystem %s, maximum is %i", pm->filename, n_slots, subsystemp->name, MAX_TFP);
 								}
 
 								for (j = 0; j < n_slots; j++ )	{
@@ -1980,7 +1980,7 @@ int read_model_file(polymodel * pm, const char *filename, int n_subsystems, mode
 										cfile::io::read<vec3d>(fp);
 									}
 								}
-								Assertion( n_slots > 0, "Turret %s has no firing points.\n", subsystemp->name );
+								Assertion( n_slots > 0, "Turret %s in model %s has no firing points.\n", subsystemp->name, pm->filename);
 
 								subsystemp->turret_num_firing_points = n_slots;
 
@@ -1989,10 +1989,8 @@ int read_model_file(polymodel * pm, const char *filename, int n_subsystems, mode
 						}
 					}
 
-//turret_gun_sobj
-
 					if ( (n_subsystems == 0) || (snum == n_subsystems) ) {
-						nprintf(("Warning", "Turret object not found for turret firing point in model %s\n", model_filename));
+						nprintf(("Warning", "Turret submodel %i not found for turret %i in model %s\n", parent, i, pm->filename));
 						cfile::io::read<vec3d>(fp);
 						n_slots = cfile::io::read<int>( fp );
 						for (j = 0; j < n_slots; j++ )
@@ -2491,8 +2489,7 @@ int model_load(const char *filename, int n_subsystems, model_subsystem *subsyste
 		char buffer[100];
 		sprintf(buffer,"Serious problem loading model %s, %d normals capped to zero",
 			filename, Parse_normal_problem_count);
-
-		SCP_Messagebox(MESSAGEBOX_ERROR, buffer);
+		MessageBox(NULL,buffer,"Error", MB_OK);
 	}
 #endif
 

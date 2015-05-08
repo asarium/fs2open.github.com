@@ -35,6 +35,19 @@ int main()
 }
 " HAS_CXX11_AUTO)
 
+CHECK_CXX_SOURCE_COMPILES("
+class base
+{
+	virtual void a() = 0;
+};
+class deriv : public base
+{
+	virtual void a() override {}
+};
+
+int main() {return 0;}
+" HAS_CXX11_OVERRIDE)
+
 CHECK_CXX_SOURCE_COMPILES("int main() noexcept {return 0;}" HAS_CXX11_NOEXCEPT)
 
 configure_file(${CODE_HEADERS}/compiler.h.in ${GENERATED_SOURCE_DIR}/compiler.h)

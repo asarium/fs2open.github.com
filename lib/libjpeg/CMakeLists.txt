@@ -6,52 +6,19 @@ ENDIF(NOT FSO_BUILD_INCLUDED_LIBS)
 IF (FSO_BUILD_INCLUDED_LIBS OR NOT JPEG_FOUND)
 	MESSAGE(STATUS "Building libjpeg from source")
 
-	SET(JPEG_SOURCES 
-		jaricom.c
-		jcapimin.c
-		jcapistd.c
-		jcomapi.c
-		jcparam.c
-		jctrans.c
-		jdapimin.c
-		jdapistd.c
-		jdarith.c
-		jdatasrc.c
-		jdcoefct.c
-		jdcolor.c
-		jddctmgr.c
-		jdhuff.c
-		jdinput.c
-		jdmainct.c
-		jdmarker.c
-		jdmaster.c
-		jdmerge.c
-		jdpostct.c
-		jdsample.c
-		jdtrans.c
-		jerror.c
-		jidctflt.c
-		jidctfst.c
-		jidctint.c
-		jmemmgr.c
-		jmemnobs.c
-		jquant1.c
-		jquant2.c
-		jutils.c
-		jconfig.h
-		jdct.h
-		jerror.h
-		jinclude.h
-		jmemsys.h
-		jmorecfg.h
-		jpegint.h
-		jpeglib.h
-		jversion.h)
+	SET(JPEG_SOURCES jaricom.c jcapimin.c jcapistd.c jcarith.c jccoefct.c jccolor.c
+        jcdctmgr.c jchuff.c jcinit.c jcmainct.c jcmarker.c jcmaster.c
+        jcomapi.c jcparam.c jcprepct.c jcsample.c jctrans.c jdapimin.c
+        jdapistd.c jdarith.c jdatadst.c jdatasrc.c jdcoefct.c jdcolor.c
+        jddctmgr.c jdhuff.c jdinput.c jdmainct.c jdmarker.c jdmaster.c
+        jdmerge.c jdpostct.c jdsample.c jdtrans.c jerror.c jfdctflt.c
+        jfdctfst.c jfdctint.c jidctflt.c jidctfst.c jidctint.c jquant1.c
+		jquant2.c jutils.c jmemmgr.c jmemnobs.c)
 
 	ADD_LIBRARY(jpeg STATIC ${JPEG_SOURCES})
-	
+
 	INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-	
+
 	set_target_properties(jpeg
 		PROPERTIES
 			COMPILE_DEFINITIONS _CRT_SECURE_NO_WARNINGS
@@ -62,14 +29,14 @@ IF (FSO_BUILD_INCLUDED_LIBS OR NOT JPEG_FOUND)
 		PROPERTIES
 			FOLDER "3rdparty"
 	)
-	
+
 	IF(MSVC)
 		set_target_properties(jpeg
 			PROPERTIES
 				STATIC_LIBRARY_FLAGS "/LTCG"
 		)
 	ENDIF(MSVC)
-	
+
 	SET(JPEG_LIBS jpeg CACHE INTERNAL "JPEG library")
 ELSE(FSO_BUILD_INCLUDED_LIBS OR NOT JPEG_FOUND)
 	INCLUDE(util)

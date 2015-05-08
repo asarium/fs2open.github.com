@@ -30,6 +30,11 @@ void pilotfile::csg_read_flags()
 {
 	// tips?
 	p->tips = (int)cfile::io::read<ubyte>(cfp);
+
+	// avoid having to read everything to get the rank
+	if (csg_ver >= 5) {
+		p->stats.rank = cfile::io::read<int>(cfp);
+	}
 }
 
 void pilotfile::csg_write_flags()
@@ -38,6 +43,9 @@ void pilotfile::csg_write_flags()
 
 	// tips
 	cfile::io::write<ubyte>((ubyte)p->tips, cfp);
+
+	// avoid having to read everything to get the rank
+	cfile::io::write<int>(p->stats.rank, cfp);
 
 	endSection();
 }
@@ -237,7 +245,7 @@ void pilotfile::csg_write_info()
 void pilotfile::csg_read_missions()
 {
 	int i, j, idx, list_size;
-	cmission *mission;
+	cmission *missionp;
 
 	if ( !m_have_info ) {
 		throw "Missions before Info!";
@@ -245,74 +253,74 @@ void pilotfile::csg_read_missions()
 
 	for (i = 0; i < Campaign.num_missions_completed; i++) {
 		idx = cfile::io::read<int>(cfp);
-		mission = &Campaign.missions[idx];
+		missionp = &Campaign.missions[idx];
 
-		mission->completed = 1;
+		missionp->completed = 1;
 
 		// flags
-		mission->flags = cfile::io::read<int>(cfp);
+		missionp->flags = cfile::io::read<int>(cfp);
 
 		// goals
-		mission->num_goals = cfile::io::read<int>(cfp);
+		missionp->num_goals = cfile::io::read<int>(cfp);
 
-		if (mission->num_goals > 0) {
-			mission->goals = (mgoal *) vm_malloc( mission->num_goals * sizeof(mgoal) );
-			Verify( mission->goals != NULL );
+		if (missionp->num_goals > 0) {
+			missionp->goals = (mgoal *) vm_malloc( missionp->num_goals * sizeof(mgoal) );
+			Verify( missionp->goals != NULL );
 
-			memset( mission->goals, 0, mission->num_goals * sizeof(mgoal) );
+			memset( missionp->goals, 0, missionp->num_goals * sizeof(mgoal) );
 
-			for (j = 0; j < mission->num_goals; j++) {
-				cfile::io::readStringLen(mission->goals[j].name, NAME_LENGTH, cfp);
-				mission->goals[j].status = cfile::io::read<char>(cfp);
+			for (j = 0; j < missionp->num_goals; j++) {
+				cfile::io::readStringLen(missionp->goals[j].name, NAME_LENGTH, cfp);
+				missionp->goals[j].status = cfile::io::read<char>(cfp);
 			}
 		}
 
 		// events
-		mission->num_events = cfile::io::read<int>(cfp);
+		missionp->num_events = cfile::io::read<int>(cfp);
 
-		if (mission->num_events > 0) {
-			mission->events = (mevent *) vm_malloc( mission->num_events * sizeof(mevent) );
-			Verify( mission->events != NULL );
+		if (missionp->num_events > 0) {
+			missionp->events = (mevent *) vm_malloc( missionp->num_events * sizeof(mevent) );
+			Verify( missionp->events != NULL );
 
-			memset( mission->events, 0, mission->num_events * sizeof(mevent) );
+			memset( missionp->events, 0, missionp->num_events * sizeof(mevent) );
 
-			for (j = 0; j < mission->num_events; j++) {
-				cfile::io::readStringLen(mission->events[j].name, NAME_LENGTH, cfp);
-				mission->events[j].status = cfile::io::read<char>(cfp);
+			for (j = 0; j < missionp->num_events; j++) {
+				cfile::io::readStringLen(missionp->events[j].name, NAME_LENGTH, cfp);
+				missionp->events[j].status = cfile::io::read<char>(cfp);
 			}
 		}
 
 		// variables
-		mission->num_variables = cfile::io::read<int>(cfp);
+		missionp->num_variables = cfile::io::read<int>(cfp);
 
-		if (mission->num_variables > 0) {
-			mission->variables = (sexp_variable *) vm_malloc( mission->num_variables * sizeof(sexp_variable) );
-			Verify( mission->variables != NULL );
+		if (missionp->num_variables > 0) {
+			missionp->variables = (sexp_variable *) vm_malloc( missionp->num_variables * sizeof(sexp_variable) );
+			Verify( missionp->variables != NULL );
 
-			memset( mission->variables, 0, mission->num_variables * sizeof(sexp_variable) );
+			memset( missionp->variables, 0, missionp->num_variables * sizeof(sexp_variable) );
 
-			for (j = 0; j < mission->num_variables; j++) {
-				mission->variables[j].type = cfile::io::read<int>(cfp);
-				cfile::io::readStringLen(mission->variables[j].text, TOKEN_LENGTH, cfp);
-				cfile::io::readStringLen(mission->variables[j].variable_name, TOKEN_LENGTH, cfp);
+			for (j = 0; j < missionp->num_variables; j++) {
+				missionp->variables[j].type = cfile::io::read<int>(cfp);
+				cfile::io::readStringLen(missionp->variables[j].text, TOKEN_LENGTH, cfp);
+				cfile::io::readStringLen(missionp->variables[j].variable_name, TOKEN_LENGTH, cfp);
 			}
 		}
 
 		// scoring stats
-		mission->stats.score = cfile::io::read<int>(cfp);
-		mission->stats.rank = cfile::io::read<int>(cfp);
-		mission->stats.assists = cfile::io::read<int>(cfp);
-		mission->stats.kill_count = cfile::io::read<int>(cfp);
-		mission->stats.kill_count_ok = cfile::io::read<int>(cfp);
-		mission->stats.bonehead_kills = cfile::io::read<int>(cfp);
+		missionp->stats.score = cfile::io::read<int>(cfp);
+		missionp->stats.rank = cfile::io::read<int>(cfp);
+		missionp->stats.assists = cfile::io::read<int>(cfp);
+		missionp->stats.kill_count = cfile::io::read<int>(cfp);
+		missionp->stats.kill_count_ok = cfile::io::read<int>(cfp);
+		missionp->stats.bonehead_kills = cfile::io::read<int>(cfp);
 
-		mission->stats.p_shots_fired = cfile::io::read<uint>(cfp);
-		mission->stats.p_shots_hit = cfile::io::read<uint>(cfp);
-		mission->stats.p_bonehead_hits = cfile::io::read<uint>(cfp);
+		missionp->stats.p_shots_fired = cfile::io::read<uint>(cfp);
+		missionp->stats.p_shots_hit = cfile::io::read<uint>(cfp);
+		missionp->stats.p_bonehead_hits = cfile::io::read<uint>(cfp);
 
-		mission->stats.s_shots_fired = cfile::io::read<uint>(cfp);
-		mission->stats.s_shots_hit = cfile::io::read<uint>(cfp);
-		mission->stats.s_bonehead_hits = cfile::io::read<uint>(cfp);
+		missionp->stats.s_shots_fired = cfile::io::read<uint>(cfp);
+		missionp->stats.s_shots_hit = cfile::io::read<uint>(cfp);
+		missionp->stats.s_bonehead_hits = cfile::io::read<uint>(cfp);
 
 		// ship kills (scoring)
 		list_size = (int)ship_list.size();
@@ -320,7 +328,7 @@ void pilotfile::csg_read_missions()
 			idx = cfile::io::read<int>(cfp);
 
 			if (ship_list[j].index >= 0) {
-				mission->stats.kills[ship_list[j].index] = idx;
+				missionp->stats.kills[ship_list[j].index] = idx;
 			}
 		}
 
@@ -330,7 +338,7 @@ void pilotfile::csg_read_missions()
 			idx = cfile::io::read<int>(cfp);
 
 			if (medals_list[j].index >= 0) {
-				mission->stats.medal_counts[medals_list[j].index] = idx;
+				missionp->stats.medal_counts[medals_list[j].index] = idx;
 			}
 		}
 	}
@@ -339,68 +347,68 @@ void pilotfile::csg_read_missions()
 void pilotfile::csg_write_missions()
 {
 	int idx, j;
-	cmission *mission;
+	cmission *missionp;
 
 	startSection(Section::Missions);
 
 	for (idx = 0; idx < MAX_CAMPAIGN_MISSIONS; idx++) {
 		if (Campaign.missions[idx].completed) {
-			mission = &Campaign.missions[idx];
+			missionp = &Campaign.missions[idx];
 
 			cfile::io::write<int>(idx, cfp);
 
 			// flags
-			cfile::io::write<int>(mission->flags, cfp);
+			cfile::io::write<int>(missionp->flags, cfp);
 
 			// goals
-			cfile::io::write<int>(mission->num_goals, cfp);
+			cfile::io::write<int>(missionp->num_goals, cfp);
 
-			for (j = 0; j < mission->num_goals; j++) {
-				cfile::io::writeStringLen(mission->goals[j].name, cfp);
-				cfile::io::write<char>(mission->goals[j].status, cfp);
+			for (j = 0; j < missionp->num_goals; j++) {
+				cfile::io::writeStringLen(missionp->goals[j].name, cfp);
+				cfile::io::write<char>(missionp->goals[j].status, cfp);
 			}
 
 			// events
-			cfile::io::write<int>(mission->num_events, cfp);
+			cfile::io::write<int>(missionp->num_events, cfp);
 
-			for (j = 0; j < mission->num_events; j++) {
-				cfile::io::writeStringLen(mission->events[j].name, cfp);
-				cfile::io::write<char>(mission->events[j].status, cfp);
+			for (j = 0; j < missionp->num_events; j++) {
+				cfile::io::writeStringLen(missionp->events[j].name, cfp);
+				cfile::io::write<char>(missionp->events[j].status, cfp);
 			}
 
 			// variables
-			cfile::io::write<int>(mission->num_variables, cfp);
+			cfile::io::write<int>(missionp->num_variables, cfp);
 
-			for (j = 0; j < mission->num_variables; j++) {
-				cfile::io::write<int>(mission->variables[j].type, cfp);
-				cfile::io::writeStringLen(mission->variables[j].text, cfp);
-				cfile::io::writeStringLen(mission->variables[j].variable_name, cfp);
+			for (j = 0; j < missionp->num_variables; j++) {
+				cfile::io::write<int>(missionp->variables[j].type, cfp);
+				cfile::io::writeStringLen(missionp->variables[j].text, cfp);
+				cfile::io::writeStringLen(missionp->variables[j].variable_name, cfp);
 			}
 
 			// scoring stats
-			cfile::io::write<int>(mission->stats.score, cfp);
-			cfile::io::write<int>(mission->stats.rank, cfp);
-			cfile::io::write<int>(mission->stats.assists, cfp);
-			cfile::io::write<int>(mission->stats.kill_count, cfp);
-			cfile::io::write<int>(mission->stats.kill_count_ok, cfp);
-			cfile::io::write<int>(mission->stats.bonehead_kills, cfp);
+			cfile::io::write<int>(missionp->stats.score, cfp);
+			cfile::io::write<int>(missionp->stats.rank, cfp);
+			cfile::io::write<int>(missionp->stats.assists, cfp);
+			cfile::io::write<int>(missionp->stats.kill_count, cfp);
+			cfile::io::write<int>(missionp->stats.kill_count_ok, cfp);
+			cfile::io::write<int>(missionp->stats.bonehead_kills, cfp);
 
-			cfile::io::write<uint>(mission->stats.p_shots_fired, cfp);
-			cfile::io::write<uint>(mission->stats.p_shots_hit, cfp);
-			cfile::io::write<uint>(mission->stats.p_bonehead_hits, cfp);
+			cfile::io::write<uint>(missionp->stats.p_shots_fired, cfp);
+			cfile::io::write<uint>(missionp->stats.p_shots_hit, cfp);
+			cfile::io::write<uint>(missionp->stats.p_bonehead_hits, cfp);
 
-			cfile::io::write<uint>(mission->stats.s_shots_fired, cfp);
-			cfile::io::write<uint>(mission->stats.s_shots_hit, cfp);
-			cfile::io::write<uint>(mission->stats.s_bonehead_hits, cfp);
+			cfile::io::write<uint>(missionp->stats.s_shots_fired, cfp);
+			cfile::io::write<uint>(missionp->stats.s_shots_hit, cfp);
+			cfile::io::write<uint>(missionp->stats.s_bonehead_hits, cfp);
 
 			// ship kills (scoring)
 			for (j = 0; j < Num_ship_classes; j++) {
-				cfile::io::write<int>(mission->stats.kills[j], cfp);
+				cfile::io::write<int>(missionp->stats.kills[j], cfp);
 			}
 
 			// medals earned (scoring)
 			for (j = 0; j < Num_medals; j++) {
-				cfile::io::write<int>(mission->stats.medal_counts[j], cfp);
+				cfile::io::write<int>(missionp->stats.medal_counts[j], cfp);
 			}
 		}
 	}
@@ -782,10 +790,6 @@ void pilotfile::csg_read_redalert()
 		return;
 	}
 
-	// about to read new redalert data so flush any existing data
-	// otherwise wingman entries will multiply like rabbits
-	Red_alert_wingman_status.clear();
-
 	cfile::io::readStringLen(t_string, MAX_FILENAME_LEN, cfp);
 
 	Red_alert_precursor_mission = t_string;
@@ -806,7 +810,7 @@ void pilotfile::csg_read_redalert()
 		} else if ( (i < 0 ) && (i >= RED_ALERT_LOWEST_VALID_SHIP_CLASS) ) {  // ship destroyed/exited
 			ras.ship_class = i;
 		} else {
-			ras.ship_class = ship_list[i].index;
+		ras.ship_class = ship_list[i].index;
 		}
 
 		// subsystem hits
@@ -1029,6 +1033,29 @@ void pilotfile::csg_read_variables()
 			cfile::io::readStringLen(Campaign.variables[idx].variable_name, TOKEN_LENGTH, cfp);
 		}
 	}
+
+	if (csg_ver < 4) { // CSG files before version 4 don't have a Red Alert set of CPVs to load, so just copy the regular set.
+		Campaign.redalert_num_variables = Campaign.num_variables;
+		Campaign.redalert_variables = (sexp_variable *) vm_malloc( Campaign.redalert_num_variables * sizeof(sexp_variable) );
+		Verify( Campaign.redalert_variables != NULL);
+
+		memcpy( Campaign.redalert_variables, Campaign.variables, Campaign.num_variables * sizeof(sexp_variable));
+	} else {
+		Campaign.redalert_num_variables = cfile::io::read<int>(cfp);
+
+		if (Campaign.redalert_num_variables > 0) {
+			Campaign.redalert_variables = (sexp_variable *) vm_malloc( Campaign.redalert_num_variables * sizeof(sexp_variable) );
+			Verify( Campaign.redalert_variables != NULL );
+
+			memset( Campaign.redalert_variables, 0, Campaign.redalert_num_variables * sizeof(sexp_variable) );
+
+			for (idx = 0; idx < Campaign.redalert_num_variables; idx++) {
+				Campaign.redalert_variables[idx].type = cfile::io::read<int>(cfp);
+				cfile::io::readStringLen(Campaign.redalert_variables[idx].text, TOKEN_LENGTH, cfp);
+				cfile::io::readStringLen(Campaign.redalert_variables[idx].variable_name, TOKEN_LENGTH, cfp);
+			}
+		}
+	}
 }
 
 void pilotfile::csg_write_variables()
@@ -1043,6 +1070,14 @@ void pilotfile::csg_write_variables()
 		cfile::io::write<int>(Campaign.variables[idx].type, cfp);
 		cfile::io::writeStringLen(Campaign.variables[idx].text, cfp);
 		cfile::io::writeStringLen(Campaign.variables[idx].variable_name, cfp);
+	}
+
+	cfile::io::write<int>(Campaign.redalert_num_variables, cfp);
+
+	for (idx = 0; idx < Campaign.redalert_num_variables; idx++) {
+		cfile::io::write<int>(Campaign.redalert_variables[idx].type, cfp);
+		cfile::io::writeStringLen(Campaign.redalert_variables[idx].text, cfp);
+		cfile::io::writeStringLen(Campaign.redalert_variables[idx].variable_name, cfp);
 	}
 
 	endSection();
@@ -1077,7 +1112,7 @@ void pilotfile::csg_read_settings()
 
 	if (csg_ver < 3) {
 		// detail
-		int dummy = cfile::io::read<int>(cfp);
+		int dummy __attribute__((__unused__)) = cfile::io::read<int>(cfp);
 		dummy = cfile::io::read<int>(cfp);
 		dummy = cfile::io::read<int>(cfp);
 		dummy = cfile::io::read<int>(cfp);
@@ -1118,7 +1153,7 @@ void pilotfile::csg_write_settings()
 void pilotfile::csg_read_controls()
 {
 	int idx, list_size;
-	short id1, id2, id3;
+	short id1, id2, id3 __attribute__((__unused__));
 
 	list_size = (int)cfile::io::read<ushort>(cfp);
 
@@ -1226,7 +1261,7 @@ void pilotfile::csg_write_lastmissions()
 void pilotfile::csg_reset_data()
 {
 	int idx;
-	cmission *mission;
+	cmission *missionp;
 
 	// internals
 	m_have_flags = false;
@@ -1256,29 +1291,38 @@ void pilotfile::csg_reset_data()
 		Campaign.variables = NULL;
 	}
 
+	if (Campaign.redalert_variables) {
+		Campaign.redalert_num_variables = 0;
+		vm_free(Campaign.redalert_variables);
+		Campaign.redalert_variables = NULL;
+	}
+
+	// clear red alert data
+	Red_alert_wingman_status.clear();
+
 	// clear out mission stuff
 	for (idx = 0; idx < MAX_CAMPAIGN_MISSIONS; idx++) {
-		mission = &Campaign.missions[idx];
+		missionp = &Campaign.missions[idx];
 
-		if (mission->goals) {
-			mission->num_goals = 0;
-			vm_free(mission->goals);
-			mission->goals = NULL;
+		if (missionp->goals) {
+			missionp->num_goals = 0;
+			vm_free(missionp->goals);
+			missionp->goals = NULL;
 		}
 
-		if (mission->events) {
-			mission->num_events = 0;
-			vm_free(mission->events);
-			mission->events = NULL;
+		if (missionp->events) {
+			missionp->num_events = 0;
+			vm_free(missionp->events);
+			missionp->events = NULL;
 		}
 
-		if (mission->variables) {
-			mission->num_variables = 0;
-			vm_free(mission->variables);
-			mission->variables = NULL;
+		if (missionp->variables) {
+			missionp->num_variables = 0;
+			vm_free(missionp->variables);
+			missionp->variables = NULL;
 		}
 
-		mission->stats.init();
+		missionp->stats.init();
 	}
 }
 
@@ -1566,3 +1610,89 @@ bool pilotfile::save_savefile()
 	return true;
 }
 
+/*
+ * get_csg_rank: this function is called from plr.cpp & is
+ * tightly linked with pilotfile::verify()
+ */
+bool pilotfile::get_csg_rank(int *rank)
+{
+	player t_csg;
+
+	// set player ptr first thing
+	p = &t_csg;
+
+	// filename has already been set
+	cfp = cfile::io::open(filename.c_str(), cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_PLAYERS);
+
+	if ( !cfp ) {
+		mprintf(("CSG => Unable to open '%s'!\n", filename.c_str()));
+		return false;
+	}
+
+	unsigned int csg_id = cfile::io::read<int>(cfp);
+
+	if (csg_id != CSG_FILE_ID) {
+		mprintf(("CSG => Invalid header id for '%s'!\n", filename.c_str()));
+		csg_close();
+		return false;
+	}
+
+	// version, now used
+	csg_ver = cfile::io::read<ubyte>(cfp);
+
+	mprintf(("CSG => Get Rank from '%s' with version %d...\n", filename.c_str(), (int)csg_ver));
+
+	// the point of all this: read in the CSG contents
+	while ( !m_have_flags && !cfile::io::eof(cfp) ) {
+		ushort section_id = cfile::io::read<ushort>(cfp);
+		uint section_size = cfile::io::read<uint>(cfp);
+
+		size_t start_pos = cfile::io::tell(cfp);
+		size_t offset_pos;
+
+		// safety, to help protect against long reads
+		cfile::io::setMaxReadLength(cfp, section_size);
+
+		try {
+			switch (section_id) {
+				case Section::Flags:
+					mprintf(("CSG => Parsing:  Flags...\n"));
+					m_have_flags = true;
+					csg_read_flags();
+					break;
+
+				default:
+					break;
+			}
+		} catch (cfile::MaxReadLengthException &msg) {
+			// read to max section size, move to next section, discarding
+			// extra/unknown data
+			mprintf(("CSG => (0x%04x) %s\n", section_id, msg.what()));
+		} catch (const char *err) {
+			mprintf(("CSG => ERROR: %s\n", err));
+			csg_close();
+			return false;
+		}
+
+		// reset safety catch
+		cfile::io::setMaxReadLength(cfp, 0);
+
+		// skip to next section (if not already there)
+		offset_pos = (start_pos + section_size) - cfile::io::tell(cfp);
+
+		if (offset_pos) {
+			mprintf(("CSG => Warning: (0x%04x) Short read, information may have been lost!\n", section_id));
+			cfile::io::seek(cfp, offset_pos, cfile::SEEK_MODE_SET);
+		}
+	}
+
+	// this is what we came for...
+	*rank = p->stats.rank;
+
+	mprintf(("CSG => Get Rank complete!\n"));
+
+	// cleanup & return
+	csg_close();
+
+	return true;
+}

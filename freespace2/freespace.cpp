@@ -33,6 +33,7 @@
 #include "cutscene/cutscenes.h"
 #include "cutscene/movie.h"
 #include "debris/debris.h"
+#include "debugconsole/console.h"
 #include "exceptionhandler/exceptionhandler.h"
 #include "external_dll/trackirpublic.h" // header file for the TrackIR routines (Swifty)
 #include "fireball/fireballs.h"
@@ -192,7 +193,7 @@ extern int Om_tracker_flag; // needed for FS2OpenPXO config
 
 //  This function is defined in code\network\multiutil.cpp so will be linked from multiutil.obj
 //  it's required fro the -missioncrcs command line option - Kazan
-void multi_spew_pxo_checksums(int max_files, char *outfile);
+void multi_spew_pxo_checksums(int max_files, const char *outfile);
 void fs2netd_spew_table_checksums(char *outfile);
 
 extern bool frame_rate_display;
@@ -586,7 +587,7 @@ void game_framerate_check()
 	// display if we're above the critical framerate
 	if(Framerate < Gf_critical){
 		gr_set_color_fast(&Color_bright_red);
-		gr_string(200, y_start, "Framerate warning");
+		gr_string(200, y_start, "Framerate warning", GR_RESIZE_NONE);
 
 		y_start += 10;
 	}
@@ -601,7 +602,7 @@ void game_framerate_check()
 			gr_set_color_fast(&Color_bright_red);
 		}
 
-		gr_printf(200, y_start, "%d%%", (int)pct);
+		gr_printf_no_resize(200, y_start, "%d%%", (int)pct);
 
 		y_start += 10;
 	}
@@ -664,10 +665,9 @@ void big_explosion_flash(float flash)
 int Sun_drew = 0;
 
 float sn_glare_scale = 1.7f;
-DCF(sn_glare, "")
+DCF(sn_glare, "Sets the sun glare scale (Default is 1.7)")
 {
-	dc_get_arg(ARG_FLOAT);
-	sn_glare_scale = Dc_arg_float;
+	dc_stuff_float(&sn_glare_scale);
 }
 
 float Supernova_last_glare = 0.0f;
@@ -1024,6 +1024,7 @@ void game_level_init(int seed)
 	control_config_clear_used_status();
 	collide_ship_ship_sounds_init();
 	Missiontime = 0;
+	Skybox_timestamp = game_get_overall_frametime();
 	Pre_player_entry = 1;			//	Means the player has not yet entered.
 	Entry_delay_time = 0;			//	Could get overwritten in mission read.
 	observer_init();
@@ -1153,13 +1154,14 @@ void game_loading_callback(int count)
 		framenum = new_framenum;
 
 	if ( Game_loading_ani.num_frames > 0 )	{
+		GR_MAYBE_CLEAR_RES(Game_loading_background);
 		if ( Game_loading_background > -1 )	{
 			gr_set_bitmap( Game_loading_background );
-			gr_bitmap(0,0);
+			gr_bitmap(0,0,GR_RESIZE_MENU);
 		}
 
 		gr_set_bitmap( Game_loading_ani.first_frame + framenum );
-		gr_bitmap(Game_loading_ani_coords[gr_screen.res][0],Game_loading_ani_coords[gr_screen.res][1]);
+		gr_bitmap(Game_loading_ani_coords[gr_screen.res][0],Game_loading_ani_coords[gr_screen.res][1], GR_RESIZE_MENU);
 
 		do_flip = 1;
 	}
@@ -1176,10 +1178,10 @@ void game_loading_callback(int count)
 
 	if (Processing_filename[0] != '\0') {
 		gr_set_shader(&busy_shader);
-		gr_shade(0, 0, gr_screen.clip_width_unscaled, 17); // make sure it goes across the entire width
+		gr_shade(0, 0, gr_screen.max_w_unscaled, 17, GR_RESIZE_MENU); // make sure it goes across the entire width
 
 		gr_set_color_fast(&Color_white);
-		gr_string(5, 5, Processing_filename);
+		gr_string(5, 5, Processing_filename, GR_RESIZE_MENU);
 
 		do_flip = 1;
 		memset( Processing_filename, 0, MAX_PATH_LEN );
@@ -1197,6 +1199,8 @@ void game_loading_callback(int count)
 		char filename[35];
 		int size;
 		int i;
+		int line_height = gr_get_font_height() + 1;
+
 	  	memblockinfo_sort();
 		for(i = 0; i < 30; i++)
 		{
@@ -1214,10 +1218,10 @@ void game_loading_callback(int count)
 				short_name++;
 
 			sprintf(mem_buffer,"%s:\t%d K", short_name, size);
-			gr_string( 20, 220 + (i*10), mem_buffer);
+			gr_string( 20, 220 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
 		}
 		sprintf(mem_buffer,"Total RAM:\t%d K", TotalRam / 1024);
-		gr_string( 20, 230 + (i*10), mem_buffer);
+		gr_string( 20, 230 + (i*line_height), mem_buffer, GR_RESIZE_MENU);
 #endif	// _WIN32
 	}
 #endif	// !NDEBUG
@@ -1254,7 +1258,7 @@ void game_loading_callback_close()
 	// Make sure bar shows all the way over.
 	game_loading_callback(COUNT_ESTIMATE);
 	
-	int real_count = game_busy_callback(NULL);
+	int real_count __attribute__((__unused__)) = game_busy_callback( NULL );
 	io::mouse::CursorManager::get()->showCursor(true);
 
 	Game_loading_callback_inited = 0;
@@ -1418,6 +1422,8 @@ int game_start_mission()
 {
 	mprintf(( "=================== STARTING LEVEL LOAD ==================\n" ));
 
+	int s1 __attribute__((__unused__)) = timer_get_milliseconds();
+
 	// clear post processing settings
 	gr_post_process_set_defaults();
 
@@ -1472,6 +1478,10 @@ int game_start_mission()
 #endif
 
 	bm_print_bitmaps();
+
+	int e1 __attribute__((__unused__)) = timer_get_milliseconds();
+
+	mprintf(("Level load took %f seconds.\n", (e1 - s1) / 1000.0f ));
 	return 1;
 }
 
@@ -1498,80 +1508,101 @@ DCF_BOOL(i_framerate, Interface_framerate )
 
 DCF(warp, "Tests warpin effect")
 {
-	if ( Dc_command )	{
-		bool warpin = true;
-		int idx = -1;
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf( "Params: bool warpin, string Target = ""\n  Warps in if true, out if false. Player is target unless specific ship is specified\n" );
+		return;
+	} // Else, process command
 
-		dc_get_arg(ARG_TRUE|ARG_FALSE|ARG_NONE);
-		if( Dc_arg_type & ARG_TRUE) warpin = true;
-		else if(Dc_arg_type & ARG_FALSE) warpin = false;
+	// TODO: Provide status flag
 
-		if(!(Dc_arg_type & ARG_NONE))
-		{
-			dc_get_arg(ARG_STRING|ARG_NONE);
-			if(Dc_arg_type & ARG_STRING)
-			{
-				idx = ship_name_lookup(Dc_arg);
-				if(idx > -1)
-				{
-					if(warpin)
-						shipfx_warpin_start(&Objects[Ships[idx].objnum]);
-					else
-						shipfx_warpout_start(&Objects[Ships[idx].objnum]);
-				}
+	bool warpin;
+	char target[MAX_NAME_LEN];
+	int idx = -1;
+
+	dc_stuff_boolean(&warpin);
+	if (dc_maybe_stuff_string_white(target, MAX_NAME_LEN)) {
+		idx = ship_name_lookup(target);
+	}	// Else, default target to player
+	
+	if (idx < 0) {
+		// Player is target
+		if (Player_ai->target_objnum > -1) {
+			if(warpin) {
+				shipfx_warpin_start(&Objects[Player_ai->target_objnum]);
+			} else {
+				shipfx_warpout_start(&Objects[Player_ai->target_objnum]);
 			}
 		}
-		
-		if(idx < 0)
-		{
-			if(Player_ai->target_objnum > -1)
-			{
-				if(warpin)
-					shipfx_warpin_start(&Objects[Player_ai->target_objnum]);
-				else
-					shipfx_warpout_start(&Objects[Player_ai->target_objnum]);
-			}
+	} else {
+		// Non-player is targer
+		if (warpin) {
+			shipfx_warpin_start(&Objects[Ships[idx].objnum]);
+		} else {
+			shipfx_warpout_start(&Objects[Ships[idx].objnum]);
 		}
-	}	
-	if ( Dc_help )	dc_printf( "Usage: Show_mem\nWarps in if true, out if false, player target unless specific ship is specified\n" );	
+	}
+	
 }
 
 DCF(show_mem,"Toggles showing mem usage")
 {
-	if ( Dc_command )	{	
-		dc_get_arg(ARG_TRUE|ARG_FALSE|ARG_NONE);		
-		if ( Dc_arg_type & ARG_TRUE )	Show_mem = 1;	
-		else if ( Dc_arg_type & ARG_FALSE ) Show_mem = 0;	
-		else if ( Dc_arg_type & ARG_NONE ) Show_mem ^= 1;	
+	bool process = true;
 
-		if ( Show_mem )	{
-			Show_cpu = 0;
-		}
-	}	
-	if ( Dc_help )	dc_printf( "Usage: Show_mem\nSets show_mem to true or false.  If nothing passed, then toggles it.\n" );	
-	if ( Dc_status )	{
-		dc_printf( "Show_mem is %s\n", (Show_mem?"TRUE":"FALSE") );	
-		dc_printf( "Show_cpu is %s\n", (Show_cpu?"TRUE":"FALSE") );	
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf( "Usage: (optional) bool Show_mem\n If true, Show_mem is set and Show_cpu is cleared.  If false, then Show_mem is cleared.  If nothing passed, then toggle.\n" );
+		process = false;
+	}
+	
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
+		dc_printf("Show_mem is %s\n", (Show_mem ? "TRUE" : "FALSE"));
+		dc_printf("Show_cpu is %s\n", (Show_cpu ? "TRUE" : "FALSE"));
+		process = false;
+	}
+	
+	if (!process) {
+		// Help and/or status was given, so don't process the command
+		return;
+	} // Else, process the command
+
+	if (!dc_maybe_stuff_boolean(&Show_mem)) {
+		// Nothing passed, so toggle
+		Show_mem = !Show_mem;
+	}	// Else, value was set/cleared by user
+
+	// Can't show mem and cpu at same time
+	if (Show_mem) {
+		Show_cpu = false;
 	}
 }
 
 DCF(show_cpu,"Toggles showing cpu usage")
 {
-	if ( Dc_command )	{	
-		dc_get_arg(ARG_TRUE|ARG_FALSE|ARG_NONE);		
-		if ( Dc_arg_type & ARG_TRUE )	Show_cpu = 1;	
-		else if ( Dc_arg_type & ARG_FALSE ) Show_cpu = 0;	
-		else if ( Dc_arg_type & ARG_NONE ) Show_cpu ^= 1;	
+	bool process = true;
 
-		if ( Show_cpu )	{
-			Show_mem = 0;
-		}
-	}	
-	if ( Dc_help )	dc_printf( "Usage: Show_cpu\nSets show_cpu to true or false.  If nothing passed, then toggles it.\n" );	
-	if ( Dc_status )	{
-		dc_printf( "Show_mem is %s\n", (Show_mem?"TRUE":"FALSE") );	
-		dc_printf( "Show_cpu is %s\n", (Show_cpu?"TRUE":"FALSE") );	
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf( "Usage: (optional) bool Show_cpu\n If true, Show_cpu is set and Show_mem is cleared.  If false, then Show_cpu is cleared.  If nothing passed, then toggle.\n" );
+		process = false;
+	}
+	
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
+		dc_printf("Show_cpu is %s\n", (Show_cpu ? "TRUE" : "FALSE"));
+		dc_printf("Show_mem is %s\n", (Show_mem ? "TRUE" : "FALSE"));
+		process = false;
+	}
 
+	if (!process) {
+		// Help and/or status was given, so don't process the command
+		return;
+	} // Else, process the command
+
+	if (!dc_maybe_stuff_boolean(&Show_cpu)) {
+		// Nothing passed, so toggle
+		Show_cpu = !Show_cpu;
+	}	// Else, value was set/cleared by user
+
+	// Can't show mem and cpu at same time
+	if (Show_cpu) {
+		Show_mem = false;
 	}
 }
 
@@ -1581,42 +1612,56 @@ DCF(show_cpu,"Toggles showing cpu usage")
 
 DCF(use_joy_mouse,"Makes joystick move mouse cursor")
 {
-	if ( Dc_command )	{	
-		dc_get_arg(ARG_TRUE|ARG_FALSE|ARG_NONE);		
-		if ( Dc_arg_type & ARG_TRUE )	Use_joy_mouse = 1;	
-		else if ( Dc_arg_type & ARG_FALSE ) Use_joy_mouse = 0;	
-		else if ( Dc_arg_type & ARG_NONE ) Use_joy_mouse ^= 1;	
-	}	
-	if ( Dc_help )	dc_printf( "Usage: use_joy_mouse [bool]\nSets use_joy_mouse to true or false.  If nothing passed, then toggles it.\n" );	
-	if ( Dc_status )	dc_printf( "use_joy_mouse is %s\n", (Use_joy_mouse?"TRUE":"FALSE") );	
+	bool process = true;
+
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf("Usage: use_joy_mouse [bool]\nSets use_joy_mouse to true or false.  If nothing passed, then toggles it.\n");
+		process = false;
+	}
+
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
+		dc_printf("use_joy_mouse is %s\n", (Use_joy_mouse ? "TRUE" : "FALSE"));
+		process = false;
+	}
+
+	if (!process) {
+		return;
+	}
+
+	if(!dc_maybe_stuff_boolean(&Use_joy_mouse)) {
+		// Nothing passed, so toggle
+		Use_joy_mouse = !Use_joy_mouse;
+	} // Else, value was set/cleared by user
 
 	os_config_write_uint( NULL, NOX("JoystickMovesCursor"), Use_joy_mouse );
 }
 
-DCF(palette_flash,"Toggles palette flash effect on/off")
-{
-	if ( Dc_command )	{	
-		dc_get_arg(ARG_TRUE|ARG_FALSE|ARG_NONE);		
-		if ( Dc_arg_type & ARG_TRUE )	Use_palette_flash = 1;	
-		else if ( Dc_arg_type & ARG_FALSE ) Use_palette_flash = 0;	
-		else if ( Dc_arg_type & ARG_NONE ) Use_palette_flash ^= 1;	
-	}	
-	if ( Dc_help )	dc_printf( "Usage: palette_flash [bool]\nSets palette_flash to true or false.  If nothing passed, then toggles it.\n" );	
-	if ( Dc_status )	dc_printf( "palette_flash is %s\n", (Use_palette_flash?"TRUE":"FALSE") );	
-}
+DCF_BOOL(palette_flash, Use_palette_flash);
 
 int Use_low_mem = 0;
 
 DCF(low_mem,"Uses low memory settings regardless of RAM")
 {
-	if ( Dc_command )	{	
-		dc_get_arg(ARG_TRUE|ARG_FALSE|ARG_NONE);		
-		if ( Dc_arg_type & ARG_TRUE )	Use_low_mem = 1;	
-		else if ( Dc_arg_type & ARG_FALSE ) Use_low_mem = 0;	
-		else if ( Dc_arg_type & ARG_NONE ) Use_low_mem ^= 1;	
-	}	
-	if ( Dc_help )	dc_printf( "Usage: low_mem [bool]\nSets low_mem to true or false.  If nothing passed, then toggles it.\n" );	
-	if ( Dc_status )	dc_printf( "low_mem is %s\n", (Use_low_mem?"TRUE":"FALSE") );	
+	bool process = true;
+
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf("Usage: low_mem [bool]\nSets low_mem to true or false.  If nothing passed, then toggles it.\n");
+		process = false;
+	}
+
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
+		dc_printf("low_mem is %s\n", (Use_low_mem ? "TRUE" : "FALSE"));
+		process = false;
+	}
+
+	if (!process) {
+		return;
+	}
+
+	if (!dc_maybe_stuff_boolean(&Use_low_mem)) {
+		// Nothing passed, so toggle
+		Use_low_mem = !Use_low_mem;
+	} // Else, value was set/cleared by user
 
 	os_config_write_uint( NULL, NOX("LowMem"), Use_low_mem );
 }
@@ -1626,14 +1671,26 @@ DCF(low_mem,"Uses low memory settings regardless of RAM")
 
 DCF(force_fullscreen, "Forces game to startup in fullscreen mode")
 {
-	if ( Dc_command )	{	
-		dc_get_arg(ARG_TRUE|ARG_FALSE|ARG_NONE);		
-		if ( Dc_arg_type & ARG_TRUE )	Use_fullscreen_at_startup = 1;	
-		else if ( Dc_arg_type & ARG_FALSE ) Use_fullscreen_at_startup = 0;	
-		else if ( Dc_arg_type & ARG_NONE ) Use_fullscreen_at_startup ^= 1;	
-	}	
-	if ( Dc_help )	dc_printf( "Usage: force_fullscreen [bool]\nSets force_fullscreen to true or false.  If nothing passed, then toggles it.\n" );	
-	if ( Dc_status )	dc_printf( "force_fullscreen is %s\n", (Use_fullscreen_at_startup?"TRUE":"FALSE") );	
+	bool process = true;
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf("Usage: low_mem [bool]\nSets low_mem to true or false.  If nothing passed, then toggles it.\n");
+		process = false;
+	}
+
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
+		dc_printf("low_mem is %s\n", (Use_fullscreen_at_startup ? "TRUE" : "FALSE"));
+		process = false;
+	}
+
+	if (!process) {
+		return;
+	}
+
+	if (dc_maybe_stuff_boolean(&Use_fullscreen_at_startup)) {
+		// Nothing passed, so toggle
+		Use_fullscreen_at_startup = !Use_fullscreen_at_startup;
+	} // Else, value was set/cleared by user
+
 	os_config_write_uint( NULL, NOX("ForceFullscreen"), Use_fullscreen_at_startup );
 }
 #endif
@@ -1642,37 +1699,33 @@ int	Framerate_delay = 0;
 
 float FreeSpace_gamma = 1.0f;
 
-DCF(gamma,"Sets Gamma factor")
+DCF(gamma,"Sets and saves Gamma Factor")
 {
-	if ( Dc_command )	{
-		dc_get_arg(ARG_FLOAT|ARG_NONE);
-		if ( Dc_arg_type & ARG_FLOAT )	{
-			FreeSpace_gamma = Dc_arg_float;
-		} else {
-			dc_printf( "Gamma reset to 1.0f\n" );
-			FreeSpace_gamma = 1.0f;
-		}
-		if ( FreeSpace_gamma < 0.1f )	{
-			FreeSpace_gamma = 0.1f;
-		} else if ( FreeSpace_gamma > 5.0f )	{
-			FreeSpace_gamma = 5.0f;
-		}
-		gr_set_gamma(FreeSpace_gamma);
-
-		char tmp_gamma_string[32];
-		sprintf( tmp_gamma_string, NOX("%.2f"), FreeSpace_gamma );
-		os_config_write_string( NULL, NOX("Gamma"), tmp_gamma_string );
-	}
-
-	if ( Dc_help )	{
+	if (dc_optional_string_either("help", "--help")) {
 		dc_printf( "Usage: gamma <float>\n" );
 		dc_printf( "Sets gamma in range 1-3, no argument resets to default 1.2\n" );
-		Dc_status = 0;	// don't print status if help is printed.  Too messy.
+		return;
 	}
 
-	if ( Dc_status )	{
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
 		dc_printf( "Gamma = %.2f\n", FreeSpace_gamma );
+		return;
 	}
+
+	if (!dc_maybe_stuff_float(&FreeSpace_gamma)) {
+		dc_printf( "Gamma reset to 1.0f\n" );
+		FreeSpace_gamma = 1.0f;
+	}
+	if ( FreeSpace_gamma < 0.1f )	{
+		FreeSpace_gamma = 0.1f;
+	} else if ( FreeSpace_gamma > 5.0f )	{
+		FreeSpace_gamma = 5.0f;
+	}
+	gr_set_gamma(FreeSpace_gamma);
+
+	char tmp_gamma_string[32];
+	sprintf( tmp_gamma_string, NOX("%.2f"), FreeSpace_gamma );
+	os_config_write_string( NULL, NOX("Gamma"), tmp_gamma_string );
 }
 
 #ifdef APPLE_APP
@@ -1689,7 +1742,7 @@ char full_path[1024];
  */
 void game_init()
 {
-	int s1, e1;
+	int s1 __attribute__((__unused__)), e1 __attribute__((__unused__));
 	const char *ptr;
 
 	Game_current_mission_filename[0] = 0;
@@ -1838,9 +1891,9 @@ void game_init()
 		SDL_VERSION(&info.version); // initialize info structure with SDL version info
 
 		bool voiceRectOn = false;
-		if(SDL_GetWindowWMInfo(window, &info)) { // the call returns true on success
+		if(SDL_GetWindowWMInfo(os_get_window(), &info)) { // the call returns true on success
 			// success
-			voiceRectOn = VOICEREC_init(info.HWND, WM_RECOEVENT, GRAMMARID1, IDR_CMD_CFG);
+			voiceRectOn = VOICEREC_init(info.info.win.window, WM_RECOEVENT, GRAMMARID1, IDR_CMD_CFG);
 		} else {
 			// call failed
 			mprintf(( "Couldn't get window information: %s\n", SDL_GetError() ));
@@ -1959,9 +2012,7 @@ void game_init()
 
 	// initialize alpha colors
 	// CommanderDJ: try with colors.tbl first, then use the old way if that doesn't work
-	if (!new_alpha_colors_init()) {
-		old_alpha_colors_init();
-	}
+	alpha_colors_init();
 
 	obj_init();	
 	mflash_game_init();	
@@ -1995,6 +2046,8 @@ void game_init()
 	pilot_load_pic_list();	
 	pilot_load_squad_pic_list();
 
+	io::mouse::CursorManager::init();
+
 	if(!Cmdline_reparse_mainhall)
 	{
 		main_hall_table_init();
@@ -2014,11 +2067,7 @@ void game_init()
 
 	// convert old pilot files (if they need it)
 	convert_pilot_files();
-
-#ifdef _WIN32
-	timeBeginPeriod(1);	
-#endif
-
+	
 	nprintf(("General", "Ships.tbl is : %s\n", Game_ships_tbl_valid ? "VALID" : "INVALID!!!!"));
 	nprintf(("General", "Weapons.tbl is : %s\n", Game_weapons_tbl_valid ? "VALID" : "INVALID!!!!"));
 
@@ -2086,6 +2135,7 @@ void game_get_framerate()
 void game_show_framerate()
 {	
 	float	cur_time;
+	int line_height = gr_get_font_height() + 1;
 
 	cur_time = f2fl(timer_get_approx_seconds());
 	if (cur_time - Start_time > 30.0f) {
@@ -2106,11 +2156,11 @@ void game_show_framerate()
 		for ( pss = GET_FIRST(&shipp->subsys_list); pss !=END_OF_LIST(&shipp->subsys_list); pss = GET_NEXT(pss) ) {
 			if (pss->system_info->type == SUBSYSTEM_TURRET) {
 				if(pss->turret_enemy_objnum == -1)
-					gr_printf(10, t*10, "Turret %d: <None>", t);
+					gr_printf_no_resize(10, t*line_height, "Turret %d: <None>", t);
 				else if (Objects[pss->turret_enemy_objnum].type == OBJ_SHIP)
-					gr_printf(10, t*10, "Turret %d: %s", t, Ships[Objects[pss->turret_enemy_objnum].instance].ship_name);
+					gr_printf_no_resize(10, t*line_height, "Turret %d: %s", t, Ships[Objects[pss->turret_enemy_objnum].instance].ship_name);
 				else
-					gr_printf(10, t*10, "Turret %d: <Object %d>", t, pss->turret_enemy_objnum);
+					gr_printf_no_resize(10, t*line_height, "Turret %d: <Object %d>", t, pss->turret_enemy_objnum);
 
 				t++;
 			}
@@ -2123,14 +2173,14 @@ void game_show_framerate()
 		gr_set_color_fast(&HUD_color_debug);
 
 		if (Cmdline_frame_profile) {
-			gr_string(20, 110, profile_output);
+			gr_string(20, 100 + line_height, profile_output, GR_RESIZE_NONE);
 		}
 
 		if (Show_framerate) {
 			if (frametotal != 0.0f)
-				gr_printf( 20, 100, "FPS: %0.1f", Framerate );
+				gr_printf_no_resize( 20, 100, "FPS: %0.1f", Framerate );
 			else
-				gr_string( 20, 100, "FPS: ?" );
+				gr_string( 20, 100, "FPS: ?", GR_RESIZE_NONE );
 		}
 	}
 
@@ -2155,106 +2205,104 @@ void game_show_framerate()
 		else
 			sprintf(mem_buffer,"Using Physical: %d Meg",(Mem_starttime_phys - mem_stats.dwAvailPhys)/1024/1024);
 
-		gr_string( 20, 120, mem_buffer);
+		gr_string( 20, 100 + (line_height * 2), mem_buffer, GR_RESIZE_NONE);
 		sprintf(mem_buffer,"Using Pagefile: %d Meg",(Mem_starttime_pagefile - mem_stats.dwAvailPageFile)/1024/1024);
-		gr_string( 20, 130, mem_buffer);
+		gr_string( 20, 100 + (line_height * 3), mem_buffer, GR_RESIZE_NONE);
 		sprintf(mem_buffer,"Using Virtual:  %d Meg",(Mem_starttime_virtual - mem_stats.dwAvailVirtual)/1024/1024);
-		gr_string( 20, 140, mem_buffer);
+		gr_string( 20, 100 + (line_height * 4), mem_buffer, GR_RESIZE_NONE);
 
 		if ( ((int)mem_stats.dwAvailPhys == -1) || ((int)mem_stats.dwTotalPhys == -1) )
 			sprintf(mem_buffer, "Physical Free: *** / *** (>4G)");
 		else
 			sprintf(mem_buffer,"Physical Free: %d / %d Meg",mem_stats.dwAvailPhys/1024/1024, mem_stats.dwTotalPhys/1024/1024);
 
-		gr_string( 20, 160, mem_buffer);
+		gr_string( 20, 100 + (line_height * 6), mem_buffer, GR_RESIZE_NONE);
 		sprintf(mem_buffer,"Pagefile Free: %d / %d Meg",mem_stats.dwAvailPageFile/1024/1024, mem_stats.dwTotalPageFile/1024/1024);
-		gr_string( 20, 170, mem_buffer);
+		gr_string( 20, 100 + (line_height * 7), mem_buffer, GR_RESIZE_NONE);
 		sprintf(mem_buffer,"Virtual Free:  %d / %d Meg",mem_stats.dwAvailVirtual/1024/1024, mem_stats.dwTotalVirtual/1024/1024);
-		gr_string( 20, 180, mem_buffer);
+		gr_string( 20, 100 + (line_height * 8), mem_buffer, GR_RESIZE_NONE);
 	}
 #endif
 
 #ifndef NDEBUG
 	if ( Show_cpu == 1 ) {
 		
-		int sx,sy,dy;
-		sx = 530;
+		int sx,sy;
+		sx = gr_screen.max_w - 154;
 		sy = 15;
-		dy = gr_get_font_height() + 1;
 
 		gr_set_color_fast(&HUD_color_debug);
 
-		gr_printf( sx, sy, NOX("DMA: %s"), transfer_text );
-		sy += dy;
-		gr_printf( sx, sy, NOX("POLYP: %d"), modelstats_num_polys );
-		sy += dy;
-		gr_printf( sx, sy, NOX("POLYD: %d"), modelstats_num_polys_drawn );
-		sy += dy;
-		gr_printf( sx, sy, NOX("VERTS: %d"), modelstats_num_verts );
-		sy += dy;
+		gr_printf_no_resize( sx, sy, NOX("DMA: %s"), transfer_text );
+		sy += line_height;
+		gr_printf_no_resize( sx, sy, NOX("POLYP: %d"), modelstats_num_polys );
+		sy += line_height;
+		gr_printf_no_resize( sx, sy, NOX("POLYD: %d"), modelstats_num_polys_drawn );
+		sy += line_height;
+		gr_printf_no_resize( sx, sy, NOX("VERTS: %d"), modelstats_num_verts );
+		sy += line_height;
 
 		{
 
 			extern int Num_pairs;		// Number of object pairs that were checked.
-			gr_printf( sx, sy, NOX("PAIRS: %d"), Num_pairs );
-			sy += dy;
+			gr_printf_no_resize( sx, sy, NOX("PAIRS: %d"), Num_pairs );
+			sy += line_height;
 
 			extern int Num_pairs_checked;	// What percent of object pairs were checked.
-			gr_printf( sx, sy, NOX("FVI: %d"), Num_pairs_checked );
-			sy += dy;
+			gr_printf_no_resize( sx, sy, NOX("FVI: %d"), Num_pairs_checked );
+			sy += line_height;
 			Num_pairs_checked = 0;
 
 		}
 
-		gr_printf( sx, sy, NOX("Snds: %d"), snd_num_playing() );
-		sy += dy;
+		gr_printf_no_resize( sx, sy, NOX("Snds: %d"), snd_num_playing() );
+		sy += line_height;
 
 		if ( Timing_total > 0.01f )	{
-			gr_printf(  sx, sy, NOX("CLEAR: %.0f%%"), Timing_clear*100.0f/Timing_total );
-			sy += dy;
-			gr_printf( sx, sy, NOX("REND2D: %.0f%%"), Timing_render2*100.0f/Timing_total );
-			sy += dy;
-			gr_printf( sx, sy, NOX("REND3D: %.0f%%"), Timing_render3*100.0f/Timing_total );
-			sy += dy;
-			gr_printf( sx, sy, NOX("FLIP: %.0f%%"), Timing_flip*100.0f/Timing_total );
-			sy += dy;
-			gr_printf( sx, sy, NOX("GAME: %.0f%%"), (Timing_total-(Timing_render2+Timing_render3+Timing_flip+Timing_clear))*100.0f/Timing_total );
-			sy += dy;
+			gr_printf_no_resize(  sx, sy, NOX("CLEAR: %.0f%%"), Timing_clear*100.0f/Timing_total );
+			sy += line_height;
+			gr_printf_no_resize( sx, sy, NOX("REND2D: %.0f%%"), Timing_render2*100.0f/Timing_total );
+			sy += line_height;
+			gr_printf_no_resize( sx, sy, NOX("REND3D: %.0f%%"), Timing_render3*100.0f/Timing_total );
+			sy += line_height;
+			gr_printf_no_resize( sx, sy, NOX("FLIP: %.0f%%"), Timing_flip*100.0f/Timing_total );
+			sy += line_height;
+			gr_printf_no_resize( sx, sy, NOX("GAME: %.0f%%"), (Timing_total-(Timing_render2+Timing_render3+Timing_flip+Timing_clear))*100.0f/Timing_total );
+			sy += line_height;
 		}
 	}
 	 	
 	if ( Show_mem  ) {
 
-		int sx,sy,dy;
-		sx = (gr_screen.res == GR_1024) ? 870 : 530;
+		int sx,sy;
+		sx = gr_screen.max_w - 154;
 		sy = 15;
-		dy = gr_get_font_height() + 1;
 
 		gr_set_color_fast(&HUD_color_debug);
 
 		{
 			extern int TotalRam;
-			gr_printf( sx, sy, NOX("DYN: %d KB\n"), TotalRam/1024 );
-			sy += dy;
+			gr_printf_no_resize( sx, sy, NOX("DYN: %d KB\n"), TotalRam/1024 );
+			sy += line_height;
 		}	
 
 		{
 			extern int Model_ram;
-			gr_printf( sx, sy, NOX("POF: %d KB\n"), Model_ram/1024 );
-			sy += dy;
+			gr_printf_no_resize( sx, sy, NOX("POF: %d KB\n"), Model_ram/1024 );
+			sy += line_height;
 		}	
 
-		gr_printf( sx, sy, NOX("%s: %d KB\n"), (Cmdline_cache_bitmaps) ? NOX("C-BMP") : NOX("BMP"), bm_texture_ram/1024 );
-		sy += dy;
+		gr_printf_no_resize( sx, sy, NOX("%s: %d KB\n"), (Cmdline_cache_bitmaps) ? NOX("C-BMP") : NOX("BMP"), bm_texture_ram/1024 );
+		sy += line_height;
 
-		gr_printf( sx, sy, NOX("S-SRAM: %d KB\n"), Snd_sram/1024 );		// mem used to store game sound
-		sy += dy;
+		gr_printf_no_resize( sx, sy, NOX("S-SRAM: %d KB\n"), Snd_sram/1024 );		// mem used to store game sound
+		sy += line_height;
 
 		{
 			extern int GL_textures_in;
 			extern int GL_vertex_data_in;
-			gr_printf( sx, sy, NOX("VRAM: %d KB\n"), (GL_textures_in + GL_vertex_data_in)/1024 );
-			sy += dy;
+			gr_printf_no_resize( sx, sy, NOX("VRAM: %d KB\n"), (GL_textures_in + GL_vertex_data_in)/1024 );
+			sy += line_height;
 		}
 	}
 
@@ -2263,7 +2311,7 @@ void game_show_framerate()
 		int sx, sy;
 		sx = 320;
 		sy = 100;
-		gr_printf(sx, sy, NOX("Player Pos: (%d,%d,%d)"), fl2i(Player_obj->pos.xyz.x), fl2i(Player_obj->pos.xyz.y), fl2i(Player_obj->pos.xyz.z));
+		gr_printf_no_resize(sx, sy, NOX("Player Pos: (%d,%d,%d)"), fl2i(Player_obj->pos.xyz.x), fl2i(Player_obj->pos.xyz.y), fl2i(Player_obj->pos.xyz.z));
 	}
 
 #ifdef _WIN32
@@ -2294,11 +2342,11 @@ void game_show_framerate()
 				short_name++;
 
 			sprintf(mem_buffer,"%s:\t%d K", short_name, size);
-			gr_string( 20, 220 + (mi*10), mem_buffer);
+			gr_string( 20, 100 + (line_height * 12) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
 		}
 
 		sprintf(mem_buffer,"Total RAM:\t%d K", TotalRam / 1024);
-		gr_string( 20, 230 + (mi*10), mem_buffer);
+		gr_string( 20, 100 + (line_height * 13) + (mi*line_height), mem_buffer, GR_RESIZE_NONE);
 	}
 #endif
 
@@ -2333,7 +2381,7 @@ void game_show_eye_pos(camid cid)
 	gr_set_color_fast(&HUD_color_debug);
 
 	//Position
-	gr_printf(20, 100 - font_height, "X:%f Y:%f Z:%f", cam_pos.xyz.x, cam_pos.xyz.y, cam_pos.xyz.z);
+	gr_printf_no_resize(20, 100 - font_height, "X:%f Y:%f Z:%f", cam_pos.xyz.x, cam_pos.xyz.y, cam_pos.xyz.z);
 	font_height -= font_height/2;
 
 	//Orientation
@@ -2341,7 +2389,7 @@ void game_show_eye_pos(camid cid)
 	rot_angles.p *= (180/PI);
 	rot_angles.b *= (180/PI);
 	rot_angles.h *= (180/PI);
-	gr_printf(20, 100 - font_height, "Xr:%f Yr:%f Zr:%f", rot_angles.p, rot_angles.b, rot_angles.h);
+	gr_printf_no_resize(20, 100 - font_height, "Xr:%f Yr:%f Zr:%f", rot_angles.p, rot_angles.b, rot_angles.h);
 }
 
 void game_show_standalone_framerate()
@@ -2391,7 +2439,7 @@ void game_show_time_left()
 		diff = 0;
 
 	hud_set_default_color();
-	gr_printf( 5, 40, XSTR( "Mission time remaining: %d seconds", 179), diff );
+	gr_printf_no_resize( 5, 40, XSTR( "Mission time remaining: %d seconds", 179), diff );
 }
 
 //========================================================================================
@@ -2402,33 +2450,54 @@ void game_show_time_left()
 
 DCF(ai_pause,"Pauses ai")
 {
-	if ( Dc_command )	{	
-		dc_get_arg(ARG_TRUE|ARG_FALSE|ARG_NONE);		
-		if ( Dc_arg_type & ARG_TRUE )	ai_paused = 1;	
-		else if ( Dc_arg_type & ARG_FALSE ) ai_paused = 0;	
-		else if ( Dc_arg_type & ARG_NONE ) ai_paused = !ai_paused;	
+	bool process = true;
+	
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf( "Usage: ai_paused [bool]\nSets ai_paused to true or false.  If nothing passed, then toggles it.\n" );
+		process = false;
+	}
 
-		if (ai_paused)	{	
-			obj_init_all_ships_physics();
-		}
-	}	
-	if ( Dc_help )	dc_printf( "Usage: ai_paused [bool]\nSets ai_paused to true or false.  If nothing passed, then toggles it.\n" );	
-	if ( Dc_status )	dc_printf( "ai_paused is %s\n", (ai_paused?"TRUE":"FALSE") );	
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
+		dc_printf( "ai_paused is %s\n", (ai_paused?"TRUE":"FALSE") );
+		process = false;
+	}
+
+	if (!process) {
+		return;
+	}
+
+	if (!dc_maybe_stuff_boolean(&ai_paused)) {
+		ai_paused = !ai_paused;
+	}
+
+	if (ai_paused) {
+		obj_init_all_ships_physics();
+	}
 }
 
-DCF(single_step,"Single steps the game")
+DCF(single_step,"Enables single step mode.")
 {
-	if ( Dc_command )	{	
-		dc_get_arg(ARG_TRUE|ARG_FALSE|ARG_NONE);		
-		if ( Dc_arg_type & ARG_TRUE )	game_single_step = 1;	
-		else if ( Dc_arg_type & ARG_FALSE ) game_single_step = 0;	
-		else if ( Dc_arg_type & ARG_NONE ) game_single_step = !game_single_step;	
+	bool process = true;
+	
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf( "Usage: game_single_step [bool]\nEnables or disables single-step mode.  If nothing passed, then toggles it.\nSingle-step mode will freeze the game, and will advance frame by frame with each key press\n");
+		process = false;
+	}
 
-		last_single_step = 0;	// Make so single step waits a frame before stepping
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
+		dc_printf( "ai_paused is %s\n", (game_single_step ? "TRUE" : "FALSE") );
+		process = false;
+	}
 
-	}	
-	if ( Dc_help )	dc_printf( "Usage: single_step [bool]\nSets single_step to true or false.  If nothing passed, then toggles it.\n" );	
-	if ( Dc_status )	dc_printf( "single_step is %s\n", (game_single_step?"TRUE":"FALSE") );	
+	if (!process) {
+		return;
+	}
+
+	if (!dc_maybe_stuff_boolean(&game_single_step)) {
+		game_single_step = !game_single_step;
+	}
+
+	last_single_step = 0;	// Make so single step waits a frame before stepping
 }
 
 DCF_BOOL(physics_pause, physics_paused)
@@ -2475,22 +2544,28 @@ int View_percent = 100;
 
 DCF(view, "Sets the percent of the 3d view to render.")
 {
-	if ( Dc_command ) {
-		dc_get_arg(ARG_INT);
-		if ( (Dc_arg_int >= 5 ) || (Dc_arg_int <= 100) ) {
-			View_percent = Dc_arg_int;
-		} else {
-			dc_printf( "Illegal value for view. (Must be from 5-100) \n\n");
-			Dc_help = 1;
-		}
+	bool process = true;
+	int value;
+
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf("Usage: view [n]\nwhere n is percent of view to show (5-100).\n");
+		process = false;
 	}
 
-	if ( Dc_help ) {
-		dc_printf("Usage: view [n]\nwhere n is percent of view to show (5-100).\n");
-	}
-	
-	if ( Dc_status ) {
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
 		dc_printf("View is set to %d%%\n", View_percent );
+		process = false;
+	}
+
+	if (!process) {
+		return;
+	}
+
+	dc_stuff_int(&value);
+	if ( (value >= 5 ) && (value <= 100) ) {
+		View_percent = value;
+	} else {
+		dc_printf("Error: Outside legal range [5 - 100]");
 	}
 }
 
@@ -2516,12 +2591,12 @@ void game_set_view_clip(float frametime)
 			// Ensure that the bars are black
 			gr_set_color(0,0,0);
 			gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
-			gr_rect(0, 0, gr_screen.max_w, yborder, false);
-			gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, false);
+			gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
 		} else {
 			//	Numeric constants encouraged by J "pig farmer" S, who shall remain semi-anonymous.
 			// J.S. I've changed my ways!! See the new "no constants" code!!!
-			gr_set_clip(0, yborder, gr_screen.max_w, gr_screen.max_h - yborder*2, false );	
+			gr_set_clip(0, yborder, gr_screen.max_w, gr_screen.max_h - yborder*2, GR_RESIZE_NONE );	
 		}
 	}
 	else {
@@ -2542,7 +2617,7 @@ void game_set_view_clip(float frametime)
 			xborder = ( gr_screen.max_w*(100-fi) )/200;
 			yborder = ( gr_screen.max_h*(100-fi) )/200;
 
-			gr_set_clip(xborder, yborder, gr_screen.max_w-xborder*2,gr_screen.max_h-yborder*2, false );
+			gr_set_clip(xborder, yborder, gr_screen.max_w-xborder*2,gr_screen.max_h-yborder*2, GR_RESIZE_NONE );
 		}
 	}
 }
@@ -2698,7 +2773,7 @@ void game_tst_frame()
 
 		// draw the bitmap
 		gr_set_bitmap(tst_bitmap);
-		gr_bitmap((int)tst_x, (int)tst_y);
+		gr_bitmap((int)tst_x, (int)tst_y, GR_RESIZE_NONE);
 
 		if(tst_mode == 1){
 			if(timestamp_elapsed_safe(tst_stamp, 1100)){
@@ -2817,65 +2892,86 @@ void do_timing_test(float frame_time)
 DCF(dcf_fov, "Change the field of view of the main camera")
 {
 	camera *cam = Main_camera.getCamera();
-	if ( Dc_command )
-	{
-		if(cam == NULL)
-			return;
+	bool process = true;
+	float value;
 
-		dc_get_arg(ARG_FLOAT|ARG_NONE);
-		if ( Dc_arg_type & ARG_NONE )	{
-			cam->set_fov(VIEWER_ZOOM_DEFAULT);
-			dc_printf( "Zoom factor reset\n" );
-		}
-		if ( Dc_arg_type & ARG_FLOAT )	{
-			if (Dc_arg_float < 0.25f) {
-				cam->set_fov(0.25f);
-				dc_printf("Zoom factor pinned at 0.25.\n");
-			} else if (Dc_arg_float > 1.25f) {
-				cam->set_fov(1.25f);
-				dc_printf("Zoom factor pinned at 1.25.\n");
-			} else {
-				cam->set_fov(Dc_arg_float);
-			}
-		}
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf( "Usage: fov [factor]\nFactor is the zoom factor btwn .25 and 1.25\nNo parameter resets it to default.\n" );
+		process = false;
 	}
 
-	if ( Dc_help )	
-		dc_printf( "Usage: fov [factor]\nFactor is the zoom factor btwn .25 and 1.25\nNo parameter resets it to default.\n" );
-
-	if ( Dc_status )
-	{
-		if(cam == NULL)
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
+		if(cam == NULL) {
 			dc_printf("Camera unavailable.");
-		else
-			dc_printf("Zoom factor set to %6.3f (original = 0.5, John = 0.75)", cam->get_fov());
+		} else {
+			dc_printf("Zoom factor set to %6.3f (original = 0.5, John = 0.75)\n", cam->get_fov());
+		}
+
+		process = false;
+	}
+
+	if ((cam == NULL) || (!process)) {
+		return;
+	}
+
+	if (!dc_maybe_stuff_float(&value)) {
+		// No value passed, use default
+		cam->set_fov(VIEWER_ZOOM_DEFAULT);
+	} else {
+		// Value passed, Clamp it to valid values
+		if (value < 0.25f) {
+			value = 0.25f;
+			dc_printf("Zoom factor clamped to 0.25\n");
+		} else if (value > 1.25f) {
+			value = 1.25f;
+			dc_printf("Zoom factor clamped to 1.25\n");
+		} else {
+			dc_printf("Zoom factor set to %6.3f\n", value);
+		}
+
+		cam->set_fov(value);
 	}
 }
 
 
 DCF(framerate_cap, "Sets the framerate cap")
 {
-	if ( Dc_command ) {
-		dc_get_arg(ARG_INT);
-		if ( (Dc_arg_int >= 1 ) || (Dc_arg_int <= 120) ) {
-			Framerate_cap = Dc_arg_int;
-		} else {
-			dc_printf( "Illegal value for framerate cap. (Must be from 1-120) \n\n");
-			Dc_help = 1;
-		}
-	}
+	bool process = true;
 
-	if ( Dc_help ) {
+	if (dc_optional_string_either("help", "--help")) {
 		dc_printf("Usage: framerate_cap [n]\nwhere n is the frames per second to cap framerate at.\n");
 		dc_printf("If n is 0 or omitted, then the framerate cap is removed\n");
 		dc_printf("[n] must be from 1 to 120.\n");
+		process = false;
 	}
-	
-	if ( Dc_status ) {
-		if ( Framerate_cap )
+
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
+		if ( Framerate_cap ) {
 			dc_printf("Framerate cap is set to %d fps\n", Framerate_cap );
-		else
+		} else {
 			dc_printf("There is no framerate cap currently active.\n");
+		}
+
+		process = false;
+	}
+
+	if (!process) {
+		return;
+	}
+
+	if (!dc_maybe_stuff_int(&Framerate_cap)) {
+		Framerate_cap = 0;
+	}
+
+	if ((Framerate_cap < 0) || (Framerate_cap > 120)) {
+		dc_printf( "Illegal value for framerate cap. (Must be from 1-120) \n");
+		Framerate_cap = 0;
+	}
+
+	if (Framerate_cap == 0) {
+		dc_printf("Framerate cap disabled");
+	} else {
+		dc_printf("Framerate cap is set to %d fps\n", Framerate_cap );
 	}
 }
 
@@ -2986,7 +3082,7 @@ float get_shake(float intensity, int decay_time, int max_decay_time)
 {
 	int r = myrand();
 
-	float shake = intensity * (float) (r-RAND_MAX_2)/RAND_MAX;
+	float shake = intensity * (float)(r-RAND_MAX_2) * RAND_MAX_1f;
 	
 	if (decay_time >= 0) {
 		Assert(max_decay_time > 0);
@@ -3614,7 +3710,9 @@ void game_render_frame( camid cid )
 	}
 
 	// this needs to happen after g3_start_frame() and before the primary projection and view matrix is setup
-	if ( Cmdline_env && !Env_cubemap_drawn ) {
+	// Note: environment mapping gets disabled when rendering to texture; if you change
+	// this, make sure that the current render target gets restored right afterwards!
+	if ( Cmdline_env && !Env_cubemap_drawn && gr_screen.rendering_to_texture == -1 ) {
 		setup_environment_mapping(cid);
 
 		if ( !Dynamic_environment ) {
@@ -3777,87 +3875,71 @@ void john_debug_stuff(vec3d *eye_pos, matrix *eye_orient)
 #ifndef NDEBUG
 
 // function to toggle state of dumping every frame into PCX when playing the game
-DCF(dump_frames, "Starts/stop frame dumping at 15 hz")
+DCF(dump_frames, "Toggles On/off frame dumping at 15 hz")
 {
-	if ( Dc_command )	{
-
-		if ( Debug_dump_frames == 0 )	{
-			// Turn it on
-			Debug_dump_frames = 15;
-			Debug_dump_trigger = 0;
-			gr_dump_frame_start( Debug_dump_frame_num, DUMP_BUFFER_NUM_FRAMES );
-			dc_printf( "Frame dumping at 15 hz is now ON\n" );
-		} else {
-			// Turn it off
-			Debug_dump_frames = 0;
-			Debug_dump_trigger = 0;
-			gr_dump_frame_stop();
-			dc_printf( "Frame dumping is now OFF\n" );
-		}
-		
+	if ( Debug_dump_frames == 0 )	{
+		// Turn it on
+		Debug_dump_frames = 15;
+		Debug_dump_trigger = 0;
+		gr_dump_frame_start( Debug_dump_frame_num, DUMP_BUFFER_NUM_FRAMES );
+		dc_printf( "Frame dumping at 15 hz is now ON\n" );
+	} else {
+		// Turn it off
+		Debug_dump_frames = 0;
+		Debug_dump_trigger = 0;
+		gr_dump_frame_stop();
+		dc_printf( "Frame dumping is now OFF\n" );
 	}
 }
 
 DCF(dump_frames_trigger, "Starts/stop frame dumping at 15 hz")
 {
-	if ( Dc_command )	{
-
-		if ( Debug_dump_frames == 0 )	{
-			// Turn it on
-			Debug_dump_frames = 15;
-			Debug_dump_trigger = 1;
-			gr_dump_frame_start( Debug_dump_frame_num, DUMP_BUFFER_NUM_FRAMES );
-			dc_printf( "Frame dumping at 15 hz is now ON\n" );
-		} else {
-			// Turn it off
-			Debug_dump_frames = 0;
-			Debug_dump_trigger = 0;
-			gr_dump_frame_stop();
-			dc_printf( "Frame dumping is now OFF\n" );
-		}
-		
+	if ( Debug_dump_frames == 0 )	{
+		// Turn it on
+		Debug_dump_frames = 15;
+		Debug_dump_trigger = 1;
+		gr_dump_frame_start( Debug_dump_frame_num, DUMP_BUFFER_NUM_FRAMES );
+		dc_printf( "Frame dumping at 15 hz is now ON\n" );
+	} else {
+		// Turn it off
+		Debug_dump_frames = 0;
+		Debug_dump_trigger = 0;
+		gr_dump_frame_stop();
+		dc_printf( "Frame dumping is now OFF\n" );
 	}
 }
 
 DCF(dump_frames30, "Starts/stop frame dumping at 30 hz")
 {
-	if ( Dc_command )	{
-
-		if ( Debug_dump_frames == 0 )	{
-			// Turn it on
-			Debug_dump_frames = 30;
-			Debug_dump_trigger = 0;
-			gr_dump_frame_start( Debug_dump_frame_num, DUMP_BUFFER_NUM_FRAMES );
-			dc_printf( "Frame dumping at 30 hz is now ON\n" );
-		} else {
-			// Turn it off
-			Debug_dump_frames = 0;
-			Debug_dump_trigger = 0;
-			gr_dump_frame_stop();
-			dc_printf( "Frame dumping is now OFF\n" );
-		}
-		
+	if ( Debug_dump_frames == 0 )	{
+		// Turn it on
+		Debug_dump_frames = 30;
+		Debug_dump_trigger = 0;
+		gr_dump_frame_start( Debug_dump_frame_num, DUMP_BUFFER_NUM_FRAMES );
+		dc_printf( "Frame dumping at 30 hz is now ON\n" );
+	} else {
+		// Turn it off
+		Debug_dump_frames = 0;
+		Debug_dump_trigger = 0;
+		gr_dump_frame_stop();
+		dc_printf( "Frame dumping is now OFF\n" );
 	}
 }
 
 DCF(dump_frames30_trigger, "Starts/stop frame dumping at 30 hz")
 {
-	if ( Dc_command )	{
-
-		if ( Debug_dump_frames == 0 )	{
-			// Turn it on
-			Debug_dump_frames = 30;
-			Debug_dump_trigger = 1;
-			gr_dump_frame_start( Debug_dump_frame_num, DUMP_BUFFER_NUM_FRAMES );
-			dc_printf( "Triggered frame dumping at 30 hz is now ON\n" );
-		} else {
-			// Turn it off
-			Debug_dump_frames = 0;
-			Debug_dump_trigger = 0;
-			gr_dump_frame_stop();
-			dc_printf( "Triggered frame dumping is now OFF\n" );
-		}
-		
+	if ( Debug_dump_frames == 0 )	{
+		// Turn it on
+		Debug_dump_frames = 30;
+		Debug_dump_trigger = 1;
+		gr_dump_frame_start( Debug_dump_frame_num, DUMP_BUFFER_NUM_FRAMES );
+		dc_printf( "Triggered frame dumping at 30 hz is now ON\n" );
+	} else {
+		// Turn it off
+		Debug_dump_frames = 0;
+		Debug_dump_trigger = 0;
+		gr_dump_frame_stop();
+		dc_printf( "Triggered frame dumping is now OFF\n" );
 	}
 }
 
@@ -4260,12 +4342,12 @@ void bars_do_frame(float frametime)
 			//Set rectangles
 			gr_set_color(0,0,0);
 			gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
-			gr_rect(0, 0, gr_screen.max_w, yborder, false);
-			gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, false);
+			gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
 		} else {
 			//Set clipping
 			gr_reset_clip();
-			gr_set_clip(0, yborder, gr_screen.max_w, gr_screen.max_h - yborder*2, false );
+			gr_set_clip(0, yborder, gr_screen.max_w, gr_screen.max_h - yborder*2, GR_RESIZE_NONE );
 		}
 	}
 	else if(Cutscene_bar_flags & CUB_CUTSCENE)
@@ -4275,11 +4357,11 @@ void bars_do_frame(float frametime)
 		if (g3_in_frame() == 0) {
 			gr_set_color(0,0,0);
 			gr_set_bitmap(0); // Valathil - Don't ask me why this has to be here but otherwise the black bars don't draw
-			gr_rect(0, 0, gr_screen.max_w, yborder, false);
-			gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, false);
+			gr_rect(0, 0, gr_screen.max_w, yborder, GR_RESIZE_NONE);
+			gr_rect(0, gr_screen.max_h-yborder, gr_screen.max_w, yborder, GR_RESIZE_NONE);
 		} else {
 			gr_reset_clip();
-			gr_set_clip(0, yborder, gr_screen.max_w, gr_screen.max_h - (yborder*2), false );
+			gr_set_clip(0, yborder, gr_screen.max_w, gr_screen.max_h - (yborder*2), GR_RESIZE_NONE );
 		}
 	}
 }
@@ -4456,7 +4538,7 @@ void game_frame(bool paused)
 			}
 
 			Script_system.SetHookObject("Self", Viewer_obj);
-			if (!hud_disabled_except_messages() && !(Viewer_mode & (VM_EXTERNAL | VM_DEAD_VIEW | VM_WARP_CHASE | VM_PADLOCK_ANY))) 
+			if (!(Viewer_mode & (VM_EXTERNAL | VM_DEAD_VIEW | VM_WARP_CHASE | VM_PADLOCK_ANY))) 
 			{
 				Script_system.RunBytecode(Script_hudhook);
 				Script_system.RunCondition(CHA_HUDDRAW, '\0', NULL, Viewer_obj);
@@ -5196,7 +5278,7 @@ void game_process_event( int current_state, int event )
 			break;
 
 		case GS_EVENT_QUIT_GAME:
-			main_hall_stop_music();
+			main_hall_stop_music(true);
 			main_hall_stop_ambient();
 			gameseq_set_state(GS_STATE_QUIT_GAME);
 			break;
@@ -5763,6 +5845,7 @@ void game_leave_state( int old_state, int new_state )
 
 		case GS_STATE_CREDITS:
 			credits_close();
+			main_hall_start_music();
 			break;
 
 		case GS_STATE_VIEW_MEDALS:
@@ -5800,7 +5883,7 @@ void game_leave_state( int old_state, int new_state )
 				Game_mode |= GM_IN_MISSION;
 			}
 
-			main_hall_stop_music();
+			main_hall_stop_music(true);
 			main_hall_stop_ambient();		
 			break;		
    
@@ -5941,7 +6024,7 @@ void game_enter_state( int old_state, int new_state )
 			break;
 
 		case GS_STATE_START_GAME:
-			main_hall_stop_music();
+			main_hall_stop_music(true);
 			main_hall_stop_ambient();
 			
 			if (Game_mode & GM_NORMAL) {
@@ -6110,7 +6193,7 @@ void game_enter_state( int old_state, int new_state )
 					//XSTR:ON
 					#endif
 
-					main_hall_stop_music();
+					main_hall_stop_music(true);
 					main_hall_stop_ambient();
 					event_music_first_pattern();	// start the first pattern
 			}
@@ -6287,7 +6370,7 @@ void mouse_force_pos(int x, int y);
 			break;
 
 		case GS_STATE_CREDITS:
-			main_hall_stop_music();
+			main_hall_stop_music(true);
 			main_hall_stop_ambient();
 			credits_init();
 			break;
@@ -6921,17 +7004,17 @@ void game_spew_pof_info()
 	model_free_all();
 }
 
-DCF(pofspew, "")
+DCF(pofspew, "Spews POF info without shutting down the game")
 {
 	game_spew_pof_info();
 }
 
 // returns:
-//		0 on an error
-//		1 on a clean exit
+// 0 on an error
+// 1 on a clean exit
 int game_main(int argc, char *argv[])
 {
-	int state;		
+	int state;
 
 	// check if networking should be disabled, this could probably be done later but the sooner the better
 	// TODO: remove this when multi is fixed to handle more than MAX_SHIP_CLASSES_MULTI
@@ -6939,12 +7022,50 @@ int game_main(int argc, char *argv[])
 		Networking_disabled = 1;
 	}
 
-#ifndef NDEBUG				
+#ifndef NDEBUG
 	extern void windebug_memwatch_init();
 	windebug_memwatch_init();
 #endif
 
-	vm_init(0); 
+#ifdef _WIN32
+	// Find out how much RAM is on this machine
+	MEMORYSTATUS ms;
+	ms.dwLength = sizeof(MEMORYSTATUS);
+	GlobalMemoryStatus(&ms);
+	FreeSpace_total_ram = ms.dwTotalPhys;
+
+	Mem_starttime_phys      = ms.dwAvailPhys;
+	Mem_starttime_pagefile  = ms.dwAvailPageFile;
+	Mem_starttime_virtual   = ms.dwAvailVirtual;
+
+	if ( game_do_ram_check(FreeSpace_total_ram) == -1 ) {
+		return 1;
+	}
+
+	if ( ms.dwTotalVirtual < 1024 )	{
+		MessageBox( NULL, XSTR( "FreeSpace requires virtual memory to run.\r\n", 196), XSTR( "No Virtual Memory", 197), MB_OK );
+		return 1;
+	}
+
+	if (!vm_init(24*1024*1024)) {
+		MessageBox( NULL, XSTR( "Not enough memory to run FreeSpace.\r\nTry closing down some other applications.\r\n", 198), XSTR( "Not Enough Memory", 199), MB_OK );
+		return 1;
+	}
+		
+	char *tmp_mem = (char *) vm_malloc(16 * 1024 * 1024);
+	if (!tmp_mem) {
+		MessageBox(NULL, XSTR( "Not enough memory to run FreeSpace.\r\nTry closing down some other applications.\r\n", 198), XSTR( "Not Enough Memory", 199), MB_OK);
+		return 1;
+	}
+
+	vm_free(tmp_mem);
+	tmp_mem = NULL;
+
+#else
+	vm_init(0);
+
+#endif // _WIN32
+
 
 	if ( !parse_cmdline(argc, argv) ) {
 		return 1;
@@ -6977,7 +7098,6 @@ int game_main(int argc, char *argv[])
 		return 0;
 	}
 
-
 	if (Cmdline_spew_table_crcs) {
 		fs2netd_spew_table_checksums("table_crcs.csv");
 		game_shutdown();
@@ -6985,12 +7105,11 @@ int game_main(int argc, char *argv[])
 	}
 
 	// maybe spew pof stuff
-	if(Cmdline_spew_pof_info){
+	if (Cmdline_spew_pof_info) {
 		game_spew_pof_info();
 		game_shutdown();
 		return 0;
 	}
-
 
 	// maybe spew VP CRCs, and exit
 	if (Cmdline_verify_vps) {
@@ -7003,7 +7122,7 @@ int game_main(int argc, char *argv[])
 		movie_play( NOX("intro.mve") );
 	}
 
-	if (Is_standalone){
+	if (Is_standalone) {
 		gameseq_post_event(GS_EVENT_STANDALONE_MAIN);
 	} else {
 		gameseq_post_event(GS_EVENT_GAME_INIT);		// start the game rolling -- check for default pilot, or go to the pilot select screen
@@ -7014,7 +7133,7 @@ int game_main(int argc, char *argv[])
 		os_poll();
 
 		state = gameseq_process_events();
-		if ( state == GS_STATE_QUIT_GAME ){
+		if ( state == GS_STATE_QUIT_GAME ) {
 			break;
 		}
 	} 
@@ -7043,7 +7162,7 @@ void game_launch_launcher_on_exit()
 	strcpy_s(cmd_line, original_path);
 	strcat_s(cmd_line, DIR_SEPARATOR_STR);
 	strcat_s(cmd_line, LAUNCHER_FNAME);
-	strcat_s(cmd_line, " -straight_to_update");		
+	strcat_s(cmd_line, " -straight_to_update");
 
 	BOOL ret = CreateProcess(	NULL,									// pointer to name of executable module 
 										cmd_line,							// pointer to command line string
@@ -7328,7 +7447,7 @@ void game_show_event_debug(float frametime)
 	gr_clear();
 	gr_set_color_fast(&Color_bright);
 	gr_set_font(FONT1);
-	gr_printf(0x8000, 5, NOX("EVENT DEBUG VIEW"));
+	gr_printf_no_resize(0x8000, 15, NOX("EVENT DEBUG VIEW"));
 
 	gr_set_color_fast(&Color_normal);
 	gr_set_font(FONT1);
@@ -7384,7 +7503,7 @@ void game_show_event_debug(float frametime)
 			}
 		}
 
-		gr_printf(10, y_index, buf);
+		gr_printf_no_resize(10, y_index, buf);
 		y_index += font_height;
 		k++;
 	}
@@ -7652,6 +7771,13 @@ void get_version_string(char *str, int max_size)
 
 	if (Cmdline_nohtl)
 		strcat_s( str, max_size, " non-HT&L" );
+
+	// if a custom identifier exists, put it at the very end
+	#ifdef FS_VERSION_IDENT
+		strcat_s( str, max_size, " (" );
+		strcat_s( str, max_size, FS_VERSION_IDENT );
+		strcat_s( str, max_size, ")" );
+	#endif
 }
 
 void get_version_string_short(char *str)
@@ -7999,7 +8125,7 @@ int game_do_cd_check(char *volume_name)
 			break;
 		} else {
 			// no CD found, so prompt user
-			popup_rval = popup(PF_BODY_BIG, 1, POPUP_OK, XSTR( "FreeSpace 2 CD not found\n\nInsert a FreeSpace 2 CD to continue", 202));
+			popup_rval = popup(PF_BODY_BIG | PF_USE_AFFIRMATIVE_ICON, 1, POPUP_OK, XSTR( "FreeSpace 2 CD not found\n\nInsert a FreeSpace 2 CD to continue", 202));
 			refresh_files = 1;
 			if ( popup_rval != 1 ) {
 				cd_present = 0;
@@ -8231,11 +8357,6 @@ int game_hacked_data()
 	return (int)Hacked_data;
 }
 
-
-//#define MAX_SPLASHSCREENS 64
-//char Splash_screens[MAX_SPLASHSCREENS][MAX_FILENAME_LEN];
-
-
 void game_title_screen_display()
 {
 /*	_finddata_t find;
@@ -8307,16 +8428,21 @@ void game_title_screen_display()
 			int width, height;
 			bm_get_info(Game_title_bitmap, &width, &height);
 
+			// set the screen scale to the bitmap's dimensions
+			gr_set_screen_scale(width, height);
+
 			// draw it in the center of the screen
-			gr_bitmap((gr_screen.max_w_unscaled - width)/2, (gr_screen.max_h_unscaled - height)/2);
-		}
+			gr_bitmap((gr_screen.max_w_unscaled - width)/2, (gr_screen.max_h_unscaled - height)/2, GR_RESIZE_MENU);
 
-		if (Game_title_logo != -1)
-		{
-			gr_set_bitmap(Game_title_logo);
+			if (Game_title_logo != -1)
+			{
+				gr_set_bitmap(Game_title_logo);
 
-			gr_bitmap(0, 0);
+				gr_bitmap(0, 0, GR_RESIZE_MENU);
 
+			}
+
+			gr_reset_screen_scale();
 		}
 	}
 
@@ -8394,7 +8520,7 @@ void game_pause()
 			case GS_STATE_TECH_MENU:
 			case GS_STATE_BARRACKS_MENU:
 				main_hall_stop_ambient();
-				main_hall_stop_music(); // not an instant shutoff
+				main_hall_stop_music(true); // not an instant shutoff
 				break;
 
 			// things that would get music except if they are called while in-mission
@@ -8402,7 +8528,7 @@ void game_pause()
 			case GS_STATE_HUD_CONFIG:
 				if ( !(Game_mode & GM_IN_MISSION) ) {
 					main_hall_stop_ambient();
-					main_hall_stop_music(); // not an instant shutoff
+					main_hall_stop_music(true); // not an instant shutoff
 				}
 				break;
 
@@ -8415,6 +8541,10 @@ void game_pause()
 			case GS_STATE_GAME_PLAY:
 				if ( (!popup_active()) && (!popupdead_is_active()) )
 					pause_init();
+				break;
+
+			case GS_STATE_FICTION_VIEWER:
+				fiction_viewer_pause();
 				break;
 
 			default:
@@ -8479,11 +8609,20 @@ void game_unpause()
 			case GS_STATE_GAME_PLAY:
 				break;
 
+			// ditto for if we explicitly paused the game and then minimized it
+			case GS_STATE_GAME_PAUSED:
+				break;
+
+			case GS_STATE_FICTION_VIEWER:
+				fiction_viewer_unpause();
+				break;
+
 			default:
 				audiostream_unpause_all();
 		}
 	}
 }
+
 
 int actual_main(int argc, char *argv[])
 {

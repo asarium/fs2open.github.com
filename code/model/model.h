@@ -460,8 +460,7 @@ typedef struct glow_point_bank {  // glow bank structure -Bobboau
 	int			on_time; 
 	int			off_time; 
 	int			disp_time; 
-	int			is_on; 
-	int			is_active; 
+	bool		is_on;
 	int			submodel_parent; 
 	int			LOD; 
 	int			num_points; 
@@ -843,10 +842,11 @@ void model_set_detail_level(int n);
 #define MR_FULL_DETAIL				(1<<28)		// render all valid objects, particularly ones that are otherwise in/out of render boxes - taylor
 #define MR_FORCE_CLAMP				(1<<29)		// force clamp - Hery
 #define MR_ANIMATED_SHADER			(1<<30)		// Use a animated Shader - Valathil
+#define MR_ATTACHED_MODEL			(1<<31)		// Used for attached weapon model lodding
 
 // Renders a model and all it's submodels.
 // See MR_? defines for values for flags
-void model_render(int model_num, matrix *orient, vec3d * pos, uint flags = MR_NORMAL, int objnum = -1, int lighting_skip = -1, int *replacement_textures = NULL);
+void model_render(int model_num, matrix *orient, vec3d * pos, uint flags = MR_NORMAL, int objnum = -1, int lighting_skip = -1, int *replacement_textures = NULL, const bool is_skybox = false);
 
 // Renders just one particular submodel on a model.
 // See MR_? defines for values for flags
@@ -1044,7 +1044,7 @@ typedef struct mc_info {
 
 inline void mc_info_init(mc_info *mc)
 {
-	memset(mc, 0, sizeof(mc_info));
+	memset(mc, -1, sizeof(mc_info));
 }
 
 

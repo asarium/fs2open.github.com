@@ -95,6 +95,8 @@ typedef struct wl_bitmap_group
 
 extern int anim_timer_start;
 
+int Weapon_select_overlay_id = -1;
+
 // convenient struct for handling all button controls
 struct wl_buttons {
 	char *filename;
@@ -468,10 +470,10 @@ const char *wl_tooltip_handler(const char *str)
 		y = Wl_weapon_desc_coords[gr_screen.res][1] - h / 2;
 
 		gr_set_color_fast(&Color_black);
-		gr_rect(x - 5, y - 5, w + 10, h + 10);
+		gr_rect(x - 5, y - 5, w + 10, h + 10, GR_RESIZE_MENU);
 
 		gr_set_color_fast(&Color_bright_white);
-		gr_string(x, y, str2);
+		gr_string(x, y, str2, GR_RESIZE_MENU);
 		return NULL;
 	}
 
@@ -777,12 +779,12 @@ void wl_render_overhead_view(float frametime)
 				if (gr_screen.res == GR_640)
 				{
 					// lo-res
-					wl_ship->overhead_bitmap = bm_load_animation(sip->overhead_filename);
+					wl_ship->overhead_bitmap = bm_load_animation(sip->overhead_filename, NULL, NULL, 0, cfile::TYPE_INTERFACE);
 				} else {
 					// high-res
 					char filename[NAME_LENGTH+2] = "2_";
 					strcat_s(filename, sip->overhead_filename);
-					wl_ship->overhead_bitmap = bm_load_animation(sip->overhead_filename);
+					wl_ship->overhead_bitmap = bm_load_animation(sip->overhead_filename, NULL, NULL, 0, cfile::TYPE_INTERFACE);
 				}
 
 				// load the bitmap
@@ -813,7 +815,7 @@ void wl_render_overhead_view(float frametime)
 	if(display_type == 0 && wl_ship->overhead_bitmap > -1)
 	{
 		gr_set_bitmap(wl_ship->overhead_bitmap);
-		gr_bitmap(Wl_overhead_coords[gr_screen.res][0], Wl_overhead_coords[gr_screen.res][1]);
+		gr_bitmap(Wl_overhead_coords[gr_screen.res][0], Wl_overhead_coords[gr_screen.res][1], GR_RESIZE_MENU);
 	}
 	else
 	{
@@ -869,7 +871,7 @@ void wl_render_overhead_view(float frametime)
 				vm_rotate_matrix_by_angles(&object_orient, &rot_angles);
 			}
 
-			gr_set_clip(Wl_overhead_coords[gr_screen.res][0], Wl_overhead_coords[gr_screen.res][1], gr_screen.res == 0 ? 291 : 467, gr_screen.res == 0 ? 226 : 362);
+			gr_set_clip(Wl_overhead_coords[gr_screen.res][0], Wl_overhead_coords[gr_screen.res][1], gr_screen.res == 0 ? 291 : 467, gr_screen.res == 0 ? 226 : 362, GR_RESIZE_MENU);
 			g3_start_frame(1);
 			g3_set_view_matrix( &sip->closeup_pos, &Eye_matrix, zoom);
 			model_set_detail_level(0);
@@ -912,14 +914,14 @@ void wl_render_overhead_view(float frametime)
 				{
 					Assert(num_found < NUM_ICON_FRAMES);
 					gr_set_color_fast(&Icon_colors[ICON_FRAME_NORMAL + num_found]);
-					gr_circle(Wl_bank_coords[gr_screen.res][x][0] + 106, Wl_bank_coords[gr_screen.res][x][1] + 12, 5);
+					gr_circle(Wl_bank_coords[gr_screen.res][x][0] + 106, Wl_bank_coords[gr_screen.res][x][1] + 12, 5, GR_RESIZE_MENU);
 					for(y = 0; y < pm->gun_banks[x].num_slots; y++)
 					{
 						//Stuff
 						vm_vec_unrotate(&subobj_pos,&pm->gun_banks[x].pnt[y],&object_orient);
 						g3_rotate_vertex(&draw_point, &subobj_pos);
 						g3_project_vertex(&draw_point);
-						gr_unsize_screen_posf(&draw_point.screen.xyw.x, &draw_point.screen.xyw.y);
+						gr_unsize_screen_posf(&draw_point.screen.xyw.x, &draw_point.screen.xyw.y, NULL, NULL, GR_RESIZE_MENU_NO_OFFSET);
 
 						xc = fl2i(draw_point.screen.xyw.x + Wl_overhead_coords[gr_screen.res][0]);
 						yc = fl2i(draw_point.screen.xyw.y +Wl_overhead_coords[gr_screen.res][1]);
@@ -943,7 +945,7 @@ void wl_render_overhead_view(float frametime)
 							lineendx = xc - 4;
 						}
 
-						gr_line(Wl_bank_coords[gr_screen.res][x][0] + 106, Wl_bank_coords[gr_screen.res][x][1] + 12, lineendx, Wl_bank_coords[gr_screen.res][x][1] + 12);
+						gr_line(Wl_bank_coords[gr_screen.res][x][0] + 106, Wl_bank_coords[gr_screen.res][x][1] + 12, lineendx, Wl_bank_coords[gr_screen.res][x][1] + 12, GR_RESIZE_MENU);
 						
 						if (curve == 0 || curve == 2)
 							lineendx = xc;
@@ -954,7 +956,7 @@ void wl_render_overhead_view(float frametime)
 							lineendy = Wl_bank_coords[gr_screen.res][x][1] + 7;
 						}
 						
-						gr_curve(lineendx, lineendy, 5, curve);
+						gr_curve(lineendx, lineendy, 5, curve, GR_RESIZE_MENU);
 						
 						if (curve == 0 || curve == 1) {
 							lineendy = Wl_bank_coords[gr_screen.res][x][1] + 17;
@@ -962,8 +964,8 @@ void wl_render_overhead_view(float frametime)
 							lineendy = Wl_bank_coords[gr_screen.res][x][1] + 7;
 						}
 
-						gr_line(xc, lineendy, xc, yc);
-						gr_circle(xc, yc, 5);
+						gr_line(xc, lineendy, xc, yc, GR_RESIZE_MENU);
+						gr_circle(xc, yc, 5, GR_RESIZE_MENU);
 					}
 					num_found++;
 				}
@@ -977,13 +979,13 @@ void wl_render_overhead_view(float frametime)
 				{
 					Assert(num_found < NUM_ICON_FRAMES);
 					gr_set_color_fast(&Icon_colors[ICON_FRAME_NORMAL + num_found]);
-					gr_circle(Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][0] - 50, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, 5);
+					gr_circle(Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][0] - 50, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, 5, GR_RESIZE_MENU);
 					for(y = 0; y < pm->missile_banks[x].num_slots; y++)
 					{
 						vm_vec_unrotate(&subobj_pos,&pm->missile_banks[x].pnt[y],&object_orient);
 						g3_rotate_vertex(&draw_point, &subobj_pos);
 						g3_project_vertex(&draw_point);
-						gr_unsize_screen_posf(&draw_point.screen.xyw.x, &draw_point.screen.xyw.y);
+						gr_unsize_screen_posf(&draw_point.screen.xyw.x, &draw_point.screen.xyw.y, NULL, NULL, GR_RESIZE_MENU_NO_OFFSET);
 
 						xc = fl2i(draw_point.screen.xyw.x + Wl_overhead_coords[gr_screen.res][0]);
 						yc = fl2i(draw_point.screen.xyw.y +Wl_overhead_coords[gr_screen.res][1]);
@@ -1006,14 +1008,14 @@ void wl_render_overhead_view(float frametime)
 						else
 							lineendx = xc + 4;
 
-						gr_line(Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][0] - 50, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, lineendx, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12);
+						gr_line(Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][0] - 50, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, lineendx, Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12, GR_RESIZE_MENU);
 						
 						if (curve == 1 || curve == 2) {
 							lineendy = Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 7;
 						} else {
 							lineendy = Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 12;
 						}
-						gr_curve(xc, lineendy, 5, curve);
+						gr_curve(xc, lineendy, 5, curve, GR_RESIZE_MENU);
 						
 						if (curve == 1 || curve == 2) {
 							lineendy = Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 7;
@@ -1021,8 +1023,8 @@ void wl_render_overhead_view(float frametime)
 							lineendy = Wl_bank_coords[gr_screen.res][x + MAX_SHIP_PRIMARY_BANKS][1] + 17;
 						}
 						
-						gr_line(xc, lineendy, xc, yc);
-						gr_circle(xc, yc, 5);
+						gr_line(xc, lineendy, xc, yc, GR_RESIZE_MENU);
+						gr_circle(xc, yc, 5, GR_RESIZE_MENU);
 					}
 
 					num_found++;
@@ -1046,7 +1048,7 @@ void wl_render_overhead_view(float frametime)
 
 	ss_return_name(Selected_wl_slot/MAX_WING_SLOTS, Selected_wl_slot%MAX_WING_SLOTS, name);
 	gr_set_color_fast(&Color_normal);
-	gr_string(Wl_ship_name_coords[gr_screen.res][0], Wl_ship_name_coords[gr_screen.res][1], name);
+	gr_string(Wl_ship_name_coords[gr_screen.res][0], Wl_ship_name_coords[gr_screen.res][1], name, GR_RESIZE_MENU);
 }
 
 // ---------------------------------------------------------------------------------
@@ -1244,7 +1246,7 @@ void wl_load_icons(int weapon_class)
 
 	if(!Cmdline_weapon_choice_3d || (wip->render_type == WRT_LASER && !strlen(wip->tech_model)))
 	{
-		first_frame = bm_load_animation(Weapon_info[weapon_class].icon_filename, &num_frames);
+		first_frame = bm_load_animation(Weapon_info[weapon_class].icon_filename, &num_frames, NULL, 0, cfile::TYPE_INTERFACE);
 
 		for ( i = 0; (i < num_frames) && (i < NUM_ICON_FRAMES); i++ ) {
 			icon->icon_bmaps[i] = first_frame+i;
@@ -1955,7 +1957,8 @@ void weapon_select_init()
 	Assert( Wss_slots != NULL );
 	wl_set_disabled_weapons(Wss_slots[Selected_wl_slot].ship_class);
 
-	help_overlay_set_state(WL_OVERLAY,0);
+	Weapon_select_overlay_id = help_overlay_get_index(WL_OVERLAY);
+	help_overlay_set_state(Weapon_select_overlay_id,gr_screen.res,0);
 
 	if ( Weapon_select_open ) {
 		wl_maybe_reset_selected_weapon_class();
@@ -2240,8 +2243,9 @@ void wl_maybe_flash_button()
 void weapon_select_render(float frametime)
 {
 	if ( !Background_playing ) {
+		GR_MAYBE_CLEAR_RES(Weapon_select_background_bitmap);
 		gr_set_bitmap(Weapon_select_background_bitmap);
-		gr_bitmap(0, 0);
+		gr_bitmap(0, 0, GR_RESIZE_MENU);
 	}
 }
 
@@ -2253,6 +2257,8 @@ void wl_render_weapon_desc(float frametime)
 {
 	int *weapon_desc_coords;
 	int *weapon_title_coords;
+
+	int line_height = gr_get_font_height() + 1;
 
 	// retrieve the correct set of text coordinates
 	if (Game_mode & GM_MULTIPLAYER) {
@@ -2282,12 +2288,12 @@ void wl_render_weapon_desc(float frametime)
 
 				// draw the strings
 				gr_set_color_fast(&Color_white);			
-				gr_string(weapon_title_coords[0], weapon_title_coords[1]+(10*i), Weapon_desc_lines[i]);
+				gr_string(weapon_title_coords[0], weapon_title_coords[1]+(line_height*i), Weapon_desc_lines[i], GR_RESIZE_MENU);
 
 				// draw the bright letters
 				gr_set_color_fast(&Color_bright_white);
 				gr_get_string_size(&w, &h, Weapon_desc_lines[i], curr_len);
-				gr_printf(weapon_title_coords[0]+w, weapon_title_coords[1]+(10*i), "%c", bright_char[i]);
+				gr_printf_menu(weapon_title_coords[0]+w, weapon_title_coords[1]+(line_height*i), "%c", bright_char[i]);
 
 				// restore the bright char to the string
 				Weapon_desc_lines[i][bright_char_index] = bright_char[i];
@@ -2295,7 +2301,7 @@ void wl_render_weapon_desc(float frametime)
 			} else {
 				// draw the string
 				gr_set_color_fast(&Color_white);
-				gr_string(weapon_title_coords[0], weapon_title_coords[1]+(10*i), Weapon_desc_lines[i]);
+				gr_string(weapon_title_coords[0], weapon_title_coords[1]+(line_height*i), Weapon_desc_lines[i], GR_RESIZE_MENU);
 			}
 		}
 
@@ -2310,12 +2316,12 @@ void wl_render_weapon_desc(float frametime)
 
 				// draw the string
 				gr_set_color_fast(&Color_white);
-				gr_string(weapon_desc_coords[0], weapon_desc_coords[1]+(10*(i-2)), Weapon_desc_lines[i]);
+				gr_string(weapon_desc_coords[0], weapon_desc_coords[1]+(line_height*(i-2)), Weapon_desc_lines[i], GR_RESIZE_MENU);
 
 				// draw the bright letters
 				gr_set_color_fast(&Color_bright_white);
 				gr_get_string_size(&w, &h, Weapon_desc_lines[i], curr_len);
-				gr_printf(weapon_desc_coords[0]+w, weapon_desc_coords[1]+(10*(i-2)), "%c", bright_char[i]);
+				gr_printf_menu(weapon_desc_coords[0]+w, weapon_desc_coords[1]+(line_height*(i-2)), "%c", bright_char[i]);
 
 				// restore the bright char to the string
 				Weapon_desc_lines[i][bright_char_index] = bright_char[i];
@@ -2323,7 +2329,7 @@ void wl_render_weapon_desc(float frametime)
 			} else {
 				// draw the string
 				gr_set_color_fast(&Color_white);
-				gr_string(weapon_desc_coords[0], weapon_desc_coords[1]+(10*(i-2)), Weapon_desc_lines[i]);
+				gr_string(weapon_desc_coords[0], weapon_desc_coords[1]+(line_height*(i-2)), Weapon_desc_lines[i], GR_RESIZE_MENU);
 			}
 		}
 
@@ -2339,12 +2345,12 @@ void wl_render_weapon_desc(float frametime)
 		// draw full version
 		// FIXME - change to use a for loop 
 		gr_set_color_fast(&Color_white);
-		gr_string(weapon_title_coords[0], weapon_title_coords[1], Weapon_desc_lines[0]);
-		gr_string(weapon_title_coords[0], weapon_title_coords[1] + 10, Weapon_desc_lines[1]);
-		gr_string(weapon_desc_coords[0], weapon_desc_coords[1], Weapon_desc_lines[2]);
-		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + 10, Weapon_desc_lines[3]);
-		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + 20, Weapon_desc_lines[4]);
-		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + 30, Weapon_desc_lines[5]);
+		gr_string(weapon_title_coords[0], weapon_title_coords[1], Weapon_desc_lines[0], GR_RESIZE_MENU);
+		gr_string(weapon_title_coords[0], weapon_title_coords[1] + line_height, Weapon_desc_lines[1], GR_RESIZE_MENU);
+		gr_string(weapon_desc_coords[0], weapon_desc_coords[1], Weapon_desc_lines[2], GR_RESIZE_MENU);
+		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height, Weapon_desc_lines[3], GR_RESIZE_MENU);
+		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height * 2, Weapon_desc_lines[4], GR_RESIZE_MENU);
+		gr_string(weapon_desc_coords[0], weapon_desc_coords[1] + line_height * 3, Weapon_desc_lines[5], GR_RESIZE_MENU);
 	}
 }
 
@@ -2655,7 +2661,7 @@ void weapon_select_do(float frametime)
 		weapon_ani_coords = Wl_weapon_ani_coords[gr_screen.res];
 	}
 
-	if(Wl_icons[Selected_wl_class].model_index != -1) {
+	if(Selected_wl_class != -1 && Wl_icons[Selected_wl_class].model_index != -1) {
 		static float WeapSelectScreenWeapRot = 0.0f;
 		wl_icon_info *sel_icon	= &Wl_icons[Selected_wl_class];
 		weapon_info *wip = &Weapon_info[Selected_wl_class];
@@ -2669,7 +2675,7 @@ void weapon_select_do(float frametime)
 			Weapon_info->closeup_zoom * 0.65f,
 			REVOLUTION_RATE,
 			MR_IS_MISSILE | MR_LOCK_DETAIL | MR_AUTOCENTER | MR_NO_FOGGING,
-			true,
+			GR_RESIZE_MENU,
 			wip->selection_effect);
 	}
 
@@ -2678,7 +2684,7 @@ void weapon_select_do(float frametime)
 		if ( Weapon_anim_class != Selected_wl_class )
 			start_weapon_animation(Selected_wl_class);
  
-		generic_anim_render(&Cur_Anim, (help_overlay_active(WL_OVERLAY)) ? 0 : frametime, weapon_ani_coords[0], weapon_ani_coords[1]);
+		generic_anim_render(&Cur_Anim, (help_overlay_active(Weapon_select_overlay_id)) ? 0 : frametime, weapon_ani_coords[0], weapon_ani_coords[1], true);
 	}
 
 	if ( !Background_playing ) {
@@ -2713,25 +2719,25 @@ void weapon_select_do(float frametime)
 			{
 				gr_set_color_fast(&Color_blue);
 				gr_set_bitmap(icon->icon_bmaps[WEAPON_ICON_FRAME_SELECTED]);
-				gr_bitmap(sx, sy);
+				gr_bitmap(sx, sy, GR_RESIZE_MENU);
 			}
 			else
 			{
 				gr_set_color_fast(&Icon_colors[ICON_FRAME_SELECTED]);
 				int w = 56;
 				int h = 24;
-				draw_brackets_square(sx, sy, sx+w, sy+h);
+				draw_brackets_square(sx, sy, sx+w, sy+h, GR_RESIZE_MENU);
 				if(icon->model_index != -1)
 				{
 					//Draw the model
-					draw_model_icon(icon->model_index, MR_LOCK_DETAIL | MR_NO_FOGGING | MR_NO_LIGHTING, Weapon_info->closeup_zoom / 2.5f, sx, sy, w, h, NULL);
+					draw_model_icon(icon->model_index, MR_LOCK_DETAIL | MR_NO_FOGGING | MR_NO_LIGHTING, Weapon_info->closeup_zoom / 2.5f, sx, sy, w, h, NULL, GR_RESIZE_MENU);
 				}
 				else if(icon->laser_bmap != -1)
 				{
 					//Draw laser bitmap
-					gr_set_clip(sx, sy, 56, 24);
+					gr_set_clip(sx, sy, 56, 24, GR_RESIZE_MENU);
 					gr_set_bitmap(icon->laser_bmap);
-					gr_bitmap(0, 0);
+					gr_bitmap(0, 0, GR_RESIZE_MENU);
 					gr_reset_clip();
 				}
 				else
@@ -2747,7 +2753,7 @@ void weapon_select_do(float frametime)
 					gr_get_string_size(&half_x, &half_y, print_name);
 					half_x = sx +((56 - half_x) / 2);
 					half_y = sy +((28 - half_y) / 2); // Was ((24 - half_y) / 2) Zacam
-					gr_string(half_x, half_y, print_name);
+					gr_string(half_x, half_y, print_name, GR_RESIZE_MENU);
 				}
 			}
 		}
@@ -2813,7 +2819,7 @@ void weapon_select_do(float frametime)
 	}
 
 	// blit help overlay if active
-	help_overlay_maybe_blit(WL_OVERLAY);
+	help_overlay_maybe_blit(Weapon_select_overlay_id, gr_screen.res);
 	gr_flip();	
 
 	// If the commit button was pressed, do the commit button actions.  Done at the end of the
@@ -2850,8 +2856,6 @@ void weapon_select_close()
 	Weapon_ui_window.destroy();
 
 	// unload bitmaps
-	help_overlay_unload(WL_OVERLAY);
-
 	bm_release(WeaponSelectMaskBitmap);
 
 	wl_unload_icons();
@@ -2888,7 +2892,7 @@ void wl_render_icon_count(int num, int x, int y)
 
 	// render
 	gr_set_color_fast(&Color_white);
-	gr_string(x-num_w-4, y+8, buf);
+	gr_string(x-num_w-4, y+8, buf, GR_RESIZE_MENU);
 }
 
 
@@ -2959,23 +2963,23 @@ void wl_render_icon(int index, int x, int y, int num, int draw_num_flag, int hot
 	{
 		gr_set_color_fast(&Color_blue);
 		gr_set_bitmap(bitmap_id);
-		gr_bitmap(x, y);
+		gr_bitmap(x, y, GR_RESIZE_MENU);
 	}
 	else
 	{
 		gr_set_color_fast(color_to_draw);
-		draw_brackets_square(x, y, x + 56, y + 24);
+		draw_brackets_square(x, y, x + 56, y + 24, GR_RESIZE_MENU);
 
 		if(icon->model_index != -1)
 		{
 			//Draw the model
-			draw_model_icon(icon->model_index, MR_LOCK_DETAIL | MR_NO_FOGGING | MR_NO_LIGHTING, Weapon_info[index].closeup_zoom * 0.4f, x, y, 56, 24, NULL);
+			draw_model_icon(icon->model_index, MR_LOCK_DETAIL | MR_NO_FOGGING | MR_NO_LIGHTING, Weapon_info[index].closeup_zoom * 0.4f, x, y, 56, 24, NULL, GR_RESIZE_MENU);
 		}
 		else if(icon->laser_bmap != -1)
 		{
-			gr_set_clip(x, y, 56, 24);
+			gr_set_clip(x, y, 56, 24, GR_RESIZE_MENU);
 			gr_set_bitmap(icon->laser_bmap);
-			gr_bitmap(0, 0);
+			gr_bitmap(0, 0, GR_RESIZE_MENU);
 			gr_reset_clip();
 		}
 		else
@@ -2991,7 +2995,7 @@ void wl_render_icon(int index, int x, int y, int num, int draw_num_flag, int hot
 			gr_get_string_size(&half_x, &half_y, print_name);
 			half_x = x +((56 - half_x) / 2);
 			half_y = y +((28 - half_y) / 2); // Was ((24 - half_y) / 2) Zacam
-			gr_string(half_x, half_y, print_name);
+			gr_string(half_x, half_y, print_name, GR_RESIZE_MENU);
 		}
 	}
 
@@ -3027,12 +3031,12 @@ void wl_draw_ship_weapons(int index)
 			if(Weapon_slot_bitmap != -1)
 			{
 				gr_set_bitmap(Weapon_slot_bitmap);
-				gr_bitmap( Wl_bank_coords[gr_screen.res][i][0] - 2,  Wl_bank_coords[gr_screen.res][i][1] - 2);
+				gr_bitmap( Wl_bank_coords[gr_screen.res][i][0] - 2,  Wl_bank_coords[gr_screen.res][i][1] - 2, GR_RESIZE_MENU);
 			}
 			else
 			{
 				gr_set_color_fast(&Icon_colors[WEAPON_ICON_FRAME_NORMAL]);
-				draw_brackets_square( Wl_bank_coords[gr_screen.res][i][0],  Wl_bank_coords[gr_screen.res][i][1],  Wl_bank_coords[gr_screen.res][i][0] + 56,  Wl_bank_coords[gr_screen.res][i][1] + 24);
+				draw_brackets_square( Wl_bank_coords[gr_screen.res][i][0],  Wl_bank_coords[gr_screen.res][i][1],  Wl_bank_coords[gr_screen.res][i][0] + 56,  Wl_bank_coords[gr_screen.res][i][1] + 24, GR_RESIZE_MENU);
 			}
 		}
 
