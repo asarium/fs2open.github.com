@@ -1,8 +1,3 @@
-#include <ctime>
-#include <SDL_video.h>
-#include <SDL_syswm.h>
-
-#include "include/cef_app.h"
 
 #include "chromium/ChromiumStateLogic.h"
 #include "chromium/ClientImpl.h"
@@ -14,6 +9,11 @@
 
 #include "freespace.h"
 
+#include <ctime>
+#include <SDL_video.h>
+#include <SDL_syswm.h>
+
+#include "include/cef_app.h"
 
 namespace chromium
 {

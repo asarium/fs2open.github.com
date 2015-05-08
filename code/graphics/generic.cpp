@@ -20,6 +20,19 @@
 //we check background type to avoid messed up colours for ANI
 #define ANI_BPP_CHECK		(ga->ani.bg_type == BM_TYPE_PCX) ? 16 : 32
 
+// These two functions find if a bitmap or animation exists by filename, no extension needed.
+bool generic_bitmap_exists(const char *filename)
+{
+	SCP_string outName;
+	return cfile::findFile(filename, outName, cfile::TYPE_ANY, bm_ext_list, BM_NUM_TYPES);
+}
+
+bool generic_anim_exists(const char *filename)
+{
+	SCP_string outName;
+	return cfile::findFile(filename, outName, cfile::TYPE_ANY, bm_ani_ext_list, BM_ANI_NUM_TYPES);
+}
+
 // Goober5000
 int generic_anim_init_and_stream(generic_anim *anim, const char *anim_filename, ubyte bg_type, bool attempt_hi_res)
 {
@@ -169,7 +182,7 @@ int generic_anim_stream(generic_anim *ga)
 	}
 
 	//make sure we can open it
-	img_cfp = cfile::open(fullName, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_ANY);
+	img_cfp = cfile::io::open(fullName, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_ANY);
 
 	if (img_cfp == NULL) {
 		return -1;
@@ -180,9 +193,9 @@ int generic_anim_stream(generic_anim *ga)
 	strcat_s(ga->filename, ext_list[rval]);
 	ga->type = type_list[rval];
 	//seek to the end
-	cfile::seek(img_cfp, 0, cfile::SEEK_MODE_END);
+	cfile::io::seek(img_cfp, 0, cfile::SEEK_MODE_END);
 
-	cfile::close(img_cfp);
+	cfile::io::close(img_cfp);
 
 	//TODO: add streaming EFF
 	if(ga->type == BM_TYPE_ANI) {
@@ -420,7 +433,7 @@ void generic_render_ani_stream(generic_anim *ga)
 	#endif
 }
 
-void generic_anim_render(generic_anim *ga, float frametime, int x, int y)
+void generic_anim_render(generic_anim *ga, float frametime, int x, int y, bool menu)
 {
 	float keytime = 0.0;
 
@@ -489,8 +502,8 @@ void generic_anim_render(generic_anim *ga, float frametime, int x, int y)
 		}
 		ga->previous_frame = ga->current_frame;
 		if(ga->use_hud_color)
-			gr_aabitmap(x,y);
+			gr_aabitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
 		else
-			gr_bitmap(x,y);
+			gr_bitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
 	}
 }

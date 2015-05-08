@@ -10,8 +10,6 @@
 #include "chromium/ClientImpl.h"
 #include "chromium/Browser.h"
 
-#include "include/cef_app.h"
-
 namespace chromium
 {
 	class ChromiumStateLogic : public statelogic::StateLogic

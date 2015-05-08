@@ -248,16 +248,16 @@ static char *opengl_load_shader(char *filename, int flags)
 	int flags_len = strlen(shader_flags);
 
 	if (Enable_external_shaders) {
-		cfile::FileHandle *cf_shader = cfile::open(filename, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_EFFECTS);
+		cfile::FileHandle *cf_shader = cfile::io::open(filename, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_EFFECTS);
 	
 		if (cf_shader != NULL) {
-			int len = cfile::fileLength(cf_shader);
+			int len = cfile::io::fileLength(cf_shader);
 			char *shader = (char*) vm_malloc(len + flags_len + 1);
 
 			strcpy(shader, shader_flags);
 			memset(shader + flags_len, 0, len + 1);
-			cfile::read(shader + flags_len, len + 1, 1, cf_shader);
-			cfile::close(cf_shader);
+			cfile::io::read(shader + flags_len, len + 1, 1, cf_shader);
+			cfile::io::close(cf_shader);
 
 			return shader;	
 		}

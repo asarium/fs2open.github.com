@@ -389,7 +389,7 @@ void VoiceActingManager::OnGenerateFileNames()
 
 	// notify user that we are done and how many filenames were changed
 	char message[128] = { '\0' };
-	snprintf(message, sizeof(message), "File name generation complete. Modified %u messages.", modified_filenames);
+	snprintf(message, sizeof(message)-1, "File name generation complete. Modified %u messages.", modified_filenames);
 	MessageBox(message, "Woohoo!");
 }
 
@@ -407,7 +407,7 @@ void VoiceActingManager::OnGenerateScript()
 
 	CString dlgPathName = dlg.GetPathName( );
 	string_copy(pathname, dlgPathName, 256);
-	fp = cfile::open(pathname, "wt", CFILE_NORMAL);
+	fp = cfile::io::open(pathname, "wt", CFILE_NORMAL);
 	if (!fp)
 	{
 		MessageBox("Can't open file to save.", "Error!");

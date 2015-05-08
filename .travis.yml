@@ -1,22 +1,25 @@
 language: cpp
+os:
+  - linux
+  #- osx
+env:
+  - BUILD_TYPE=Release GENERATOR=Ninja
+  - BUILD_TYPE=Debug GENERATOR=Ninja
 compiler:
   - gcc
   - clang
 before_install:
-  - sudo add-apt-repository --yes ppa:andykimpe/cmake
-  - sudo add-apt-repository --yes ppa:zoogie/sdl2-snapshots
-  - sudo apt-get update -qq
+  - test "$TRAVIS_OS_NAME" = "linux" && sudo add-apt-repository --yes ppa:andykimpe/cmake || echo "NOT adding apt repo."
+  - test "$TRAVIS_OS_NAME" = "linux" && sudo add-apt-repository --yes ppa:zoogie/sdl2-snapshots  || echo "NOT adding apt repo."
+  - test "$TRAVIS_OS_NAME" = "linux" && sudo apt-get update -qq  || echo "NOT updating apt repo."
 install:
-  - sudo apt-get install -y cmake ninja-build
-  - sudo apt-get install -y libopenal-dev libogg-dev libvorbis-dev build-essential libsdl2-dev libtheora-dev libreadline6-dev libpng12-dev libjpeg62-dev liblua5.1-0-dev libjansson-dev libtool doxygen
+  - test "$TRAVIS_OS_NAME" = "linux" && sudo apt-get install -y cmake ninja-build || echo "NOT installing from apt."
+  - test "$TRAVIS_OS_NAME" = "linux" && sudo apt-get install -y libopenal-dev libogg-dev libvorbis-dev libsdl2-dev libtheora-dev libreadline6-dev libpng12-dev libjpeg62-dev liblua5.1-0-dev libjansson-dev libtool || echo "NOT installing from apt."
+  - test "$TRAVIS_OS_NAME" = "osx" && brew install pkg-config ninja sdl2 theora libogg libvorbis openal-soft || echo "NOT osx."
 before_script:
   - cmake --version
   - mkdir travis-build
-script: cd travis-build && cmake -G Ninja .. && ninja
-branches:
-  only: cmake-travis
-notifications:
-  irc:
-    channels: "irc.esper.net#Diaspora"
-    on_success: change
-    on_failure: change
+script:
+  - cd travis-build
+  - cmake -G "$GENERATOR" -DCMAKE_BUILD_TYPE=$BUILD_TYPE ..
+  - cmake --build .

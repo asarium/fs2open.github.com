@@ -222,7 +222,7 @@ int multi_xfer_send_file(PSNET_SOCKET_RELIABLE who, char *filename, cfile::DirTy
 
 	// attempt to open the file
 	temp_entry.file = NULL;
-	temp_entry.file = cfile::open(filename, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile_flags);
+	temp_entry.file = cfile::io::open(filename, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile_flags);
 	if(temp_entry.file == NULL){
 #ifdef MULTI_XFER_VERBOSE
 		nprintf(("Network","MULTI XFER : Could not open file %s on xfer send!\n",filename));
@@ -233,7 +233,7 @@ int multi_xfer_send_file(PSNET_SOCKET_RELIABLE who, char *filename, cfile::DirTy
 
 	// set the file size
 	temp_entry.file_size = -1;
-	temp_entry.file_size = cfile::fileLength(temp_entry.file);
+	temp_entry.file_size = cfile::io::fileLength(temp_entry.file);
 	if(temp_entry.file_size == -1){
 #ifdef MULTI_XFER_VERBOSE
 		nprintf(("Network","MULTI XFER : Could not get file length for file %s on xfer send\n",filename));
@@ -253,7 +253,7 @@ int multi_xfer_send_file(PSNET_SOCKET_RELIABLE who, char *filename, cfile::DirTy
 	nprintf(("Network","MULTI XFER : Got file %s checksum of %d\n",temp_entry.filename,(int)temp_entry.file_chksum));
 #endif
 	// rewind the file pointer to the beginning of the file
-	cfile::seek(temp_entry.file,0,cfile::SEEK_MODE_SET);
+	cfile::io::seek(temp_entry.file,0,cfile::SEEK_MODE_SET);
 
 	// set the flags
 	temp_entry.flags |= (MULTI_XFER_FLAG_USED | MULTI_XFER_FLAG_SEND | MULTI_XFER_FLAG_PENDING);
@@ -319,7 +319,7 @@ void multi_xfer_abort(int handle)
 
 	// close any open file and delete it 
 	if(xe->file != NULL){
-		cfile::close(xe->file);
+		cfile::io::close(xe->file);
 		xe->file = NULL;
 
 		// delete it if there isn't some problem with the filename
@@ -350,7 +350,7 @@ void multi_xfer_release_handle(int handle)
 
 	// close any open file and delete it 
 	if(xe->file != NULL){
-		cfile::close(xe->file);
+		cfile::io::close(xe->file);
 		xe->file = NULL;
 
 		// delete it if the file was not successfully received
@@ -606,7 +606,7 @@ void multi_xfer_fail_entry(xfer_entry *xe)
 
 	// close the file pointer
 	if(xe->file != NULL){
-		cfile::close(xe->file);
+		cfile::io::close(xe->file);
 		xe->file = NULL;
 	}
 
@@ -808,7 +808,7 @@ void multi_xfer_process_final(xfer_entry *xe)
 	
 	// close the file
 	if(xe->file != NULL){
-		cfile::close(xe->file);
+		cfile::io::close(xe->file);
 		xe->file = NULL;
 	}	
 
@@ -866,7 +866,7 @@ void multi_xfer_process_data(xfer_entry *xe, ubyte *data, int data_size)
 	nprintf(("Network","."));		
 
 	// attempt to write the rest of the data string to the file
-	if((xe->file == NULL) || !cfile::write(data, data_size, 1, xe->file)){
+	if((xe->file == NULL) || !cfile::io::write(data, data_size, 1, xe->file)){
 		// inform the sender we had a problem
 		multi_xfer_send_nak(xe->file_socket, xe->sig);
 
@@ -956,7 +956,7 @@ void multi_xfer_process_header(ubyte *data, PSNET_SOCKET_RELIABLE who, ushort si
 
 	// attempt to open the file (using the prefixed filename)
 	xe->file = NULL;
-	xe->file = cfile::open(xe->ex_filename, cfile::MODE_WRITE, cfile::OPEN_NORMAL, xe->force_dir);
+	xe->file = cfile::io::open(xe->ex_filename, cfile::MODE_WRITE, cfile::OPEN_NORMAL, xe->force_dir);
 	if(xe->file == NULL){		
 		multi_xfer_send_nak(who, sig);		
 
@@ -1027,7 +1027,7 @@ void multi_xfer_send_next(xfer_entry *xe)
 	ADD_USHORT(data_size);
 	
 	// copy in the data
-	if(cfile::read(data+packet_size,1,(int)data_size,xe->file) == 0){
+	if(cfile::io::read(data+packet_size,1,(int)data_size,xe->file) == 0){
 		// send a nack to the receiver
 		multi_xfer_send_nak(xe->file_socket, xe->sig);
 

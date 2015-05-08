@@ -1,8 +1,8 @@
 
 #include "globalincs/pstypes.h"
 
-#include "cfile/ZipFileSystem.h"
-#include "cfile/ZipFileSystemEntry.h"
+#include "cfile/archives/ZipFileSystem.h"
+#include "cfile/archives/ZipFileSystemEntry.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -28,17 +28,17 @@ namespace cfile
 
 	public:
 		MemoryBuffer(shared_array<Ch> data, size_t n)
-			: dataPtr(data), boost::iostreams::basic_array<Ch>(data.get(), n)
+			: boost::iostreams::basic_array<Ch>(data.get(), n), dataPtr(data)
 		{
 		}
 	};
 
-	ZipFileSystemEntry::ZipFileSystemEntry(ZipFileSystem* parentSystem, const string_type& path)
-		: IFileSystemEntry(path), parentSystem(parentSystem)
+	ZipFileSystemEntry::ZipFileSystemEntry(ZipFileSystem* parentSystemIn, const string_type& pathIn)
+		: IFileSystemEntry(pathIn), parentSystem(parentSystemIn)
 	{
 	}
 
-	FileEntryPointer ZipFileSystemEntry::getChild(const string_type& path)
+	FileEntryPointer ZipFileSystemEntry::getChild(const string_type& searchPath)
 	{
 		if (getType() != DIRECTORY)
 		{
@@ -46,7 +46,7 @@ namespace cfile
 		}
 
 		string_type childPath = this->path;
-		childPath.append(DirectorySeparatorStr).append(path);
+		childPath.append(DirectorySeparatorStr).append(searchPath);
 		childPath = vfspp::util::normalizePath(childPath);
 
 		EntryType type = parentSystem->getFileData(childPath).type;

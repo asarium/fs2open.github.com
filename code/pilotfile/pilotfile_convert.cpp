@@ -1,5 +1,7 @@
 #include <algorithm>
 
+#include <algorithm>
+
 #include "globalincs/pstypes.h"
 #include "pilotfile/pilotfile_convert.h"
 #include "cfile/cfile.h"
@@ -20,7 +22,7 @@ pilotfile_convert::pilotfile_convert()
 pilotfile_convert::~pilotfile_convert()
 {
 	if (cfp) {
-		cfile::close(cfp);
+		cfile::io::close(cfp);
 	}
 
 	if (plr) {
@@ -38,13 +40,13 @@ void pilotfile_convert::startSection(Section::id section_id)
 
 	const int zero = 0;
 
-	cfile::write<short>( (ushort)section_id, cfp );
+	cfile::io::write<short>( (ushort)section_id, cfp );
 
 	// to be updated when endSection() is called
-	cfile::write<int>(zero, cfp);
+	cfile::io::write<int>(zero, cfp);
 
 	// starting offset, for size of section
-	m_size_offset = cfile::tell(cfp);
+	m_size_offset = cfile::io::tell(cfp);
 }
 
 void pilotfile_convert::endSection()
@@ -52,7 +54,7 @@ void pilotfile_convert::endSection()
 	Assert( cfp );
 	Assert( m_size_offset > 0 );
 
-	size_t cur = cfile::tell(cfp);
+	size_t cur = cfile::io::tell(cfp);
 
 	Assert( cur >= m_size_offset );
 
@@ -60,11 +62,11 @@ void pilotfile_convert::endSection()
 
 	if (section_size) {
 		// go back to section size in file and write proper value
-		cfile::seek(cfp, cur - section_size - sizeof(int), cfile::SEEK_MODE_SET);
-		cfile::write<int>((int)section_size, cfp);
+		cfile::io::seek(cfp, cur - section_size - sizeof(int), cfile::SEEK_MODE_SET);
+		cfile::io::write<int>((int)section_size, cfp);
 
 		// go back to previous location for next section
-		cfile::seek(cfp, cur, cfile::SEEK_MODE_SET);
+		cfile::io::seek(cfp, cur, cfile::SEEK_MODE_SET);
 	}
 }
 

@@ -41,6 +41,7 @@
 #include "playerman/player.h"
 #include "fs2netd/fs2netd_client.h"
 #include "menuui/mainhallmenu.h"
+#include "debugconsole/console.h"
 
 
 
@@ -460,14 +461,15 @@ void multi_pxo_scroll_players_down();
 // get the absolute index of the displayed items which our currently selected one is
 int multi_pxo_get_select_index();
 
-DCF(players, "")
+DCF(players, "Adds the specified number of bogus players to the PXO listing (Multiplayer)")
 {
 	char name[512] = "";
-
+	int i;
 	// add a bunch of bogus players
-	dc_get_arg(ARG_INT);
-	for(int idx=0; idx<Dc_arg_int; idx++){
-		sprintf(name, "player %d", idx);
+	dc_stuff_int(&i);
+
+	for(int idx = 0; idx < i; idx++){
+		sprintf(name, "bogus player %d", idx);
 		multi_pxo_add_player(name);
 	}
 }
@@ -1455,7 +1457,7 @@ void multi_pxo_blit_all()
 	} while(0);
 	if(Multi_pxo_bitmap != -1){
 		gr_set_bitmap(Multi_pxo_bitmap);
-		gr_bitmap(0,0);
+		gr_bitmap(0,0,GR_RESIZE_MENU);
 	}
 	Multi_pxo_window.draw();
 
@@ -1484,7 +1486,7 @@ void multi_pxo_blit_all()
 	// display the mission start countdown timer (if any)
 	//anim_render_all(GS_STATE_MULTI_MISSION_SYNC,flFrametime);
 	if(gameseq_get_state() == GS_STATE_PXO && Multi_pxo_anim.num_frames > 0)
-		generic_anim_render(&Multi_pxo_anim, flFrametime, MULTI_PXO_ANIM_X, MULTI_PXO_ANIM_Y);
+		generic_anim_render(&Multi_pxo_anim, flFrametime, MULTI_PXO_ANIM_X, MULTI_PXO_ANIM_Y, true);
 }
 
 // process common stuff
@@ -2207,7 +2209,7 @@ void multi_pxo_blit_status_text()
 	if(strlen(Multi_pxo_status_text)) {
 		gr_set_color_fast(&Color_bright);
 		gr_get_string_size(&w, NULL, Multi_pxo_status_text);
-		gr_string(Multi_pxo_status_coords[gr_screen.res][0] + ((Multi_pxo_status_coords[gr_screen.res][2] - w)/2), Multi_pxo_status_coords[gr_screen.res][1], Multi_pxo_status_text);
+		gr_string(Multi_pxo_status_coords[gr_screen.res][0] + ((Multi_pxo_status_coords[gr_screen.res][2] - w)/2), Multi_pxo_status_coords[gr_screen.res][1], Multi_pxo_status_text, GR_RESIZE_MENU);
 	}
 }
 
@@ -2421,7 +2423,7 @@ void multi_pxo_process_channels()
 		Multi_pxo_channel_button.get_mouse_pos(NULL,&my);
 
 		// index from the top
-		item_index = my / 10;
+		item_index = my / (gr_get_font_height() + 1);
 
 		// select the item if possible
 		if((item_index + Multi_pxo_channel_start_index) < Multi_pxo_channel_count){
@@ -2509,6 +2511,7 @@ void multi_pxo_blit_channels()
 	char chan_servers[15];
 	int user_w,server_w;
 	int disp_count,y_start;
+	int line_height = gr_get_font_height() + 1;
 
 	// blit as many channels as we can
 	disp_count = 0;
@@ -2548,14 +2551,14 @@ void multi_pxo_blit_channels()
 		gr_force_fit_string(chan_name, MAX_PXO_TEXT_LEN-1, Multi_pxo_chan_coords[gr_screen.res][2] - Multi_pxo_chan_column_offsets[gr_screen.res][CHAN_PLAYERS_COLUMN]);
 
 		// blit the strings
-		gr_string(Multi_pxo_chan_coords[gr_screen.res][0], y_start, chan_name + 1);
-		gr_string(Multi_pxo_chan_coords[gr_screen.res][0] + Multi_pxo_chan_coords[gr_screen.res][2] - Multi_pxo_chan_column_offsets[gr_screen.res][CHAN_PLAYERS_COLUMN], y_start, chan_users);
+		gr_string(Multi_pxo_chan_coords[gr_screen.res][0], y_start, chan_name + 1, GR_RESIZE_MENU);
+		gr_string(Multi_pxo_chan_coords[gr_screen.res][0] + Multi_pxo_chan_coords[gr_screen.res][2] - Multi_pxo_chan_column_offsets[gr_screen.res][CHAN_PLAYERS_COLUMN], y_start, chan_users, GR_RESIZE_MENU);
 		gr_set_color_fast(&Color_bright);
-		gr_string(Multi_pxo_chan_coords[gr_screen.res][0] + Multi_pxo_chan_coords[gr_screen.res][2] - Multi_pxo_chan_column_offsets[gr_screen.res][CHAN_GAMES_COLUMN], y_start, chan_servers);
+		gr_string(Multi_pxo_chan_coords[gr_screen.res][0] + Multi_pxo_chan_coords[gr_screen.res][2] - Multi_pxo_chan_column_offsets[gr_screen.res][CHAN_GAMES_COLUMN], y_start, chan_servers, GR_RESIZE_MENU);
 
 		// increment the displayed count
 		disp_count++;
-		y_start += 10;		
+		y_start += line_height;		
 
 		// next item
 		moveup = moveup->next;
@@ -2903,7 +2906,7 @@ void multi_pxo_process_players()
 		Multi_pxo_player_button.get_mouse_pos(NULL,&my);
 
 		// index from the top
-		item_index = my / 10;
+		item_index = my / (gr_get_font_height() + 1);
 
 		// select the item if possible
 		lookup = Multi_pxo_player_start;
@@ -2937,6 +2940,7 @@ void multi_pxo_blit_players()
 	player_list *moveup;
 	char player_name[MAX_PXO_TEXT_LEN];
 	int disp_count,y_start;
+	int line_height = gr_get_font_height() + 1;
 
 	// blit as many channels as we can
 	disp_count = 0;
@@ -2960,11 +2964,11 @@ void multi_pxo_blit_players()
 		gr_force_fit_string(player_name, MAX_PXO_TEXT_LEN-1, Multi_pxo_player_coords[gr_screen.res][2]);
 
 		// blit the string
-		gr_string(Multi_pxo_player_coords[gr_screen.res][0], y_start, player_name);
+		gr_string(Multi_pxo_player_coords[gr_screen.res][0], y_start, player_name, GR_RESIZE_MENU);
 
 		// increment the displayed count
 		disp_count++;
-		y_start += 10;
+		y_start += line_height;
 
 		// next item
 		moveup = moveup->next;
@@ -3243,7 +3247,7 @@ void multi_pxo_chat_process_incoming(const char *txt,int mode)
  */
 void multi_pxo_chat_blit()
 {
-	int y_start;
+	int y_start, line_height;
 	int disp_count,token_width;
 	char piece[100];
 	char title[MAX_PXO_TEXT_LEN];
@@ -3264,24 +3268,25 @@ void multi_pxo_chat_blit()
 	gr_force_fit_string(title, MAX_PXO_TEXT_LEN-1, Multi_pxo_chat_coords[gr_screen.res][2] - 10);
 	gr_get_string_size(&token_width,NULL,title);
 	gr_set_color_fast(&Color_normal);
-	gr_string(Multi_pxo_chat_coords[gr_screen.res][0] + ((Multi_pxo_chat_coords[gr_screen.res][2] - token_width)/2), Multi_pxo_chat_title_y[gr_screen.res], title);	
+	gr_string(Multi_pxo_chat_coords[gr_screen.res][0] + ((Multi_pxo_chat_coords[gr_screen.res][2] - token_width)/2), Multi_pxo_chat_title_y[gr_screen.res], title, GR_RESIZE_MENU);	
 
 	// blit all active lines of text
 	moveup = Multi_pxo_chat_start;	
 	disp_count = 0;
 	y_start = Multi_pxo_chat_coords[gr_screen.res][1];
+	line_height = gr_get_font_height() + 1;
 	while((moveup != NULL) && (moveup != Multi_pxo_chat_add) && (disp_count < (Multi_pxo_max_chat_display[gr_screen.res]))){
 		switch(moveup->mode){
 		// if this is text from the server, display it all "bright"
 		case CHAT_MODE_SERVER:				
 			gr_set_color_fast(&Color_bright);
-			gr_string(Multi_pxo_chat_coords[gr_screen.res][0], y_start, moveup->text);
+			gr_string(Multi_pxo_chat_coords[gr_screen.res][0], y_start, moveup->text, GR_RESIZE_MENU);
 			break;
 
 		// if this is motd, display it all "bright"
 		case CHAT_MODE_MOTD:
 			gr_set_color_fast(&Color_bright_white);
-			gr_string(Multi_pxo_chat_coords[gr_screen.res][0], y_start, moveup->text);
+			gr_string(Multi_pxo_chat_coords[gr_screen.res][0], y_start, moveup->text, GR_RESIZE_MENU);
 			break;
 
 		// normal mode, just highlight the server
@@ -3295,13 +3300,13 @@ void multi_pxo_chat_blit()
 				
 				// draw it brightly
 				gr_set_color_fast(&Color_bright);
-				gr_string(Multi_pxo_chat_coords[gr_screen.res][0], y_start, tok);
+				gr_string(Multi_pxo_chat_coords[gr_screen.res][0], y_start, tok, GR_RESIZE_MENU);
 
 				// draw the rest of the string normally
 				tok = strtok(NULL,"");
 				if(tok != NULL){
 					gr_set_color_fast(&Color_normal);
-					gr_string(Multi_pxo_chat_coords[gr_screen.res][0] + token_width + 6, y_start, tok);
+					gr_string(Multi_pxo_chat_coords[gr_screen.res][0] + token_width + 6, y_start, tok, GR_RESIZE_MENU);
 				}
 			}
 			break;
@@ -3309,20 +3314,20 @@ void multi_pxo_chat_blit()
 		// carry mode, display with no highlight
 		case CHAT_MODE_CARRY:
 			gr_set_color_fast(&Color_normal);
-			gr_string(Multi_pxo_chat_coords[gr_screen.res][0], y_start, moveup->text);
+			gr_string(Multi_pxo_chat_coords[gr_screen.res][0], y_start, moveup->text, GR_RESIZE_MENU);
 			break;
 
 		// "switching channels mode", display it bright
 		case CHAT_MODE_CHANNEL_SWITCH:
 			gr_set_color_fast(&Color_bright);
-			gr_string(Multi_pxo_chat_coords[gr_screen.res][0], y_start, moveup->text);
+			gr_string(Multi_pxo_chat_coords[gr_screen.res][0], y_start, moveup->text, GR_RESIZE_MENU);
 			break;
 		}
 		
 		// next chat line
 		moveup = moveup->next;
 		disp_count++;
-		y_start += 10;
+		y_start += line_height;
 	}
 
 	if ((moveup != Multi_pxo_chat_add) && (moveup != NULL)) {
@@ -3689,11 +3694,11 @@ void multi_pxo_set_end_of_motd()
 	new_chksum = cfile::checksum::crc::addLong(0, (ubyte*)Pxo_motd, strlen(Pxo_motd));
 
 	// checksum the old motd if its lying around
-	cfile::FileHandle *in = cfile::open("oldmotd.txt");
+	cfile::FileHandle *in = cfile::io::open("oldmotd.txt");
 	if(in != NULL){
 		// read the old checksum
-		cfile::read(&old_chksum, sizeof(old_chksum), 1, in);
-		cfile::close(in);
+		cfile::io::read(&old_chksum, sizeof(old_chksum), 1, in);
+		cfile::io::close(in);
 		
 		// same checksum? no blink
 		if(new_chksum == old_chksum){
@@ -3703,13 +3708,13 @@ void multi_pxo_set_end_of_motd()
 	
 	// write out the motd for next time
 	if(strlen(Pxo_motd)){
-		cfile::FileHandle *out = cfile::open("oldmotd.txt", cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
+		cfile::FileHandle *out = cfile::io::open("oldmotd.txt", cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
 		if(out != NULL){
 			// write all the text
-			cfile::write(&new_chksum, sizeof(new_chksum), 1, out);
+			cfile::io::write(&new_chksum, sizeof(new_chksum), 1, out);
 			
 			// close the outfile
-			cfile::close(out);
+			cfile::io::close(out);
 		}
 	}
 	
@@ -3821,15 +3826,15 @@ void multi_pxo_com_blit_text()
 	// blit top, middle and bottom text if possible
 	if(Multi_pxo_com_top_text[0] != '\0'){
 		gr_set_color_fast(&Color_bright);
-		gr_string(Multi_pxo_com_top_text_coords[gr_screen.res][0], Multi_pxo_com_top_text_coords[gr_screen.res][1], Multi_pxo_com_top_text);
+		gr_string(Multi_pxo_com_top_text_coords[gr_screen.res][0], Multi_pxo_com_top_text_coords[gr_screen.res][1], Multi_pxo_com_top_text, GR_RESIZE_MENU);
 	}
 	if(Multi_pxo_com_middle_text[0] != '\0'){
 		gr_set_color_fast(&Color_bright);
-		gr_string(Multi_pxo_com_top_text_coords[gr_screen.res][0], Multi_pxo_com_middle_text_y[gr_screen.res], Multi_pxo_com_middle_text);
+		gr_string(Multi_pxo_com_top_text_coords[gr_screen.res][0], Multi_pxo_com_middle_text_y[gr_screen.res], Multi_pxo_com_middle_text, GR_RESIZE_MENU);
 	}
 	if(Multi_pxo_com_bottom_text[0] != '\0'){
 		gr_set_color_fast(&Color_bright);
-		gr_string(Multi_pxo_com_top_text_coords[gr_screen.res][0], Multi_pxo_com_bottom_text_y[gr_screen.res], Multi_pxo_com_bottom_text);
+		gr_string(Multi_pxo_com_top_text_coords[gr_screen.res][0], Multi_pxo_com_bottom_text_y[gr_screen.res], Multi_pxo_com_bottom_text, GR_RESIZE_MENU);
 	}
 }
 
@@ -3939,7 +3944,7 @@ int multi_pxo_priv_popup()
 	// blit my stuff		
 	gr_reset_clip();	
 	gr_set_bitmap(Multi_pxo_com_bitmap);
-	gr_bitmap(Multi_pxo_com_coords[gr_screen.res][0], Multi_pxo_com_coords[gr_screen.res][1]);
+	gr_bitmap(Multi_pxo_com_coords[gr_screen.res][0], Multi_pxo_com_coords[gr_screen.res][1], GR_RESIZE_MENU);
 	Multi_pxo_com_window.draw();	
 
 	// blit all text lines, top, middle, bottoms
@@ -4123,7 +4128,7 @@ int multi_pxo_find_popup()
 	// blit my stuff		
 	gr_reset_clip();	
 	gr_set_bitmap(Multi_pxo_com_bitmap);
-	gr_bitmap(Multi_pxo_com_coords[gr_screen.res][0], Multi_pxo_com_coords[gr_screen.res][1]);
+	gr_bitmap(Multi_pxo_com_coords[gr_screen.res][0], Multi_pxo_com_coords[gr_screen.res][1], GR_RESIZE_MENU);
 	Multi_pxo_com_window.draw();	
 
 	// blit any text lines
@@ -4505,7 +4510,8 @@ void multi_pxo_pinfo_build_vals()
 	if (fs->stats.last_flown == 0) {		
 		strcpy_s(Multi_pxo_pinfo_vals[7], XSTR("No missions flown", 970) );
 	} else {
-		tm *tmr = gmtime( (time_t*)&fs->stats.last_flown );
+		time_t tmp_lf = fs->stats.last_flown; // don't cast a pointer to a type that can be either 32 or 64bit
+		tm *tmr = gmtime( &tmp_lf );
 
 		if (tmr != NULL)
 			strftime(Multi_pxo_pinfo_vals[7], 30, "%m/%d/%y %H:%M", tmr);	
@@ -4664,7 +4670,7 @@ int multi_pxo_pinfo_do()
 	// blit our own stuff
 	gr_reset_clip();	
 	gr_set_bitmap(Multi_pxo_pinfo_bitmap);
-	gr_bitmap(0, 0);
+	gr_bitmap(0, 0, GR_RESIZE_MENU);
 	Multi_pxo_pinfo_window.draw();	
 
 	// blit the stats themselves
@@ -4711,11 +4717,11 @@ void multi_pxo_pinfo_blit()
 	for(idx=0; idx<MULTI_PXO_PINFO_NUM_LABELS; idx++){
 		// blit the label
 		gr_set_color_fast(&Color_bright);
-		gr_string(Multi_pxo_pinfo_coords[gr_screen.res][0], y_start, Multi_pxo_pinfo_stats_labels[idx]);
+		gr_string(Multi_pxo_pinfo_coords[gr_screen.res][0], y_start, Multi_pxo_pinfo_stats_labels[idx], GR_RESIZE_MENU);
 
 		// blit the label's value
 		gr_set_color_fast(&Color_normal);
-		gr_string(Multi_pxo_pinfo_val_x[gr_screen.res], y_start, Multi_pxo_pinfo_vals[idx]);
+		gr_string(Multi_pxo_pinfo_val_x[gr_screen.res], y_start, Multi_pxo_pinfo_vals[idx], GR_RESIZE_MENU);
 
 		// spacing
 		y_start += Multi_pxo_pinfo_stats_spacing[idx];
@@ -4790,7 +4796,7 @@ void multi_pxo_notify_blit()
 	// otherwise blit the text
 	gr_set_color_fast(&Color_bright);
 	gr_get_string_size(&w,NULL,Multi_pxo_notify_text);
-	gr_string((gr_screen.max_w - w)/2,MULTI_PXO_NOTIFY_Y,Multi_pxo_notify_text);
+	gr_string((gr_screen.max_w - w)/2,MULTI_PXO_NOTIFY_Y,Multi_pxo_notify_text,GR_RESIZE_MENU);
 }
 
 
@@ -4869,7 +4875,7 @@ void multi_pxo_help_do()
 	GR_MAYBE_CLEAR_RES(Multi_pxo_help_bitmap);
 	if(Multi_pxo_help_bitmap != -1){
 		gr_set_bitmap(Multi_pxo_help_bitmap);
-		gr_bitmap(0,0);
+		gr_bitmap(0,0,GR_RESIZE_MENU);
 	}
 	Multi_pxo_help_window.draw();
 
@@ -4915,7 +4921,7 @@ void multi_pxo_help_load()
 
 	// read in the text file
 	in = NULL;
-	in = cfile::open(MULTI_PXO_HELP_FILE, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_DATA);			
+	in = cfile::io::open(MULTI_PXO_HELP_FILE, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_DATA);			
 	Assert(in != NULL);
 	if(in == NULL){
 		return;
@@ -4928,7 +4934,7 @@ void multi_pxo_help_load()
 	Multi_pxo_help_num_pages = 0;
 	cp = &Multi_pxo_help_pages[0];
 
-	while(!cfile::eof(in)){
+	while(!cfile::io::eof(in)){
 		// malloc the line
 		cp->text[cp->num_lines] = (char*)vm_malloc(Multi_pxo_chars_per_line[gr_screen.res]);
 		if(cp->text[cp->num_lines] == NULL){
@@ -4936,7 +4942,7 @@ void multi_pxo_help_load()
 		}
 		
 		// read in the next line		
-		cfile::readLine(cp->text[cp->num_lines++], Multi_pxo_chars_per_line[gr_screen.res], in);
+		cfile::io::readLine(cp->text[cp->num_lines++], Multi_pxo_chars_per_line[gr_screen.res], in);
 
 		// skip to the next page if necessary
 		if(cp->num_lines == Multi_pxo_lines_pp[gr_screen.res]){			
@@ -4951,7 +4957,7 @@ void multi_pxo_help_load()
 	}
 
 	// close the file
-	cfile::close(in);
+	cfile::io::close(in);
 }
 
 /**
@@ -4961,11 +4967,12 @@ void multi_pxo_help_blit_page()
 {
 	int idx;
 	int start_pos;
-	int y_start;
+	int y_start, line_height;
 	help_page *cp = &Multi_pxo_help_pages[Multi_pxo_help_cur];
 	
 	// blit each line
 	y_start = Multi_pxo_help_coords[gr_screen.res][1];
+	line_height = gr_get_font_height() + 1;
 	for(idx=0;idx<cp->num_lines;idx++){
 		// if the first symbol is "@", highlight the line
 		if(cp->text[idx][0] == '@'){
@@ -4977,10 +4984,10 @@ void multi_pxo_help_blit_page()
 		}
 
 		// blit the line
-		gr_string(Multi_pxo_help_coords[gr_screen.res][0], y_start, cp->text[idx] + start_pos);
+		gr_string(Multi_pxo_help_coords[gr_screen.res][0], y_start, cp->text[idx] + start_pos, GR_RESIZE_MENU);
 
 		// increment the y location
-		y_start += 10;
+		y_start += line_height;
 	}
 }
 
@@ -5224,7 +5231,7 @@ void multi_pxo_ban_parse_banner_file(int choose_existing)
 	int exists[10];
 	int exist_count;
 	int num_banners, idx;
-	cfile::FileHandle *in = cfile::open(PXO_BANNERS_CONFIG_FILE, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_MULTI_CACHE);
+	cfile::FileHandle *in = cfile::io::open(PXO_BANNERS_CONFIG_FILE, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_MULTI_CACHE);
 
 	Multi_pxo_banner.ban_bitmap = -1;
 	strcpy_s(Multi_pxo_banner.ban_file, "");
@@ -5243,8 +5250,8 @@ void multi_pxo_ban_parse_banner_file(int choose_existing)
 	}
 
 	// get the global banner url
-	if(cfile::readLine(file_url, 254, in) == NULL){
-		cfile::close(in);
+	if(cfile::io::readLine(file_url, 254, in) == NULL){
+		cfile::io::close(in);
 		cfile::deleteFile(PXO_BANNERS_CONFIG_FILE, cfile::TYPE_MULTI_CACHE);
 		return;
 	}
@@ -5255,11 +5262,11 @@ void multi_pxo_ban_parse_banner_file(int choose_existing)
 	num_banners = 0;
 	while(num_banners < 10){
 		// try and get the pcx
-		if(cfile::readLine(banners[num_banners], 254, in) == NULL){
+		if(cfile::io::readLine(banners[num_banners], 254, in) == NULL){
 			break;
 		}
 		// try and get the url
-		if (cfile::readLine(urls[num_banners], 254, in) == NULL){
+		if (cfile::io::readLine(urls[num_banners], 254, in) == NULL){
 			break;
 		}
 
@@ -5274,7 +5281,7 @@ void multi_pxo_ban_parse_banner_file(int choose_existing)
 	}
 
 	// close the file
-	cfile::close(in);
+	cfile::io::close(in);
 
 	// no banners
 	if(num_banners <= 0){		
@@ -5365,12 +5372,12 @@ void multi_pxo_ban_draw()
 		// if the mouse is over the banner button, highlight with a rectangle
 		if(Multi_pxo_ban_button.is_mouse_on()){
 			gr_set_color_fast(&Color_bright_blue);
-			gr_rect(Pxo_ban_coords[gr_screen.res][0] - 1, Pxo_ban_coords[gr_screen.res][1] - 1, Pxo_ban_coords[gr_screen.res][2] + 2, Pxo_ban_coords[gr_screen.res][3] + 2);
+			gr_rect(Pxo_ban_coords[gr_screen.res][0] - 1, Pxo_ban_coords[gr_screen.res][1] - 1, Pxo_ban_coords[gr_screen.res][2] + 2, Pxo_ban_coords[gr_screen.res][3] + 2, GR_RESIZE_MENU);
 		}
 
 		// draw the bitmap itself
 		gr_set_bitmap(Multi_pxo_banner.ban_bitmap);
-		gr_bitmap(Pxo_ban_coords[gr_screen.res][0], Pxo_ban_coords[gr_screen.res][1]);
+		gr_bitmap(Pxo_ban_coords[gr_screen.res][0], Pxo_ban_coords[gr_screen.res][1], GR_RESIZE_MENU);
 	}
 }
 

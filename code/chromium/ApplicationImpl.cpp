@@ -71,13 +71,13 @@ namespace chromium
 		{
 			if (handle != nullptr)
 			{
-				close(handle);
+				cfile::io::close(handle);
 			}
 		}
 
 		virtual size_t Read(void* ptr, size_t size, size_t n) override
 		{
-			return read(ptr, size, n, handle);
+			return cfile::io::read(ptr, size, n, handle);
 		}
 
 		virtual int Seek(int64 offset, int whence) override
@@ -99,17 +99,17 @@ namespace chromium
 				break;
 			}
 
-			return seek(handle, static_cast<int>(offset), mode);
+			return cfile::io::seek(handle, static_cast<int>(offset), mode);
 		}
 
 		virtual int64 Tell() override
 		{
-			return tell(handle);
+			return cfile::io::tell(handle);
 		}
 
 		virtual int Eof() override
 		{
-			return eof(handle) ? 1 : 0;
+			return cfile::io::eof(handle) ? 1 : 0;
 		}
 		
 		virtual bool MayBlock() override
@@ -136,7 +136,7 @@ namespace chromium
 
 		SCP_string filePath = vfspp::util::normalizePath(path).c_str();
 
-		cfile::FileHandle *handle = cfile::open(filePath);
+		cfile::FileHandle *handle = cfile::io::open(filePath);
 
 		if (handle == nullptr)
 		{

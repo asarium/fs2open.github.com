@@ -1,0 +1,34 @@
+version: 3.7.3.{build}
+branches:
+  only:
+    - build/ci
+configuration:
+  - Debug
+  - Release
+platform: x86
+shallow_clone: true
+environment:
+  matrix:
+    - INSTRUCTION_SET: SSE2
+    - INSTRUCTION_SET: AVX
+init:
+  - CALL "%VS120COMNTOOLS%\..\..\VC\vcvarsall.bat" x86
+install:
+  - dir "%APPVEYOR_BUILD_FOLDER%"
+  - cinst ninja -y
+  - SET PATH=%PATH%;C:\tools\ninja
+before_build:
+  - mkdir build
+  - cd build
+  - cmake -DCMAKE_INSTALL_PREFIX="%APPVEYOR_BUILD_FOLDER%\binInstall" -DCMAKE_BUILD_TYPE="%CONFIGURATION%" -DFSO_INSTRUCTION_SET="%INSTRUCTION_SET%" -G "Ninja" ..
+  - dir "C:\projects\fs2open-github-com\code\def_files"
+  - dir "C:\projects\fs2open-github-com\build\generated_source\code\def_files"
+build_script:
+  - cmake --build .
+after_build:
+  - dir "%APPVEYOR_BUILD_FOLDER%"
+  - cmake --build . --target install
+  - dir "%APPVEYOR_BUILD_FOLDER%"
+artifacts:
+  - path: binInstall\**\*
+    name: binaries

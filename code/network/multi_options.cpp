@@ -72,16 +72,16 @@ void multi_options_read_config()
 
 
 	// read in the config file
-	in = cfile::open(MULTI_CFG_FILE, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
+	in = cfile::io::open(MULTI_CFG_FILE, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
 	
 	// if we failed to open the config file, user default settings
 	if (in == NULL) {
 		nprintf(("Network","Failed to open network config file, using default settings\n"));		
 	} else {
-		while ( !cfile::eof(in) ) {
+		while ( !cfile::io::eof(in) ) {
 			// read in the game info
 			memset(str, 0, 512);
-			cfile::readLine(str, 512, in);
+			cfile::io::readLine(str, 512, in);
 
 			// parse the first line
 			tok = strtok(str, " \t");
@@ -306,7 +306,7 @@ void multi_options_read_config()
 		}
 
 		// close the config file
-		cfile::close(in);
+		cfile::io::close(in);
 		in = NULL;
 	}
 
@@ -586,6 +586,11 @@ void multi_options_process_packet(unsigned char *data, header *hinfo)
 	// find out who is sending this data	
 	player_index = find_player_id(hinfo->id);
 
+	if (player_index < 0) {
+		nprintf(("Network", "Received packet from unknown player!\n"));
+		return;
+	}
+
 	// get the packet code
 	GET_DATA(code);
 	switch(code){
@@ -664,7 +669,6 @@ void multi_options_process_packet(unsigned char *data, header *hinfo)
 
 			Netgame.campaign_mode = 1;
 
-#ifdef _WIN32
 			// put brackets around the campaign name
 			if(Game_mode & GM_STANDALONE_SERVER){
 				strcpy_s(str,"(");
@@ -672,7 +676,6 @@ void multi_options_process_packet(unsigned char *data, header *hinfo)
 				strcat_s(str,")");
 				std_multi_set_standalone_mission_name(str);
 			}
-#endif
 		}
 		// non-campaign mode
 		else {
@@ -690,12 +693,11 @@ void multi_options_process_packet(unsigned char *data, header *hinfo)
 			}			
 
 			Netgame.campaign_mode = 0;
-#ifdef _WIN32
+            
 			// set the mission name
 			if(Game_mode & GM_STANDALONE_SERVER){
 				std_multi_set_standalone_mission_name(Netgame.mission_name);			
 			}
-#endif
 		}
 
 		// update FS2NetD as well

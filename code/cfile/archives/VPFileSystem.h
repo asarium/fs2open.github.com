@@ -7,7 +7,7 @@
 #include "VFSPP/util.hpp"
 
 #include "globalincs/pstypes.h"
-#include "cfile/VPFileSystemEntry.h"
+#include "cfile/archives/VPFileSystemEntry.h"
 
 #include <boost/unordered_map.hpp>
 

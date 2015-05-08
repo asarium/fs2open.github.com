@@ -12,6 +12,7 @@
 #include <ctype.h>
 #include <algorithm>
 
+#include <algorithm>
 
 #include "menuui/barracks.h"
 #include "playerman/managepilot.h"
@@ -291,6 +292,8 @@ static int Pilot_squad_images[MAX_PILOT_IMAGES];
 static int Rank_pips_bitmaps;
 static int Rank_pips_count;
 
+int Barracks_overlay_id;
+
 void barracks_squad_change_popup();
 
 
@@ -309,6 +312,7 @@ void barracks_init_stats(scoring_struct *stats)
 	int Max_stat_lines = Num_ship_classes + 23;
 	int i;
 	float f;
+	int score_from_kills = 0;
 
 	//Set up variables
 	if(Stat_labels != NULL)
@@ -471,8 +475,17 @@ void barracks_init_stats(scoring_struct *stats)
 			sprintf(Stat_labels[Num_stat_lines], NOX("%s:"), Ship_info[i].name);
 			sprintf(Stats[Num_stat_lines], "%d", stats->kills[i]);
 			Num_stat_lines++;
+
+			// work out the total score from ship kills
+			score_from_kills += stats->kills[i] * Ship_info[i].score;
 		}
 	}
+
+	// add the score from kills
+	Assert((Num_stat_lines + 1) < Max_stat_lines);
+	STRCPY1(Stat_labels[Num_stat_lines], XSTR( "Score from kills only:", 1636));
+	sprintf(Stats[Num_stat_lines], "%d", score_from_kills);
+	Num_stat_lines++;
 
 	for (i=0; i<Num_stat_lines; i++) {
 		gr_force_fit_string(Stat_labels[i], Stat_column1_w[gr_screen.res], Barracks_stats_coords[gr_screen.res][BARRACKS_W_COORD]);
@@ -627,6 +640,15 @@ int barracks_pilot_accepted()
 {
 	// check if pilot active.  If not, don't allow accept.
 	if (!Cur_pilot->callsign[0]){
+		return -1;
+	}
+
+	// check that pilot language is OK
+	if (!valid_pilot_lang(Cur_pilot->callsign)) {
+		popup(PF_USE_AFFIRMATIVE_ICON,1,POPUP_OK,XSTR(
+			"Selected pilot was created with a different language\n"
+			"to the currently active language.\n\n"
+			"Please select a different pilot or change the language", 1637));
 		return -1;
 	}
 
@@ -1153,9 +1175,9 @@ void barracks_display_pilot_callsigns(int prospective_pilot)
 			}
 		}
 
-		gr_printf(Barracks_list_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_list_coords[gr_screen.res][BARRACKS_Y_COORD] + y, Pilots[cur_pilot_idx]);
+		gr_printf_menu(Barracks_list_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_list_coords[gr_screen.res][BARRACKS_Y_COORD] + y, Pilots[cur_pilot_idx]);
 		gr_set_bitmap(Rank_pips_bitmaps + Pilot_ranks[cur_pilot_idx]);
-		gr_bitmap(Barracks_list_coords[gr_screen.res][BARRACKS_X_COORD] - 34, Barracks_list_coords[gr_screen.res][BARRACKS_Y_COORD] + y);
+		gr_bitmap(Barracks_list_coords[gr_screen.res][BARRACKS_X_COORD] - 34, Barracks_list_coords[gr_screen.res][BARRACKS_Y_COORD] + y, GR_RESIZE_MENU);
  
 		y += font_height;
 		cur_pilot_idx++;
@@ -1183,18 +1205,18 @@ void barracks_display_pilot_stats()
 
 			gr_get_string_size(&w, &h, str);
 			i = Barracks_stats_coords[gr_screen.res][BARRACKS_Y_COORD] + y + h / 2 - 1;			
-			gr_line(Barracks_stats_coords[gr_screen.res][BARRACKS_X_COORD], i, Barracks_stats_coords[gr_screen.res][BARRACKS_X_COORD] + Barracks_stats_coords[gr_screen.res][BARRACKS_W_COORD] - w - 2, i);
-			gr_line(Barracks_stats_coords[gr_screen.res][BARRACKS_X_COORD] + Barracks_stats_coords[gr_screen.res][BARRACKS_W_COORD] + 1, i, Barracks_stats2_coords[gr_screen.res][BARRACKS_X_COORD] + Barracks_stats2_coords[gr_screen.res][BARRACKS_W_COORD], i);
+			gr_line(Barracks_stats_coords[gr_screen.res][BARRACKS_X_COORD], i, Barracks_stats_coords[gr_screen.res][BARRACKS_X_COORD] + Barracks_stats_coords[gr_screen.res][BARRACKS_W_COORD] - w - 2, i, GR_RESIZE_MENU);
+			gr_line(Barracks_stats_coords[gr_screen.res][BARRACKS_X_COORD] + Barracks_stats_coords[gr_screen.res][BARRACKS_W_COORD] + 1, i, Barracks_stats2_coords[gr_screen.res][BARRACKS_X_COORD] + Barracks_stats2_coords[gr_screen.res][BARRACKS_W_COORD], i, GR_RESIZE_MENU);
 
 		} else {
 			gr_set_color_fast(&Color_text_normal);
 		}
 
 		gr_get_string_size(&w, NULL, str);
-		gr_printf(Barracks_stats_coords[gr_screen.res][BARRACKS_X_COORD] + Barracks_stats_coords[gr_screen.res][BARRACKS_W_COORD] - w, Barracks_stats_coords[gr_screen.res][BARRACKS_Y_COORD] + y, "%s", str);
+		gr_printf_menu(Barracks_stats_coords[gr_screen.res][BARRACKS_X_COORD] + Barracks_stats_coords[gr_screen.res][BARRACKS_W_COORD] - w, Barracks_stats_coords[gr_screen.res][BARRACKS_Y_COORD] + y, "%s", str);
 		str = Stats[z];
 		if (*str) {
-			gr_printf(Barracks_stats2_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_stats_coords[gr_screen.res][BARRACKS_Y_COORD] + y, "%s", str);
+			gr_printf_menu(Barracks_stats2_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_stats_coords[gr_screen.res][BARRACKS_Y_COORD] + y, "%s", str);
 		}
 
 		y += font_height;
@@ -1285,13 +1307,13 @@ void barracks_draw_pilot_pic()
 			extern int Palman_allow_any_color;
 			Palman_allow_any_color = 1;
 			gr_set_bitmap(Pilot_images[Pic_number]);
-			gr_bitmap(Barracks_image_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_image_coords[gr_screen.res][BARRACKS_Y_COORD]);
+			gr_bitmap(Barracks_image_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_image_coords[gr_screen.res][BARRACKS_Y_COORD], GR_RESIZE_MENU);
 			Palman_allow_any_color = 0;
 
 			// print number of the current pic
 			char buf[40];			
 			sprintf(buf, XSTR( "%d of %d", 71), Pic_number + 1, Num_pilot_images);
-			gr_printf(Barracks_image_number_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_image_number_coords[gr_screen.res][BARRACKS_Y_COORD], buf);				
+			gr_printf_menu(Barracks_image_number_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_image_number_coords[gr_screen.res][BARRACKS_Y_COORD], buf);				
 		}
 	} else {
 		Pic_number = -1;
@@ -1310,13 +1332,13 @@ void barracks_draw_squad_pic()
 			extern int Palman_allow_any_color;
 			Palman_allow_any_color = 1;
 			gr_set_bitmap(Pilot_squad_images[Pic_squad_number]);
-			gr_bitmap(Barracks_squad_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_squad_coords[gr_screen.res][BARRACKS_Y_COORD]);
+			gr_bitmap(Barracks_squad_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_squad_coords[gr_screen.res][BARRACKS_Y_COORD], GR_RESIZE_MENU);
 			Palman_allow_any_color = 0;
 
 			// print number of current squad pic
 			if(Player_sel_mode != PLAYER_SELECT_MODE_SINGLE){
 				sprintf(buf,XSTR( "%d of %d", 71), Pic_squad_number+1, Num_pilot_squad_images);
-				gr_printf(Barracks_squad_number_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_squad_number_coords[gr_screen.res][BARRACKS_Y_COORD], buf);
+				gr_printf_menu(Barracks_squad_number_coords[gr_screen.res][BARRACKS_X_COORD], Barracks_squad_number_coords[gr_screen.res][BARRACKS_Y_COORD], buf);
 			}
 		}
 	} else {
@@ -1390,8 +1412,8 @@ void barracks_init()
 	Inputbox.hide();
 
 	// load in help overlay bitmap	
-	help_overlay_load(BARRACKS_OVERLAY);
-	help_overlay_set_state(BARRACKS_OVERLAY,0);	
+	Barracks_overlay_id = help_overlay_get_index(BARRACKS_OVERLAY);
+	help_overlay_set_state(Barracks_overlay_id,gr_screen.res,0);
 
 	// other init stuff
 	Barracks_callsign_enter_mode = 0;	
@@ -1442,8 +1464,8 @@ void barracks_do_frame(float frametime)
 	int k = Ui_window.process();
 
 	if ( k > 0 ) {
-		if ( help_overlay_active(BARRACKS_OVERLAY) ) {
-			help_overlay_set_state(BARRACKS_OVERLAY,0);
+		if ( help_overlay_active(Barracks_overlay_id) ) {
+			help_overlay_set_state(Barracks_overlay_id,gr_screen.res,0);
 			k = 0;
 		}
 	}
@@ -1485,7 +1507,7 @@ void barracks_do_frame(float frametime)
 				break;
 
 			case KEY_ESC:  // cancel
-				if (!help_overlay_active(BARRACKS_OVERLAY)) {
+				if (!help_overlay_active(Barracks_overlay_id)) {
 					if (Num_pilots && !barracks_pilot_accepted()) {
 						gameseq_post_event(GS_EVENT_MAIN_MENU);
 					} else {
@@ -1493,7 +1515,7 @@ void barracks_do_frame(float frametime)
 					}
 				} else {
 					// kill the overlay
-					help_overlay_set_state(BARRACKS_OVERLAY,0);
+					help_overlay_set_state(Barracks_overlay_id,gr_screen.res,0);
 				}
 				break;
 
@@ -1550,7 +1572,7 @@ void barracks_do_frame(float frametime)
 
 	// check mouse over help
 	if (mouse_down(MOUSE_LEFT_BUTTON)) {
-		help_overlay_set_state(BARRACKS_OVERLAY, 0);
+		help_overlay_set_state(Barracks_overlay_id, gr_screen.res, 0);
 	}
 
 	// do pilot pic stuff
@@ -1596,7 +1618,7 @@ void barracks_do_frame(float frametime)
 	GR_MAYBE_CLEAR_RES(Background_bitmap);
 	if (Background_bitmap >= 0) {
 		gr_set_bitmap(Background_bitmap);
-		gr_bitmap(0, 0);	
+		gr_bitmap(0, 0, GR_RESIZE_MENU);	
 	}		
 
 	// draw pilot image and clean up afterwards
@@ -1620,7 +1642,7 @@ void barracks_do_frame(float frametime)
 	barracks_display_pilot_stats();
 
 	// blit help overlay if active
-	help_overlay_maybe_blit(BARRACKS_OVERLAY);	
+	help_overlay_maybe_blit(Barracks_overlay_id, gr_screen.res);
 	
 	// flip the page
 	gr_flip();
@@ -1646,9 +1668,6 @@ void barracks_close()
 			bm_release(Pilot_images[i]);
 		}
 	}
-
-	// unload the overlay bitmap
-	help_overlay_unload(BARRACKS_OVERLAY);
 
 	if(Stat_labels != NULL)
 	{

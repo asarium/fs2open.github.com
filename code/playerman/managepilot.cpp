@@ -132,6 +132,9 @@ void init_new_pilot(player *p, int reset)
 
 	p->tips = 1;
 
+	// set pilot language to the current language
+	lcl_get_language_name(p->language);
+
 	Multi_options_g.protocol = NET_TCP;	
 
 	// initialize default multiplayer options
@@ -465,7 +468,11 @@ void player::reset()
 	memset(&ci, 0, sizeof(control_info));
 
 	stats.init();
-	Pilot.reset_stats();
+	// only reset Pilotfile stats if we're resetting Player
+	// remember: multi has many Players...
+	if (Player == this) {
+		Pilot.reset_stats();
+	}
 
 	friendly_hits = 0;
 	friendly_damage = 0.0f;
@@ -548,6 +555,7 @@ void player::reset()
 	memset(&lua_bi_full, 0, sizeof(button_info));
 
 	player_was_multi = 0;
+	memset(language, 0, sizeof(language));
 }
 
 void player::assign(const player *other)
@@ -702,4 +710,5 @@ void player::assign(const player *other)
 	memcpy(&lua_bi_full, &other->lua_bi_full, sizeof(button_info));
 
 	player_was_multi = other->player_was_multi;
+	strcpy_s(language, other->language);
 }

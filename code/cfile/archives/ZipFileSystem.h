@@ -15,7 +15,7 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_array.hpp>
 
-#include <cfile/ZipFileSystemEntry.h>
+#include "cfile/archives/ZipFileSystemEntry.h"
 
 namespace cfile
 {

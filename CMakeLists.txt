@@ -2,14 +2,16 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+include(cmake/util.cmake)
+
 # Set a few policies
-cmake_policy(SET CMP0051 OLD)
-cmake_policy(SET CMP0053 NEW)
-cmake_policy(SET CMP0054 NEW)
+set_policy(CMP0051 OLD)
+set_policy(CMP0053 NEW)
+set_policy(CMP0054 NEW)
 
 SET(FSO_VERSION_MAJOR 3)
 SET(FSO_VERSION_MINOR 7)
-SET(FSO_VERSION_BUILD 1)
+SET(FSO_VERSION_BUILD 3)
 SET(FSO_VERSION_REVISION 0)
 
 SET(FSO_PROJECT_DESCRIPTION "Open source project based on the original FreeSpace 2 source code.")
@@ -110,7 +112,13 @@ ENDIF(SET_INDEX LESS 0)
 
 OPTION(FSO_CMAKE_DEBUG "Enable cmake debugging in while generating build files" OFF)
 
-OPTION(COTIRE_ENABLE "Enable cotire, disabling may be useful for cmake files development" ON)
+if (WIN32)
+	set(cotire_default ON)
+else()
+	# There are a few issues for non-windows
+	set(cotire_default OFF)
+endif()
+OPTION(COTIRE_ENABLE "Enable cotire, disabling may be useful for cmake files development" ${cotire_default})
 
 SET(CEF_PATH "" CACHE PATH "Path to the CEF files")
 

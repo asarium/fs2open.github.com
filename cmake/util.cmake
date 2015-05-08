@@ -11,13 +11,23 @@ FUNCTION(ADD_IMPORTED_LIB NAME INCLUDES LIBS LIB_TYPE)
 
 	SET(INTERFACE_LIBS)
 
-	if(${LIBS_SIZE} GREATER 1)
-		math(EXPR LIBS_SIZE "${LIBS_SIZE} - 1")
-		foreach(i RANGE 1 ${LIBS_SIZE})
-			LIST(GET LIBS ${i} LIB)
+	if(${LIBS_SIZE} GREATER 0)
+		LIST(GET LIBS 0 MAIN_LIB)
 
-			SET(INTERFACE_LIBS ${INTERFACE_LIBS} "${LIB}")
-		endforeach(i)
+		set_target_properties(${NAME}
+			PROPERTIES
+				IMPORTED_LOCATION "${MAIN_LIB}"
+		)
+
+		math(EXPR LIBS_SIZE "${LIBS_SIZE} - 1")
+
+		if(${LIBS_SIZE} GREATER 0)
+			foreach(i RANGE 1 ${LIBS_SIZE})
+				LIST(GET LIBS ${i} LIB)
+
+				SET(INTERFACE_LIBS ${INTERFACE_LIBS} "${LIB}")
+			endforeach(i)
+		endif(${LIBS_SIZE} GREATER 0)
 	endif(${LIBS_SIZE} GREATER 1)
 
 	set_target_properties(${NAME}
@@ -98,6 +108,29 @@ MACRO(COPY_FILES_TO_TARGET _target)
 		)
 	ENDFOREACH(dir)
 ENDMACRO(COPY_FILES_TO_TARGET)
+
+macro(set_policy policy value)
+	if (POLICY ${policy})
+		cmake_policy(SET ${policy} ${value})
+	endif ()
+endmacro(set_policy)
+
+macro(configure_cotire target)
+	IF(COTIRE_ENABLE)
+		# Disable unity build as it doesn't work well for us
+		set_target_properties(${target} PROPERTIES COTIRE_ADD_UNITY_BUILD FALSE)
+
+		# add ignored paths for the precompiled header here
+		set_target_properties(code PROPERTIES COTIRE_PREFIX_HEADER_IGNORE_PATH
+			"${CMAKE_SOURCE_DIR};${CMAKE_BINARY_DIR}")
+
+		IF(DEFINED CMAKE_CONFIGURATION_TYPES)
+			cotire(${target} CONFIGURATIONS ${CMAKE_CONFIGURATION_TYPES})
+		ELSE(DEFINED CMAKE_CONFIGURATION_TYPES)
+			cotire(${target})
+		ENDIF(DEFINED CMAKE_CONFIGURATION_TYPES)
+	ENDIF(COTIRE_ENABLE)
+endmacro(configure_cotire)
 
 macro(_clear_old_libraries_state)
 	set(is_debug FALSE)

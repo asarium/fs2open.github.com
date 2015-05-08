@@ -1084,8 +1084,8 @@ int std_pinfo_player_is_active(net_player *p);
 // start displaying info for the passed player on this page
 void std_pinfo_display_player_info(net_player *p)
 {
-	wchar_t txt[40];		
-
+	wchar_t txt[40];
+	txt[39] = L'\0';
 	// set his ship type
 	SetWindowText(Player_ship_type, util::charToWchar(Ship_info[p->p_info.ship_class].name).c_str());
 

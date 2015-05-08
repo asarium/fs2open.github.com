@@ -22,6 +22,7 @@
 #include "io/timer.h"
 #include "ddsutils/ddsutils.h"
 #include "model/model.h"
+#include "debugconsole/console.h"
 #include "debugconsole/timerbar.h"
 #include "graphics/gropenglbmpman.h"
 #include "graphics/gropengllight.h"
@@ -215,6 +216,9 @@ void gr_opengl_flip()
 
 	mouse_reset_deltas();
 
+	if (Cmdline_gl_finish)
+		glFinish();
+
 	SDL_GL_SwapWindow(os_get_window());
 
 	opengl_tcache_frame();
@@ -228,7 +232,7 @@ void gr_opengl_flip()
 #endif
 }
 
-void gr_opengl_set_clip(int x, int y, int w, int h, bool resize)
+void gr_opengl_set_clip(int x, int y, int w, int h, int resize_mode)
 {
 	// check for sanity of parameters
 	if (x < 0) {
@@ -239,10 +243,14 @@ void gr_opengl_set_clip(int x, int y, int w, int h, bool resize)
 		y = 0;
 	}
 
-	int to_resize = (resize && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)));
+	int to_resize = (resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)));
 
 	int max_w = ((to_resize) ? gr_screen.max_w_unscaled : gr_screen.max_w);
 	int max_h = ((to_resize) ? gr_screen.max_h_unscaled : gr_screen.max_h);
+
+	if ((gr_screen.rendering_to_texture != -1) && to_resize) {
+		gr_unsize_screen_pos(&max_w, &max_h);
+	}
 
 	if (x >= max_w) {
 		x = max_w - 1;
@@ -278,8 +286,7 @@ void gr_opengl_set_clip(int x, int y, int w, int h, bool resize)
 	gr_screen.clip_height_unscaled = h;
 
 	if (to_resize) {
-		gr_resize_screen_pos(&x, &y);
-		gr_resize_screen_pos(&w, &h);
+		gr_resize_screen_pos(&x, &y, &w, &h, resize_mode);
 	} else {
 		gr_unsize_screen_pos( &gr_screen.offset_x_unscaled, &gr_screen.offset_y_unscaled );
 		gr_unsize_screen_pos( &gr_screen.clip_right_unscaled, &gr_screen.clip_bottom_unscaled );
@@ -491,27 +498,25 @@ void gr_opengl_fog_set(int fog_mode, int r, int g, int b, float fog_near, float 
 		return;
 	}
 	
-  	if (gr_screen.current_fog_mode != fog_mode) {
-	  	if (OGL_fogmode == 3) {
-			glFogf(GL_FOG_DISTANCE_MODE_NV, GL_EYE_RADIAL_NV);
-			glFogf(GL_FOG_COORDINATE_SOURCE, GL_FRAGMENT_DEPTH);
-		}
-		// Um.. this is not the correct way to fog in software, probably doesn't matter though
-		else if ( (OGL_fogmode == 2) && Cmdline_nohtl ) {
-			glFogf(GL_FOG_COORDINATE_SOURCE_EXT, GL_FOG_COORDINATE_EXT);
-			fog_near *= fog_near;		// it's faster this way
-			fog_far *= fog_far;		
-		} else {
-			glFogf(GL_FOG_COORDINATE_SOURCE, GL_FRAGMENT_DEPTH);
-		}
-
-		GL_state.Fog(GL_TRUE); 
-		glFogf(GL_FOG_MODE, GL_LINEAR);
-		glFogf(GL_FOG_START, fog_near);
-		glFogf(GL_FOG_END, fog_far);
-
-		gr_screen.current_fog_mode = fog_mode;
+  	if (OGL_fogmode == 3) {
+		glFogf(GL_FOG_DISTANCE_MODE_NV, GL_EYE_RADIAL_NV);
+		glFogf(GL_FOG_COORDINATE_SOURCE, GL_FRAGMENT_DEPTH);
 	}
+	// Um.. this is not the correct way to fog in software, probably doesn't matter though
+	else if ( (OGL_fogmode == 2) && Cmdline_nohtl ) {
+		glFogf(GL_FOG_COORDINATE_SOURCE_EXT, GL_FOG_COORDINATE_EXT);
+		fog_near *= fog_near;		// it's faster this way
+		fog_far *= fog_far;		
+	} else {
+		glFogf(GL_FOG_COORDINATE_SOURCE, GL_FRAGMENT_DEPTH);
+	}
+
+	GL_state.Fog(GL_TRUE); 
+	glFogf(GL_FOG_MODE, GL_LINEAR);
+	glFogf(GL_FOG_START, fog_near);
+	glFogf(GL_FOG_END, fog_far);
+
+	gr_screen.current_fog_mode = fog_mode;
 	
 	if ( (gr_screen.current_fog_color.red != r) ||
 			(gr_screen.current_fog_color.green != g) ||
@@ -878,7 +883,7 @@ void gr_opengl_restore_screen(int bmp_id)
 		return;
 
 	gr_set_bitmap(GL_saved_screen_id);
-	gr_bitmap(0, 0, false);	// don't scale here since we already have real screen size
+	gr_bitmap(0, 0, GR_RESIZE_NONE);	// don't scale here since we already have real screen size
 }
 
 void gr_opengl_free_screen(int bmp_id)
@@ -908,29 +913,29 @@ static void opengl_flush_frame_dump()
 		sprintf(filename, NOX("frm%04d.tga"), GL_dump_frame_number );
 		GL_dump_frame_number++;
 
-		cfile::FileHandle *f = cfile::open(filename, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
+		cfile::FileHandle *f = cfile::io::open(filename, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
 
 		// Write the TGA header
-		cfile::write<ubyte>( 0, f );	//	IDLength;
-		cfile::write<ubyte>( 0, f );	//	ColorMapType;
-		cfile::write<ubyte>( 2, f );	//	ImageType;		// 2 = 24bpp, uncompressed, 10=24bpp rle compressed
-		cfile::write<short>( 0, f );	// CMapStart;
-		cfile::write<short>( 0, f );	//	CMapLength;
-		cfile::write<ubyte>( 0, f );	// CMapDepth;
-		cfile::write<short>( 0, f );	//	XOffset;
-		cfile::write<short>( 0, f );	//	YOffset;
-		cfile::write<short>( (ushort)gr_screen.max_w, f );	//	Width;
-		cfile::write<short>( (ushort)gr_screen.max_h, f );	//	Height;
-		cfile::write<ubyte>( 24, f );	//PixelDepth;
-		cfile::write<ubyte>( 0, f );	//ImageDesc;
+		cfile::io::write<ubyte>( 0, f );	//	IDLength;
+		cfile::io::write<ubyte>( 0, f );	//	ColorMapType;
+		cfile::io::write<ubyte>( 2, f );	//	ImageType;		// 2 = 24bpp, uncompressed, 10=24bpp rle compressed
+		cfile::io::write<short>( 0, f );	// CMapStart;
+		cfile::io::write<short>( 0, f );	//	CMapLength;
+		cfile::io::write<ubyte>( 0, f );	// CMapDepth;
+		cfile::io::write<short>( 0, f );	//	XOffset;
+		cfile::io::write<short>( 0, f );	//	YOffset;
+		cfile::io::write<short>( (ushort)gr_screen.max_w, f );	//	Width;
+		cfile::io::write<short>( (ushort)gr_screen.max_h, f );	//	Height;
+		cfile::io::write<ubyte>( 24, f );	//PixelDepth;
+		cfile::io::write<ubyte>( 0, f );	//ImageDesc;
 
 		glReadBuffer(GL_FRONT);
 		glReadPixels(0, 0, gr_screen.max_w, gr_screen.max_h, GL_BGR_EXT, GL_UNSIGNED_BYTE, GL_dump_buffer);
 
 		// save the data out
-		cfile::write( GL_dump_buffer, GL_dump_frame_size, 1, f );
+		cfile::io::write( GL_dump_buffer, GL_dump_frame_size, 1, f );
 
-		cfile::close(f);
+		cfile::io::close(f);
 
 	}
 
@@ -1277,14 +1282,13 @@ int opengl_init_display_device()
 	Gr_ta_alpha.scale = 17;
 
 	// allocate storage for original gamma settings
-	if (!Cmdline_no_set_gamma && (GL_original_gamma_ramp == NULL)) {
-		GL_original_gamma_ramp = (ushort*) vm_malloc_q(3 * 256 * sizeof(ushort));
+	if ( !Cmdline_no_set_gamma && (GL_original_gamma_ramp == NULL) ) {
+		GL_original_gamma_ramp = (ushort*) vm_malloc_q( 3 * 256 * sizeof(ushort) );
 
 		if (GL_original_gamma_ramp == NULL) {
 			mprintf(("  Unable to allocate memory for gamma ramp!  Disabling...\n"));
 			Cmdline_no_set_gamma = 1;
-		}
-		else {
+		} else {
 			// assume identity ramp by default, to be overwritten by true ramp later
 			for (ushort x = 0; x < 256; x++) {
 				GL_original_gamma_ramp[x] = GL_original_gamma_ramp[x + 256] = GL_original_gamma_ramp[x + 512] = (x << 8) | x;
@@ -1690,56 +1694,61 @@ bool gr_opengl_init()
 
 DCF(ogl_minimize, "Minimizes opengl")
 {
+	bool minimize_ogl = false;
+
 	if ( gr_screen.mode != GR_OPENGL ) {
 		dc_printf("Command only available in OpenGL mode.\n");
 		return;
 	}
 
-	if (Dc_command) {
-		dc_get_arg(ARG_TRUE);
-
-		if ( Dc_arg_type & ARG_TRUE ) {
-			opengl_minimize();
-		}
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf("[bool] If true is passed, then the OpenGL window will minimize.\n");
+		return;
 	}
+	dc_stuff_boolean(&minimize_ogl);
 
-	if (Dc_help)
-		dc_printf("If set to true then the OpenGL window will minimize.\n");
+	if (minimize_ogl) {
+		opengl_minimize();
+	}
 }
 
 DCF(ogl_anisotropy, "toggles anisotropic filtering")
 {
+	bool process = true;
+	int value;
+
 	if ( gr_screen.mode != GR_OPENGL ) {
 		dc_printf("Can only set anisotropic filter in OpenGL mode.\n");
 		return;
 	}
 
-	if ( Dc_command && !Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf("Sets OpenGL anisotropic filtering level.\n");
+		dc_printf("GL_anisotropy [int]  Valid values are 0 to %i. 0 turns off anisotropic filtering.\n", (int)opengl_get_max_anisotropy());
+		process = false;
+	}
+
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
+		dc_printf("Current anisotropic filter value is %i\n", (int)GL_anisotropy);
+		process = false;
+	}
+
+	if (!process) {
+		return;
+	}
+
+	if ( !Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
 		dc_printf("Error: Anisotropic filter is not settable!\n");
 		return;
 	}
 
-	if ( Dc_command ) {
-		dc_get_arg(ARG_INT | ARG_NONE);
-
-		if ( Dc_arg_type & ARG_NONE ) {
+	if (!dc_maybe_stuff_int(&value)) {
+		// No arg passed, set to default
 			GL_anisotropy = 1.0f;
 		//	opengl_set_anisotropy();
 			dc_printf("Anisotropic filter value reset to default level.\n");
-		}
-
-		if ( Dc_arg_type & ARG_INT ) {
-			GL_anisotropy = (GLfloat)Dc_arg_float;
+	} else {
+		GL_anisotropy = (GLfloat)value;
 		//	opengl_set_anisotropy( (float)Dc_arg_float );
-		}
-	}
-
-	if ( Dc_status ) {
-		dc_printf("Current anisotropic filter value is %i\n", (int)GL_anisotropy);
-	}
-
-	if (Dc_help) {
-		dc_printf("Sets OpenGL anisotropic filtering level.\n");
-		dc_printf("Valid values are 1 to %i, or 0 to turn off.\n", (int)opengl_get_max_anisotropy());
 	}
 }

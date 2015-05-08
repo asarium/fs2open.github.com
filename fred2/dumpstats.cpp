@@ -119,7 +119,7 @@ void DumpStats::OnDumpToFile()
 
 	cfile::FileHandle *fp;
 
-	fp = cfile::open((char *)LPCTSTR(dump_filename), "wt", CFILE_NORMAL, CF_TYPE_MISSIONS);
+	fp = cfile::io::open((char *)LPCTSTR(dump_filename), "wt", CFILE_NORMAL, CF_TYPE_MISSIONS);
 	cfputs((char *)LPCTSTR(buffer), fp);
 	cfclose(fp);
 }

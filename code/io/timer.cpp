@@ -399,16 +399,18 @@ void timing_display(int x, int y)
 #else
 	int idx;
 
+	int line_height = gr_get_font_height() + 1;
+
 	gr_set_color_fast(&Color_bright_blue);
 
 	// total time
-	gr_printf(x, y, "Total time %f\n", (float)timing_frame_total() / 1000000.0f);
-	y += 10;
+	gr_printf_no_resize(x, y, "Total time %f\n", (float)timing_frame_total() / 1000000.0f);
+	y += line_height;
 
 	// each event percentage
 	for(idx=0; idx<Timing_event_count; idx++){
-		gr_printf(x, y, "%s: %f\n", Timing_events[idx].name, timing_event_pct(Timing_events[idx].name));
-		y += 10;
+		gr_printf_no_resize(x, y, "%s: %f\n", Timing_events[idx].name, timing_event_pct(Timing_events[idx].name));
+		y += line_height;
 	}
 #endif
 }

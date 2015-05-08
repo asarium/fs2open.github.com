@@ -750,12 +750,12 @@ int message_play_training_voice(int index)
 	}
 
 	if (Message_waves[index].num < 0) {
-		fp = cfile::open(Message_waves[index].name);
+		fp = cfile::io::open(Message_waves[index].name);
 		if (!fp)
 			return -1;
 
-		len = cfile::fileLength(fp);
-		cfile::close(fp);
+		len = cfile::io::fileLength(fp);
+		cfile::io::close(fp);
 		if (len > 100000) {
 			if ((Training_voice < 0) || !Training_voice_type || (Training_voice != index)) {
 				if (Training_voice >= 0) {

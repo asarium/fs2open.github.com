@@ -242,17 +242,17 @@ void save_filter_info(void)
 	if (Outwnd_no_filter_file)
 		return;	// No file, don't save
 
-	fp = cfile::open("debug_filter.cfg", cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
+	fp = cfile::io::open("debug_filter.cfg", cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
 
 	if (fp) {
-		std::iostream& stream = cfile::getStream(fp);
+		std::iostream& stream = cfile::io::getStream(fp);
 
 		for (uint i = 0; i < OutwndFilter.size(); i++)
 		{
 			stream << (OutwndFilter[i].enabled ? '+' : '-') << OutwndFilter[i].name << std::endl;
 		}
 
-		cfile::close(fp);
+		cfile::io::close(fp);
 	}
 }
 
@@ -396,9 +396,6 @@ void outwnd_print(const char *id, const char *tmp)
 		outwnd_print( "general", "categories can be shown and no debug_filter.cfg info will be saved.\n" );
 		outwnd_print( "general", "==========================================================================\n" );
 	}
-
-	if ( !id )
-		id = "General";
 
 	uint outwnd_size = OutwndFilter.size();
 
@@ -1037,7 +1034,6 @@ void outwnd_update_marking(LPARAM l_parm, HWND hwnd)
 
 BOOL outwnd_create(int display_under_freespace_window)
 {
-	int x;
 	WNDCLASSEX wclass;
 	HINSTANCE hInst = GetModuleHandle(NULL);
 	RECT rect;
@@ -1068,14 +1064,14 @@ BOOL outwnd_create(int display_under_freespace_window)
 		client_rect.bottom = 480;
 		AdjustWindowRect(&client_rect,WS_CAPTION | WS_SYSMENU,FALSE);
 
-		int x = (GetSystemMetrics( SM_CXSCREEN )-(client_rect.right - client_rect.left))/2;
-		int y = 0;
-		if ( x < 0 ) x = 0;
+		int _x = (GetSystemMetrics( SM_CXSCREEN )-(client_rect.right - client_rect.left))/2;
+		int _y = 0;
+		if ( _x < 0 ) _x = 0;
 
-		rect.left = x;
-		rect.top = y;
-		rect.right = x + client_rect.right - client_rect.left - 1;
-		rect.bottom = y + client_rect.bottom - client_rect.top - 1;
+		rect.left = _x;
+		rect.top = _y;
+		rect.right = _x + client_rect.right - client_rect.left - 1;
+		rect.bottom = _y + client_rect.bottom - client_rect.top - 1;
 
 		if(!Is_standalone){
 			rect.top = rect.bottom;
@@ -1101,8 +1097,8 @@ BOOL outwnd_create(int display_under_freespace_window)
 
 	outwnd_disabled = false;
 	SetTimer(hOutputWnd, TIMER1, 50, NULL);
-	for (x=0; x<MAX_LINE_WIDTH; x++)
-		spaces[x] = ' ';
+	for (int i=0; i<MAX_LINE_WIDTH; i++)
+		spaces[i] = ' ';
 
 	spaces[MAX_LINE_WIDTH] = 0;
 	return TRUE;

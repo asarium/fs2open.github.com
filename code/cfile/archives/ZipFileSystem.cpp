@@ -1,12 +1,16 @@
 
 #include "cfile/cfile.h"
 
-#include "cfile/ZipFileSystem.h"
+#include "cfile/archives/ZipFileSystem.h"
 
 #include <boost/foreach.hpp>
 #include <boost/algorithm/string.hpp>
 
 #include <ctime>
+
+#ifdef WIN32
+#include "iowin32.h"
+#endif
 
 namespace
 {
@@ -32,8 +36,15 @@ namespace cfile
 	ZipFileSystem::ZipFileSystem(const boost::filesystem::path& filePathIn)
 		: ArchiveFileSystem(filePathIn), zipFile(NULL)
 	{
-		zipFile = unzOpen64(filePathIn.string().c_str());
+#ifdef WIN32
+		// As always, windows needs special treatment...
+		zlib_filefunc64_def fileDef;
+		fill_win32_filefunc64W(&fileDef);
 
+		zipFile = unzOpen2_64(filePathIn.c_str(), &fileDef);
+#else
+		zipFile = unzOpen64(filePathIn.c_str());
+#endif
 		if (!zipFile)
 		{
 			throw FileSystemException("Failed to open zip file!");
@@ -49,7 +60,7 @@ namespace cfile
 			std::string fileName;
 			fileName.resize(info.size_filename);
 
-			unzGetCurrentFileInfo(zipFile, NULL, &fileName[0], fileName.size(), NULL, 0, NULL, 0);
+			unzGetCurrentFileInfo(zipFile, &info, &fileName[0], fileName.size(), NULL, 0, NULL, 0);
 
 			boost::to_lower(fileName);
 

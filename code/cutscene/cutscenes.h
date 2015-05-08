@@ -31,7 +31,6 @@ void cutscenes_screen_init();
 void cutscenes_screen_close();
 void cutscenes_screen_do_frame();
 
-int cutscenes_validate_cd(char *mve_name, int prompt_for_cd = 1);
 void cutscene_mark_viewable(char *filename);
 
 #endif

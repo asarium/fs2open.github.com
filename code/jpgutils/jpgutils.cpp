@@ -111,7 +111,7 @@ int jpeg_read_header(const char *real_filename, cfile::FileHandle *img_cfp, int 
 
 		strcat_s( filename, ".jpg" );
 
-		jpeg_file = cfile::open(filename);
+		jpeg_file = cfile::io::open(filename);
 
 		if ( !jpeg_file ) {
 			return JPEG_ERROR_READING;
@@ -149,7 +149,7 @@ int jpeg_read_header(const char *real_filename, cfile::FileHandle *img_cfp, int 
 	jpeg_destroy_decompress(&jpeg_info);
 
 	if (img_cfp == NULL) {
-		cfile::close(jpeg_file);
+		cfile::io::close(jpeg_file);
 		jpeg_file = NULL;
 	}
 
@@ -176,7 +176,7 @@ int jpeg_read_bitmap(const char *real_filename, ubyte *image_data, ubyte *palett
 	strcat_s( filename, ".jpg" );
 
 
-	img_cfp = cfile::open(filename, cfile::MODE_READ, cfile::OPEN_NORMAL, cf_type);
+	img_cfp = cfile::io::open(filename, cfile::MODE_READ, cfile::OPEN_NORMAL, cf_type);
 
 	if (img_cfp == NULL)
 		return JPEG_ERROR_READING;
@@ -246,7 +246,7 @@ int jpeg_read_bitmap(const char *real_filename, ubyte *image_data, ubyte *palett
 		jpeg_destroy_decompress(&jpeg_info);
 	}
 
-	cfile::close(img_cfp);
+	cfile::io::close(img_cfp);
 
 
 	return jpeg_error_code;
@@ -274,7 +274,7 @@ boolean jpeg_cf_fill_input_buffer(j_decompress_ptr cinfo)
 	cfile_src_ptr src = (cfile_src_ptr) cinfo->src;
 	size_t nbytes;
 
-	nbytes = cfile::read(src->buffer, 1, INPUT_BUF_SIZE, src->infile);
+	nbytes = cfile::io::read(src->buffer, 1, INPUT_BUF_SIZE, src->infile);
 
 	if (nbytes <= 0) {
 		if (src->start_of_file) {	// Treat empty input file as fatal error

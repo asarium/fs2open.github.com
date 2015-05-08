@@ -19,13 +19,13 @@ ov_callbacks cfile_callbacks;
 //Encapsulation funcs to please the almighty ov_callbacks struct
 size_t ogg_cfread(void *buf, size_t elsize, size_t elnem, void* cfile)
 {
-	return cfile::read(buf, elsize, elnem, (cfile::FileHandle*)cfile);
+	return cfile::io::read(buf, elsize, elnem, (cfile::FileHandle*)cfile);
 }
 
 int ogg_cfseek(void* cfile, ogg_int64_t offset, int where)
 {
 	// cfile::SeekMode is the same as C seek mode
-	return cfile::seek((cfile::FileHandle*)cfile, (int) offset, static_cast<cfile::SeekMode>(where));
+	return cfile::io::seek((cfile::FileHandle*)cfile, (int) offset, static_cast<cfile::SeekMode>(where));
 }
 
 int ogg_cfclose(void* cfile)
@@ -36,7 +36,7 @@ int ogg_cfclose(void* cfile)
 
 long ogg_cftell(void* cfile)
 {
-	return cfile::tell((cfile::FileHandle*) cfile);
+	return cfile::io::tell((cfile::FileHandle*) cfile);
 }
 
 int OGG_init()

@@ -51,7 +51,7 @@ int dds_read_header(const char *filename, cfile::FileHandle *img_cfp, int *width
 		strcat_s(real_name, ".dds");
 
 		// try to open the file
-		ddsfile = cfile::open(real_name);
+		ddsfile = cfile::io::open(real_name);
 
 		// file not found
 		if (ddsfile == NULL)
@@ -61,7 +61,7 @@ int dds_read_header(const char *filename, cfile::FileHandle *img_cfp, int *width
 	}
 
 	// read the code
-	code = cfile::read<int>(ddsfile);
+	code = cfile::io::read<int>(ddsfile);
 
 	// check it
 	if (code != DDS_FILECODE) {
@@ -70,29 +70,29 @@ int dds_read_header(const char *filename, cfile::FileHandle *img_cfp, int *width
 	}
 
 	// read header variables
-	dds_header.dwSize				= cfile::read<uint>(ddsfile);
-	dds_header.dwFlags				= cfile::read<uint>(ddsfile);
-	dds_header.dwHeight				= cfile::read<uint>(ddsfile);
-	dds_header.dwWidth				= cfile::read<uint>(ddsfile);
-	dds_header.dwPitchOrLinearSize	= cfile::read<uint>(ddsfile);
-	dds_header.dwDepth				= cfile::read<uint>(ddsfile);
-	dds_header.dwMipMapCount		= cfile::read<uint>(ddsfile);
+	dds_header.dwSize				= cfile::io::read<uint>(ddsfile);
+	dds_header.dwFlags				= cfile::io::read<uint>(ddsfile);
+	dds_header.dwHeight				= cfile::io::read<uint>(ddsfile);
+	dds_header.dwWidth				= cfile::io::read<uint>(ddsfile);
+	dds_header.dwPitchOrLinearSize	= cfile::io::read<uint>(ddsfile);
+	dds_header.dwDepth				= cfile::io::read<uint>(ddsfile);
+	dds_header.dwMipMapCount		= cfile::io::read<uint>(ddsfile);
 
 	// skip over the crap we don't care about
 	for (i = 0; i < 11; i++)
-		trash = cfile::read<uint>(ddsfile);
+		trash = cfile::io::read<uint>(ddsfile);
 
-	dds_header.ddpfPixelFormat.dwSize				= cfile::read<uint>(ddsfile);
-	dds_header.ddpfPixelFormat.dwFlags				= cfile::read<uint>(ddsfile);
-	dds_header.ddpfPixelFormat.dwFourCC				= cfile::read<uint>(ddsfile);
-	dds_header.ddpfPixelFormat.dwRGBBitCount		= cfile::read<uint>(ddsfile);
-	dds_header.ddpfPixelFormat.dwRBitMask			= cfile::read<uint>(ddsfile);
-	dds_header.ddpfPixelFormat.dwGBitMask			= cfile::read<uint>(ddsfile);
-	dds_header.ddpfPixelFormat.dwBBitMask			= cfile::read<uint>(ddsfile);
-	dds_header.ddpfPixelFormat.dwRGBAlphaBitMask	= cfile::read<uint>(ddsfile);
+	dds_header.ddpfPixelFormat.dwSize				= cfile::io::read<uint>(ddsfile);
+	dds_header.ddpfPixelFormat.dwFlags				= cfile::io::read<uint>(ddsfile);
+	dds_header.ddpfPixelFormat.dwFourCC				= cfile::io::read<uint>(ddsfile);
+	dds_header.ddpfPixelFormat.dwRGBBitCount		= cfile::io::read<uint>(ddsfile);
+	dds_header.ddpfPixelFormat.dwRBitMask			= cfile::io::read<uint>(ddsfile);
+	dds_header.ddpfPixelFormat.dwGBitMask			= cfile::io::read<uint>(ddsfile);
+	dds_header.ddpfPixelFormat.dwBBitMask			= cfile::io::read<uint>(ddsfile);
+	dds_header.ddpfPixelFormat.dwRGBAlphaBitMask	= cfile::io::read<uint>(ddsfile);
 
-	dds_header.ddsCaps.dwCaps1		= cfile::read<uint>(ddsfile);
-	dds_header.ddsCaps.dwCaps2		= cfile::read<uint>(ddsfile);
+	dds_header.ddsCaps.dwCaps1		= cfile::io::read<uint>(ddsfile);
+	dds_header.ddsCaps.dwCaps2		= cfile::io::read<uint>(ddsfile);
 
 	// sanity
 	if (dds_header.dwDepth == 0)
@@ -256,15 +256,15 @@ int dds_read_header(const char *filename, cfile::FileHandle *img_cfp, int *width
 		*levels = dds_header.dwMipMapCount;
 
 	if (palette && (bits == 8)) {
-		cfile::seek(ddsfile, DDS_OFFSET, cfile::SEEK_MODE_SET);
-		cfile::read(palette, 1, 1024, ddsfile);
+		cfile::io::seek(ddsfile, DDS_OFFSET, cfile::SEEK_MODE_SET);
+		cfile::io::read(palette, 1, 1024, ddsfile);
 	}
 
 
 Done:
 	if (img_cfp == NULL) {
 		// close file and return
-		cfile::close(ddsfile);
+		cfile::io::close(ddsfile);
 		ddsfile = NULL;
 	}
 
@@ -290,7 +290,7 @@ int dds_read_bitmap(const char *filename, ubyte *data, ubyte *bpp, cfile::DirTyp
 	strcat_s(real_name, ".dds");
 
 	// open it up and go to the data section
-	cfp = cfile::open(real_name, cfile::MODE_READ, cfile::OPEN_NORMAL, cf_type);
+	cfp = cfile::io::open(real_name, cfile::MODE_READ, cfile::OPEN_NORMAL, cf_type);
 
 	// just in case
 	if (cfp == NULL)
@@ -305,16 +305,16 @@ int dds_read_bitmap(const char *filename, ubyte *data, ubyte *bpp, cfile::DirTyp
 		return retval;
 	}
 
-	cfile::seek(cfp, DDS_OFFSET, cfile::SEEK_MODE_SET);
+	cfile::io::seek(cfp, DDS_OFFSET, cfile::SEEK_MODE_SET);
 
 	// read in the data
-	cfile::read(data, 1, size, cfp);
+	cfile::io::read(data, 1, size, cfp);
 
 	if (bpp)
 		*bpp = (ubyte)bits;
 
 	// we look done here
-	cfile::close(cfp);
+	cfile::io::close(cfp);
 
 	return DDS_ERROR_NONE;
 }
@@ -364,7 +364,7 @@ void dds_save_image(int width, int height, int bpp, int num_mipmaps, ubyte *data
 		strcat_s(real_filename, ".dds");
 	}
 
-	cfile::FileHandle *image = cfile::open( real_filename, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_CACHE );
+	cfile::FileHandle *image = cfile::io::open( real_filename, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_CACHE );
 
 	if (image == NULL) {
 		mprintf(("Unable to open DDS image for saving!!\n"));
@@ -418,8 +418,8 @@ void dds_save_image(int width, int height, int bpp, int num_mipmaps, ubyte *data
 
 	// now save it all...
 	uint dds_id = DDS_FILECODE;
-	cfile::write(&dds_id, 1, 4, image);
-	cfile::write(&dds_header, 1, sizeof(DDSURFACEDESC2), image);
+	cfile::io::write(&dds_id, 1, 4, image);
+	cfile::io::write(&dds_header, 1, sizeof(DDSURFACEDESC2), image);
 
 	int faces = (cubemap) ? 6 : 1;
 	int f_width = width;
@@ -437,7 +437,7 @@ void dds_save_image(int width, int height, int bpp, int num_mipmaps, ubyte *data
 		for (int j = 0; j < num_mipmaps; j++) {
 			f_size = (f_width * f_height * (bpp >> 3));
 
-			cfile::write(data + f_offset, 1, f_size, image);
+			cfile::io::write(data + f_offset, 1, f_size, image);
 
 			// increase offset for next mipmap level
 			f_offset += f_size;
@@ -459,7 +459,7 @@ void dds_save_image(int width, int height, int bpp, int num_mipmaps, ubyte *data
 	}
 
 	// done!  now lets go get something to eat...
-	cfile::close(image);
+	cfile::io::close(image);
 }
 
 

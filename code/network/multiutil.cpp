@@ -23,6 +23,8 @@
 #include <ctype.h>
 #include <iostream>
 
+#include <iostream>
+
 #include "globalincs/pstypes.h"
 #include "network/multiutil.h"
 #include "globalincs/linklist.h"
@@ -77,6 +79,7 @@
 #include "network/multi_rate.h"
 #include "fs2netd/fs2netd_client.h"
 #include "parse/parselo.h"
+#include "debugconsole/console.h"
 
 extern int ascii_table[];
 extern int shifted_ascii_table[];
@@ -989,7 +992,7 @@ void delete_player(int player_num,int kicked_reason)
 	multi_rate_reset(player_num);
 
 	// display a message that this guy has left
-	if(Net_players[player_num].m_player->callsign != NULL){
+	if(*Net_players[player_num].m_player->callsign){
 		sprintf(notify_string,XSTR("<%s has left>",901),Net_players[player_num].m_player->callsign);
 		multi_display_chat_msg(notify_string,0,0);
 	}
@@ -1598,6 +1601,12 @@ void multi_create_standalone_object()
 
 	vm_vec_zero(&v);
 	objnum = observer_create(&m,&v);
+
+	if (objnum < 0) {
+		Error(LOCATION, "Failed to create standalone observer object! Please investigate!");
+		return;
+	}
+
 	Player_obj = &Objects[objnum];
 	obj_set_flags(Player_obj, Player_obj->flags & (~OF_COLLIDES) );
 	//obj_set_flags(Player_obj, Player_obj->flags | OF_SHOULD_BE_DEAD);
@@ -2190,7 +2199,7 @@ void multi_warpout_all_players()
 	
 	// if we're an observer, or we're respawning, or we can't warp out. so just jump into the debrief state
 	if((Net_player->flags & NETINFO_FLAG_OBSERVER) || (Net_player->flags & NETINFO_FLAG_RESPAWNING) ||
-		(Net_player->flags & NETINFO_FLAG_OBSERVER) || ((Player_obj->type == OBJ_SHIP) && (Player_ship->flags & SF_CANNOT_WARP)) ){		
+		((Player_obj->type == OBJ_SHIP) && (Player_ship->flags & SF_CANNOT_WARP)) ){		
 
 		multi_handle_sudden_mission_end(); 
 
@@ -2947,19 +2956,19 @@ void multi_get_mission_checksum(const char *filename)
 	Multi_current_file_length = -1;
 
 	// get the filename
-	in = cfile::open(filename);
+	in = cfile::io::open(filename);
 	if(in != NULL){
 		// get the length of the file
-		Multi_current_file_length = cfile::fileLength(in);
-		cfile::close(in);
+		Multi_current_file_length = cfile::io::fileLength(in);
+		cfile::io::close(in);
 
-		in = cfile::open(filename);
+		in = cfile::io::open(filename);
 		if(in != NULL){
 			// get the checksum of the file
 			cfile::checksum::crc::doShort(in, &Multi_current_file_checksum);
 
 			// close the file
-			cfile::close(in);
+			cfile::io::close(in);
 			in = NULL;
 		}
 		// if the file doesn't exist, setup some special values, so the server recognizes this
@@ -3085,14 +3094,14 @@ void multi_update_valid_missions()
 	}
 	
 	// attempt to open the valid mission config file
-	in = cfile::open(MULTI_VALID_MISSION_FILE, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
+	in = cfile::io::open(MULTI_VALID_MISSION_FILE, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
 
 	if (in != NULL) {		
 		// read in all listed missions
-		while ( !cfile::eof(in) ) {
+		while ( !cfile::io::eof(in) ) {
 			// read in a line
 			memset(next_line, 0, 512);
-			cfile::readLine(next_line, 512, in);
+			cfile::io::readLine(next_line, 512, in);
 
 			drop_trailing_white_space(next_line);
 			drop_leading_white_space(next_line);
@@ -3131,7 +3140,7 @@ void multi_update_valid_missions()
 		}
 
 		// close the infile
-		cfile::close(in);
+		cfile::io::close(in);
 		in = NULL;	
 	}
 
@@ -3149,7 +3158,7 @@ void multi_update_valid_missions()
 	}
 
 	// now rewrite the outfile with the new mission info
-	in = cfile::open(MULTI_VALID_MISSION_FILE, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
+	in = cfile::io::open(MULTI_VALID_MISSION_FILE, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
 	if(in == NULL){
 		// if we're a standalone, kill the validate dialog
 		if(Game_mode & GM_STANDALONE_SERVER){
@@ -3162,21 +3171,21 @@ void multi_update_valid_missions()
 	for (idx = 0; idx < Multi_create_mission_list.size(); idx++) {
 		switch(Multi_create_mission_list[idx].valid_status){
 		case MVALID_STATUS_VALID:
-			cfile::write<const char*>(Multi_create_mission_list[idx].filename, in);
-			cfile::write<const char*>(NOX("   valid"), in);
-			cfile::write<const char*>(NOX("\n"), in);
+			cfile::io::write<const char*>(Multi_create_mission_list[idx].filename, in);
+			cfile::io::write<const char*>(NOX("   valid"), in);
+			cfile::io::write<const char*>(NOX("\n"), in);
 			break;
 
 		case MVALID_STATUS_INVALID:
-			cfile::write<const char*>(Multi_create_mission_list[idx].filename, in);
-			cfile::write<const char*>(NOX("   invalid"), in);
-			cfile::write<const char*>(NOX("\n"), in);
+			cfile::io::write<const char*>(Multi_create_mission_list[idx].filename, in);
+			cfile::io::write<const char*>(NOX("   invalid"), in);
+			cfile::io::write<const char*>(NOX("\n"), in);
 			break;
 		}
 	}
 
 	// close the outfile
-	cfile::close(in);
+	cfile::io::close(in);
 	in = NULL;
 
 	// if we're a standalone, kill the validate dialog
@@ -3199,65 +3208,74 @@ short multi_get_new_id()
 // ------------------------------------
 
 //XSTR:OFF
-DCF(multi,"changes multiplayer settings")
+DCF(multi,"changes multiplayer settings (Multiplayer)")
 {
-	if(Dc_command){
-		dc_get_arg(ARG_STRING);
-		
-		if(strcmp(Dc_arg, "kick")==0){				// kick a player
-			multi_dcf_kick();
+	if (dc_optional_string("kick")) {
+		// kick a player
+		multi_dcf_kick();
+
 #ifndef NDEBUG
-		} else if(strcmp(Dc_arg, "stats")==0) {
-			// multi_toggle_stats();
-		} else if(strcmp(Dc_arg, "show_stats")==0) {
-			// multi_show_basic_stats(0);
-		} else if(strcmp(Dc_arg, "dump_stats")==0) {
-			// multi_show_basic_stats(1);
+	} else if (dc_optional_string("stats")) {
+		// multi_toggle_stats();
+
+	} else if (dc_optional_string("show_stats")) {
+		// multi_show_basic_stats(0);
+
+	} else if (dc_optional_string("dump_stats")) {
+		// multi_show_basic_stats(1);
 #endif
-		} else if(strcmp(Dc_arg, "voice")==0){				// settings for multiplayer voice
-			multi_voice_dcf();
-		} else if(strcmp(Dc_arg, "respawn_chump")==0){	// set a really large # of respawns
-			if((Net_player != NULL) && (Net_player->flags & NETINFO_FLAG_GAME_HOST)){			
-				Netgame.respawn = 9999;
-				Netgame.options.respawn = 9999;				
 
-				// if i'm the server, send a netgame update
-				if(Net_player->flags & NETINFO_FLAG_AM_MASTER){
-					send_netgame_update_packet();
-				} 
-			}
-		} else if(strcmp(Dc_arg, "ss_leaders")==0){		// only host or team captains can modify ships
-			if((Net_player != NULL) && (Net_player->flags & NETINFO_FLAG_GAME_HOST)){			
-				Netgame.options.flags |= MSO_FLAG_SS_LEADERS;
-				multi_options_update_netgame();
-			}
-		} else if(strcmp(Dc_arg, "make_players")==0){
-#ifndef NDEBUG
-			multi_make_fake_players(MAX_PLAYERS);
-#endif
-		} else if(strcmp(Dc_arg, "givecd")==0){
-			extern int Multi_has_cd;
-			Multi_has_cd = 1;
-		} else if(strcmp(Dc_arg, "oo")==0){						
-			int new_flags = -1;
+	} else if (dc_optional_string("voice")) {
+		// settings for multiplayer voice
+		multi_voice_dcf();
 
-			dc_get_arg(ARG_INT);
-			if(Dc_arg_type & ARG_INT){
-				new_flags = Dc_arg_int;
-			}
+	} else if (dc_optional_string("respawn_chump")){
+		// set a really large # of respawns
+		if((Net_player != NULL) && (Net_player->flags & NETINFO_FLAG_GAME_HOST)) {
+			Netgame.respawn = 9999;
+			Netgame.options.respawn = 9999;
 
-			dc_printf("Interesting flags\nPos : %d\nVelocity : %d\nDesired vel : %d\nOrient : %d\nRotvel : %d\nDesired rotvel %d\n",
-						 1<<0, 1<<7, 1<<8, 1<<1, 1<<9, 1<<10);						
-		} else if(strcmp(Dc_arg, "oo_sort")==0){			
-			extern int OO_sort;
-
-			OO_sort = !OO_sort;
-			if(OO_sort){
-				dc_printf("Network object sorting ENABLED\n");
-			} else {
-				dc_printf("Network object sorting DISABLED\n");
-			}
+			// if i'm the server, send a netgame update
+			if(Net_player->flags & NETINFO_FLAG_AM_MASTER){
+				send_netgame_update_packet();
+			} 
 		}
+
+	} else if (dc_optional_string("ss_leaders")) {
+		// only host or team captains can modify ships
+		if((Net_player != NULL) && (Net_player->flags & NETINFO_FLAG_GAME_HOST)) {
+			Netgame.options.flags |= MSO_FLAG_SS_LEADERS;
+			multi_options_update_netgame();
+		}
+
+	} else if (dc_optional_string("make_players")) {
+#ifndef NDEBUG
+		multi_make_fake_players(MAX_PLAYERS);
+#endif
+
+	} else if (dc_optional_string("givecd")) {
+		extern int Multi_has_cd;
+		Multi_has_cd = 1;
+
+	} else if (dc_optional_string("oo")) {
+		int new_flags;
+
+		if(!dc_maybe_stuff_int(&new_flags))
+			new_flags = -1;
+
+		dc_printf("Interesting flags\n");
+		dc_printf("Pos : %d\n", 1 << 0);
+		dc_printf("Velocity    : %d\n", 1 << 7);
+		dc_printf("Desired vel : %d\n", 1 << 8);
+		dc_printf("Orient : %d\n", 1 << 1);
+		dc_printf("Rotvel : %d\n", 1 << 9);
+		dc_printf("Desired rotvel : %d\n", 1 << 10);
+
+	} else if (dc_optional_string("oo_sort")) {
+		extern int OO_sort;
+
+		OO_sort = !OO_sort;
+		dc_printf("Network object sorting %s\n", OO_sort ? "ENABLED" : "DISABLED");
 	}
 }
 
@@ -3266,7 +3284,7 @@ DCF(multi,"changes multiplayer settings")
 // PXO crc checking stuff
 
 
-void multi_spew_pxo_checksums(int max_files, char *outfile)
+void multi_spew_pxo_checksums(int max_files, const char *outfile)
 {
 	char wild_card[10];
 	uint checksum;
@@ -3284,12 +3302,12 @@ void multi_spew_pxo_checksums(int max_files, char *outfile)
 	cfile::listFiles(fileNames, cfile::TYPE_MISSIONS, wild_card);
 
 	// open the outfile
-	cfile::FileHandle *out = cfile::open(outfile, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_ROOT);
+	cfile::FileHandle *out = cfile::io::open(outfile, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_ROOT);
 
 	if (out == NULL)
 		return;
 
-	std::iostream& stream = cfile::getStream(out);
+	std::iostream& stream = cfile::io::getStream(out);
 
 	p = Cmdline_spew_mission_crcs;
 
@@ -3357,7 +3375,7 @@ void multi_spew_pxo_checksums(int max_files, char *outfile)
 		stream << '"' << description << '"' << std::endl;
 	}
 
-	cfile::close(out);
+	cfile::io::close(out);
 }
 
 /*
@@ -3430,19 +3448,20 @@ Done:
 }
 */
 
-DCF(pxospew,"spew PXO 32 bit checksums for all visible mission files")
+DCF(pxospew,"spew PXO 32 bit checksums for all visible mission files (Multiplayer)")
 {
 	int max_files;
+	char file_str[MAX_NAME_LEN];
 
-	dc_get_arg(ARG_INT);
-	if(Dc_arg_type & ARG_INT){
-		max_files = Dc_arg_int;	
-
-		dc_get_arg(ARG_STRING);
-		if(Dc_arg_type & ARG_STRING){
-			multi_spew_pxo_checksums(max_files, Dc_arg);
-		}
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf("Usage: pxospew <max_files> <filename>\n");
+		return;
 	}
+
+	dc_stuff_int(&max_files);
+	dc_stuff_string_white(file_str, MAX_NAME_LEN);
+
+	multi_spew_pxo_checksums(max_files, file_str);
 }
 
 

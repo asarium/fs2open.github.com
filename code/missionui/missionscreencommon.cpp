@@ -332,7 +332,7 @@ void common_music_close()
 	if ( Num_music_files <= 0 )
 		return;
 
-	briefing_stop_music();
+	briefing_stop_music(true);
 }
 
 int common_num_cutscenes_valid(int movie_type)
@@ -362,11 +362,11 @@ void common_maybe_play_cutscene(int movie_type, bool restart_music, int music)
 				continue; 
 			}
 
-			if ( strlen(The_mission.cutscenes[i].cutscene_name) ) {
+			if ( strlen(The_mission.cutscenes[i].filename) ) {
 				common_music_close(); 
 				music_off = true;
-				movie_play( The_mission.cutscenes[i].cutscene_name );	//Play the movie!
-				cutscene_mark_viewable( The_mission.cutscenes[i].cutscene_name );
+				movie_play( The_mission.cutscenes[i].filename );	//Play the movie!
+				cutscene_mark_viewable( The_mission.cutscenes[i].filename );
 			}
 		}
 	}
@@ -582,7 +582,7 @@ int common_select_do(float frametime)
 	int	k, new_k;
 
 
-	if ( help_overlay_active(BR_OVERLAY) || help_overlay_active(SS_OVERLAY) || help_overlay_active(WL_OVERLAY) ) {
+	if ( help_overlay_active(Briefing_overlay_id) || help_overlay_active(Ship_select_overlay_id) || help_overlay_active(Weapon_select_overlay_id) ) {
 		Common_buttons[0][gr_screen.res][COMMON_HELP_BUTTON].button.reset_status();
 		Common_buttons[1][gr_screen.res][COMMON_HELP_BUTTON].button.reset_status();
 		Common_buttons[2][gr_screen.res][COMMON_HELP_BUTTON].button.reset_status();
@@ -600,10 +600,10 @@ int common_select_do(float frametime)
 	}
 
 	if ( (k > 0) || (new_k > 0) || B1_JUST_RELEASED ) {
-		if ( help_overlay_active(BR_OVERLAY) || help_overlay_active(SS_OVERLAY) || help_overlay_active(WL_OVERLAY) ) {
-			help_overlay_set_state(BR_OVERLAY, 0);
-			help_overlay_set_state(SS_OVERLAY, 0);
-			help_overlay_set_state(WL_OVERLAY, 0);
+		if ( help_overlay_active(Briefing_overlay_id) || help_overlay_active(Ship_select_overlay_id) || help_overlay_active(Weapon_select_overlay_id) ) {
+			help_overlay_set_state(Briefing_overlay_id, gr_screen.res, 0);
+			help_overlay_set_state(Ship_select_overlay_id, gr_screen.res, 0);
+			help_overlay_set_state(Weapon_select_overlay_id, gr_screen.res, 0);
 			Active_ui_window->set_ignore_gadgets(0);
 			k = 0;
 			new_k = 0;
@@ -695,8 +695,9 @@ int common_select_do(float frametime)
 void common_render(float frametime)
 {
 	if ( !Background_playing ) {
+		GR_MAYBE_CLEAR_RES(Brief_background_bitmap);
 		gr_set_bitmap(Brief_background_bitmap);
-		gr_bitmap(0, 0);
+		gr_bitmap(0, 0, GR_RESIZE_MENU);
 	}
 
 	anim_render_all(0, frametime);
@@ -1211,13 +1212,13 @@ void wss_direct_restore_loadout()
 
 			// This wing is already created, so directly update the ships
 			for ( j = 0; j < MAX_WING_SLOTS; j++ ) {
+				if ( wp->ship_index[j] == -1 ) { // if this is an invalid ship, move on
+					continue;
+				}
+
 				slot = &Player_loadout.unit_data[valid_wing_index*MAX_WING_SLOTS+j];
 				shipp = &Ships[wp->ship_index[j]];
 				if ( shipp->ship_info_index != slot->ship_class ) {
-
-					if ( wp->ship_index[j] == -1 ) {
-						continue;
-					}
 
 					if ( slot->ship_class == -1 ) {
 						cleanup_ship_index[j] = wp->ship_index[j];
@@ -1501,7 +1502,7 @@ int restore_wss_data(ubyte *block)
 	return offset;
 }
 
-void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, int w, int h, ship_info *sip, bool resize)
+void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, int w, int h, ship_info *sip, int resize_mode)
 {
 	matrix	object_orient	= IDENTITY_MATRIX;
 	angles rot_angles = {0.0f,0.0f,0.0f};
@@ -1528,7 +1529,7 @@ void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, 
 	}
 	vm_angles_2_matrix(&object_orient, &rot_angles);
 
-	gr_set_clip(x, y, w, h, resize);
+	gr_set_clip(x, y, w, h, resize_mode);
 	g3_start_frame(1);
 	if(sip != NULL)
 	{
@@ -1615,7 +1616,7 @@ void draw_model_icon(int model_id, int flags, float closeup_zoom, int x, int y, 
 	gr_reset_clip();
 }
 
-void draw_model_rotating(int model_id, int x1, int y1, int x2, int y2, float *rotation_buffer, vec3d *closeup_pos, float closeup_zoom, float rev_rate, int flags, bool resize, int effect)
+void draw_model_rotating(int model_id, int x1, int y1, int x2, int y2, float *rotation_buffer, vec3d *closeup_pos, float closeup_zoom, float rev_rate, int flags, int resize_mode, int effect)
 {
 	//WMC - Can't draw a non-model
 	if (model_id < 0)
@@ -1652,7 +1653,7 @@ void draw_model_rotating(int model_id, int x1, int y1, int x2, int y2, float *ro
 		rot_angles.b = 0.0f;
 		rot_angles.h = *rotation_buffer;
 		vm_rotate_matrix_by_angles(&model_orient, &rot_angles);
-		gr_set_clip(x1, y1, x2, y2, resize);
+		gr_set_clip(x1, y1, x2, y2, resize_mode);
 		vec3d wire_normal,ship_normal,plane_point;
 
 		// Clip the wireframe below the scanline
@@ -1745,7 +1746,7 @@ void draw_model_rotating(int model_id, int x1, int y1, int x2, int y2, float *ro
 			// render the ships
 			model_clear_instance(model_id);
 			model_set_detail_level(0);
-			gr_set_color(80,49,160);
+			model_set_outline_color(80,49,160);
 			opengl_shader_set_animated_effect(ANIMATED_SHADER_LOADOUTSELECT_FS2);
 			opengl_shader_set_animated_timer(-clip);
 
@@ -1804,7 +1805,7 @@ void draw_model_rotating(int model_id, int x1, int y1, int x2, int y2, float *ro
 		rot_angles.h = *rotation_buffer;
 		vm_rotate_matrix_by_angles(&model_orient, &rot_angles);
 
-		gr_set_clip(x1, y1, x2, y2, resize);
+		gr_set_clip(x1, y1, x2, y2, resize_mode);
 		g3_start_frame(1);
 
 		// render the wodel

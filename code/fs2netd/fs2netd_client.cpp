@@ -7,7 +7,6 @@
  *
 */
 
-
 #include <iostream>
 #include <algorithm>
 
@@ -1204,14 +1203,14 @@ void fs2netd_update_ban_list()
 	Local_timeout = -1;
 
 	if ( !FS2NetD_ban_list.empty() ) {
-		cfile::FileHandle *banlist_cfg = cfile::open("banlist.cfg", cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
+		cfile::FileHandle *banlist_cfg = cfile::io::open("banlist.cfg", cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
 
 		if (banlist_cfg != NULL) {
 			for (SCP_vector<SCP_string>::iterator bl = FS2NetD_ban_list.begin(); bl != FS2NetD_ban_list.end(); ++bl) {
-				cfile::write<const char*>(bl->c_str(), banlist_cfg);
+				cfile::io::write<const char*>(bl->c_str(), banlist_cfg);
 			}
 
-			cfile::close(banlist_cfg);
+			cfile::io::close(banlist_cfg);
 		}
 	}
 
@@ -1230,7 +1229,7 @@ bool fs2netd_player_banned(net_addr *addr)
 	memset(line, 0, 32);
 
 	bool retval = false;
-	cfile::FileHandle *banlist_cfg = cfile::open("banlist.cfg", cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
+	cfile::FileHandle *banlist_cfg = cfile::io::open("banlist.cfg", cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
 
 	if (banlist_cfg == NULL) {
 		return false;
@@ -1238,15 +1237,15 @@ bool fs2netd_player_banned(net_addr *addr)
 
 	psnet_addr_to_string( ip_str, addr );
 
-	while ( !cfile::eof(banlist_cfg) && !retval ) {
-		cfile::readString(line, 32, banlist_cfg);
+	while ( !cfile::io::eof(banlist_cfg) && !retval ) {
+		cfile::io::readString(line, 32, banlist_cfg);
 
 		if ( !strnicmp(ip_str, line, strlen(line)) ) {
 			retval = true; // BANNINATED!!!
 		}
 	}
 
-	cfile::close(banlist_cfg);
+	cfile::io::close(banlist_cfg);
 
 	return retval;
 }
@@ -1581,7 +1580,7 @@ void fs2netd_add_table_validation(const char *tblname)
 		return;
 	}
 
-	cfile::FileHandle *tbl = cfile::open(tblname, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_TABLES);
+	cfile::FileHandle *tbl = cfile::io::open(tblname, cfile::MODE_READ, cfile::OPEN_NORMAL, cfile::TYPE_TABLES);
 
 	if (tbl == NULL) {
 		return;
@@ -1589,7 +1588,7 @@ void fs2netd_add_table_validation(const char *tblname)
 
 	cfile::checksum::crc::doLong(tbl, &chksum);
 
-	cfile::close(tbl);
+	cfile::io::close(tbl);
 
 	crc_valid_status tbl_crc;
 
@@ -1691,13 +1690,13 @@ void fs2netd_spew_table_checksums(char *outfile)
 		return;
 	}
 
-	cfile::FileHandle* handle = cfile::open(outfile, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_ROOT);
+	cfile::FileHandle* handle = cfile::io::open(outfile, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_ROOT);
 
 	if (handle == NULL) {
 		return;
 	}
 
-	std::ostream& stream = cfile::getStream(handle);
+	std::iostream& stream = cfile::io::getStream(handle);
 
 	p = Cmdline_spew_table_crcs;
 
@@ -1740,5 +1739,5 @@ void fs2netd_spew_table_checksums(char *outfile)
 		stream << '"' << filename << "\"," << tvs->crc32 << ",\"" << description << '"' << std::endl;
 	}
 
-	cfile::close(handle);
+	cfile::io::close(handle);
 }

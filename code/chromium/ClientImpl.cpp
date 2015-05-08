@@ -1,7 +1,3 @@
-#include <SDL_syswm.h>
-
-#include "include/cef_version.h"
-#include "include/cef_url.h"
 
 #include "bmpman/bmpman.h"
 #include "chromium/ClientImpl.h"
@@ -10,6 +6,10 @@
 #include "graphics/2d.h"
 #include "osapi/osapi.h"
 
+#include <SDL_syswm.h>
+
+#include "include/cef_version.h"
+#include "include/cef_url.h"
 
 namespace
 {

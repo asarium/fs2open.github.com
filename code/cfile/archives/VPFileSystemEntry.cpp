@@ -1,6 +1,6 @@
 
-#include "cfile/VPFileSystem.h"
-#include "cfile/VPFileSystemEntry.h"
+#include "cfile/archives/VPFileSystem.h"
+#include "cfile/archives/VPFileSystemEntry.h"
 
 #include <boost/foreach.hpp>
 
@@ -24,11 +24,11 @@ namespace cfile
 	public:
 		std::streamsize begin;
 		std::streamsize size;
+		std::streamsize offset;
+
 		std::istream* vpStream;
 
 		boost::mutex *streamMutex;
-
-		std::streamsize offset;
 
 		VPFileSource(boost::mutex *streamMutexIn) : begin(-1), size(-1), offset(0), vpStream(NULL), streamMutex(streamMutexIn)
 		{}
@@ -96,12 +96,12 @@ namespace cfile
 		}
 	};
 
-	VPFileSystemEntry::VPFileSystemEntry(VPFileSystem* parentSystem, const string_type& path)
-		: IFileSystemEntry(path), parentSystem(parentSystem)
+	VPFileSystemEntry::VPFileSystemEntry(VPFileSystem* parentSystemIn, const string_type& pathIn)
+		: IFileSystemEntry(pathIn), parentSystem(parentSystemIn)
 	{
 	}
 
-	FileEntryPointer VPFileSystemEntry::getChild(const string_type& path)
+	FileEntryPointer VPFileSystemEntry::getChild(const string_type& searchPath)
 	{
 		if (getType() != DIRECTORY)
 		{
@@ -109,7 +109,7 @@ namespace cfile
 		}
 
 		string_type childPath = this->path;
-		childPath.append(DirectorySeparatorStr).append(path);
+		childPath.append(DirectorySeparatorStr).append(searchPath);
 		childPath = vfspp::util::normalizePath(childPath);
 
 		EntryType type = parentSystem->getFileData(childPath).type;

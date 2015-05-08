@@ -38,6 +38,7 @@ extern float flRealframetime;
 extern float flFrametime;
 extern fix Missiontime;
 extern int Last_frame_timestamp; // A timestamp for when the previous frame ended
+extern fix Skybox_timestamp;	// A timestamp for animated skyboxes -MageKing17
 
 // 0 - 4
 extern int Game_skill_level;
@@ -58,9 +59,6 @@ extern int Game_subspace_effect;
 
 // The current mission being played.
 extern char Game_current_mission_filename[MAX_FILENAME_LEN];
-
-// game's CDROM directory
-extern std::wstring Game_CDROM_dir;
 
 // if the ships.tbl the player has is valid
 extern int Game_ships_tbl_valid;
@@ -190,11 +188,6 @@ void game_whack_apply( float x, float y );
 void game_shudder_apply(int time, float intensity);
 
 //===================================================================
-
-// make sure a CD is in the drive before continuing (returns 1 to continue, otherwise 0).
-int game_do_cd_check(char *volume_name=NULL);
-int find_freespace_cd(char *volume_name=NULL);
-int set_cdrom_path(int drive_num);
 
 // Used to tell the player that a feature is disabled by build settings
 void game_feature_disabled_popup();

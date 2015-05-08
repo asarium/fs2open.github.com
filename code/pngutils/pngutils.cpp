@@ -22,7 +22,7 @@ void png_scp_read_data(png_structp png_ptr, png_bytep data, png_size_t length)
 	/* fread() returns 0 on error, so it is OK to store this in a png_size_t
 	* instead of an int, which is what fread() actually returns.
 	*/
-	check = (png_size_t)cfile::read(data, (png_size_t)1, length, png_file);
+	check = (png_size_t)cfile::io::read(data, (png_size_t)1, length, png_file);
 	if (check != length)
 		png_error(png_ptr, "Read Error");
 }
@@ -56,7 +56,7 @@ int png_read_header(const char *real_filename, cfile::FileHandle *img_cfp, int *
 
 		strcat_s( filename, ".png" );
 
-		png_file = cfile::open(filename);
+		png_file = cfile::io::open(filename);
 
 		if ( !png_file ) {
 			return PNG_ERROR_READING;
@@ -81,7 +81,7 @@ int png_read_header(const char *real_filename, cfile::FileHandle *img_cfp, int *
 	if (png_ptr == NULL)
 	{
 		mprintf(("png_read_header: error creating read struct\n"));
-		cfile::close(png_file);
+		cfile::io::close(png_file);
 		return PNG_ERROR_READING;
 	}
 
@@ -90,7 +90,7 @@ int png_read_header(const char *real_filename, cfile::FileHandle *img_cfp, int *
 	if (info_ptr == NULL)
 	{
 		mprintf(("png_read_header: error creating info struct\n"));
-		cfile::close(png_file);
+		cfile::io::close(png_file);
 		png_destroy_read_struct(&png_ptr, NULL, NULL);
 		return PNG_ERROR_READING;
 	}
@@ -100,7 +100,7 @@ int png_read_header(const char *real_filename, cfile::FileHandle *img_cfp, int *
 		mprintf(("png_read_header: something went wrong\n"));
 		/* Free all of the memory associated with the png_ptr and info_ptr */
 		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-		cfile::close(png_file);
+		cfile::io::close(png_file);
 		/* If we get here, we had a problem reading the file */
 		return PNG_ERROR_READING;
 	}
@@ -115,7 +115,7 @@ int png_read_header(const char *real_filename, cfile::FileHandle *img_cfp, int *
 	if (bpp) *bpp = (png_get_channels(png_ptr, info_ptr) * png_get_bit_depth(png_ptr, info_ptr));
 
 	if (img_cfp == NULL) {
-		cfile::close(png_file);
+		cfile::io::close(png_file);
 		png_file = NULL;
 	}
 
@@ -146,7 +146,7 @@ int png_read_bitmap(const char *real_filename, ubyte *image_data, ubyte *bpp, in
 	if ( p ) *p = 0;
 	strcat_s( filename, ".png" );
 
-	png_file = cfile::open(filename, cfile::MODE_READ, cfile::OPEN_NORMAL, cf_type);
+	png_file = cfile::io::open(filename, cfile::MODE_READ, cfile::OPEN_NORMAL, cf_type);
 
 	if (png_file == NULL)
 		return PNG_ERROR_READING;
@@ -162,7 +162,7 @@ int png_read_bitmap(const char *real_filename, ubyte *image_data, ubyte *bpp, in
 	if (png_ptr == NULL)
 	{
 		mprintf(("png_read_bitmap: png_ptr went wrong\n"));
-		cfile::close(png_file);
+		cfile::io::close(png_file);
 		return PNG_ERROR_READING;
 	}
 
@@ -171,7 +171,7 @@ int png_read_bitmap(const char *real_filename, ubyte *image_data, ubyte *bpp, in
 	if (info_ptr == NULL)
 	{
 		mprintf(("png_read_bitmap: info_ptr went wrong\n"));
-		cfile::close(png_file);
+		cfile::io::close(png_file);
 		png_destroy_read_struct(&png_ptr, NULL, NULL);
 		return PNG_ERROR_READING;
 	}
@@ -181,7 +181,7 @@ int png_read_bitmap(const char *real_filename, ubyte *image_data, ubyte *bpp, in
 		mprintf(("png_read_bitmap: something went wrong\n"));
 		/* Free all of the memory associated with the png_ptr and info_ptr */
 		png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-		cfile::close(png_file);
+		cfile::io::close(png_file);
 		/* If we get here, we had a problem reading the file */
 		return PNG_ERROR_READING;
 	}
@@ -203,7 +203,7 @@ int png_read_bitmap(const char *real_filename, ubyte *image_data, ubyte *bpp, in
 	}
 
 	png_destroy_read_struct(&png_ptr, &info_ptr, NULL);
-	cfile::close(png_file);
+	cfile::io::close(png_file);
 
 	return PNG_ERROR_NONE;
 }

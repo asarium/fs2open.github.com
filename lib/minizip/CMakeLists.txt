@@ -9,6 +9,15 @@ SET(MINIZIP_SOURCES
 	zip.h
 )
 
+IF(WIN32)
+	# For windows there is a better way to open files
+	SET(MINIZIP_SOURCES
+		${MINIZIP_SOURCES}
+		iowin32.c
+		iowin32.h
+	)
+ENDIF(WIN32)
+
 ADD_LIBRARY(minizip ${MINIZIP_SOURCES})
 TARGET_LINK_LIBRARIES(minizip zlib)
 ADD_DEFINITIONS(-DZLIB_INTERNAL)

@@ -15,6 +15,7 @@
 #include "globalincs/globals.h"
 #include "parse/generic_log.h"
 #include "cfile/cfile.h"
+#include "parse/parselo.h"
 
 
 
@@ -52,13 +53,13 @@ logfile logfiles[MAX_LOGFILES] = {
 // initialize the logfile
 bool logfile_init(int logfile_type)
 {
-	if((logfile_type < 0) && (logfile_type >= MAX_LOGFILES)) {
+	if((logfile_type < 0) || (logfile_type >= MAX_LOGFILES)) {
 		Warning(LOCATION, "Attempt to write illegal logfile number %d", logfile_type);
 		return false;
 	}
 
 	// attempt to open the file
-	logfiles[logfile_type].log_file = cfile::open(logfiles[logfile_type].filename, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
+	logfiles[logfile_type].log_file = cfile::io::open(logfiles[logfile_type].filename, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_DATA);
 
 	if(logfiles[logfile_type].log_file == NULL){
 		nprintf(("Network","Error opening %s for writing!!\n",logfiles[logfile_type].filename));
@@ -74,7 +75,7 @@ void logfile_close(int logfile_type)
 	// if we have a valid file, write a trailer and close
 	if(logfiles[logfile_type].log_file != NULL){
 
-		cfile::close(logfiles[logfile_type].log_file);
+		cfile::io::close(logfiles[logfile_type].log_file);
 		logfiles[logfile_type].log_file = NULL;
 	}
 }
@@ -82,21 +83,25 @@ void logfile_close(int logfile_type)
 // printf function itself called by the ml_printf macro
 void log_printf(int logfile_type, char *format, ...)
 {
-	char tmp[MAX_LOGFILE_LINE_LEN*4];
+	SCP_string temp;
 	va_list args;
 
+	if (format == NULL) {
+		return;
+	}
+
 	// if we don't have a valid logfile do nothing
-	if(logfiles[logfile_type].log_file == NULL){
+	if (logfiles[logfile_type].log_file == NULL) {
 		return;
 	}
 	
 	// format the text
 	va_start(args, format);
-	vsprintf(tmp, format, args);
+	vsprintf(temp, format, args);
 	va_end(args);
 	
 	// log the string
-	log_string(logfile_type, tmp);
+	log_string(logfile_type, temp.c_str());
 }
 
 // string print function
@@ -129,8 +134,8 @@ void log_string(int logfile_type, const char *string, int add_time)
 	strcat_s(tmp, "\n");
 
 	// now print it to the logfile if necessary	
-	cfile::write<const char*>(tmp, logfiles[logfile_type].log_file);
-	cfile::flush(logfiles[logfile_type].log_file);
+	cfile::io::write<const char*>(tmp, logfiles[logfile_type].log_file);
+	cfile::io::flush(logfiles[logfile_type].log_file);
 
 #if defined(LOGFILE_ECHO_TO_DEBUG)
 	mprintf(("Log file type %d %s",logfile_type, tmp));
