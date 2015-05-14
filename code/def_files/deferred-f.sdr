@@ -1,0 +1,78 @@
+uniform sampler2D ColorBuffer;
+uniform sampler2D NormalBuffer;
+uniform sampler2D PositionBuffer;
+uniform sampler2D SpecBuffer;
+uniform float specFactor;
+uniform float invScreenWidth;
+uniform float invScreenHeight;
+uniform int lightType;
+varying vec3 lightPosition;
+uniform float lightRadius;
+varying vec3 beamVec;
+uniform vec3 diffuseLightColor;
+uniform vec3 specLightColor;
+uniform float coneAngle;
+uniform float coneInnerAngle;
+uniform bool dualCone;
+uniform vec3 coneDir;
+
+#define SPEC_INTENSITY_POINT			5.3 // Point light
+#define SPEC_INTENSITY_DIRECTIONAL		3.0 // Directional light
+#define SPECULAR_FACTOR				1.75
+#define SPECULAR_ALPHA					0.1
+#define SPEC_FACTOR_NO_SPEC_MAP		0.6
+#define ENV_ALPHA_FACTOR				0.3
+#define GLOW_MAP_INTENSITY				1.5
+#define AMBIENT_LIGHT_BOOST			1.0
+void main()
+{
+	vec2 screenPos = gl_FragCoord.xy * vec2(invScreenWidth, invScreenHeight);
+	vec3 position = texture2D(PositionBuffer, screenPos).xyz;
+
+	if(abs(dot(position, position)) < 0.1)
+		discard;
+	vec3 lightDir = lightPosition - position.xyz;
+	float dist = length(lightDir);
+	float attenuation = (1.0 - dist/lightRadius);
+	if(lightType == 2)
+	{
+		float coneDot = dot(normalize(-lightDir), coneDir);
+		if(dualCone) {
+			if(abs(coneDot) < coneAngle)
+				discard;
+			else
+				attenuation *= smoothstep(coneAngle, coneInnerAngle, abs(coneDot));
+		} else {
+			if(coneDot < coneAngle)
+				discard;
+			else
+				attenuation *= smoothstep(coneAngle, coneInnerAngle, coneDot);
+		}
+	}
+	if(dist > lightRadius && lightType != 1)
+		discard;
+	vec3 color = texture2D(ColorBuffer, screenPos).rgb;
+	vec4 normal = texture2D(NormalBuffer, screenPos);
+	vec3 specfactor = texture2D(SpecBuffer, screenPos).rgb;
+	vec3 eyeDir = normalize(-position);
+
+	if(lightType == 1)
+	{
+		float beamLength = length(beamVec);
+		vec3 beamDir = beamVec / beamLength;
+		// Get nearest point on line
+		float neardist = clamp(dot(lightDir, beamDir), 0.0, beamLength);
+		// Move back from the endpoint of the beam along the beam by the distance we calculated
+		vec3 nearest = lightPosition - beamDir * neardist;
+		lightDir = nearest - position.xyz;
+		dist = length(lightDir);
+		if(dist > lightRadius)
+			discard;
+	}
+	lightDir /= dist;
+	vec3 halfVec = normalize(lightDir + eyeDir);
+	float NdotHV = clamp(dot(normal.xyz, halfVec), 0.0, 1.0);
+	gl_FragData[0].rgb = color * (diffuseLightColor * (max(dot(normal.xyz, lightDir), 0.0)) * attenuation);
+   gl_FragData[0].rgb += pow(NdotHV, specFactor) * SPEC_INTENSITY_POINT * specfactor * specLightColor * attenuation;
+	gl_FragData[0].a = 1.0;
+}

@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 #include <queue>
+#include <deque>
 
 #if defined __GNUC__
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
@@ -21,12 +22,19 @@
 #endif // __GNUC__
 
 #if ! defined __GNUC__
-#include <hash_map>
-#if defined(_MSC_VER) && _MSC_VER < 1400
-#define SCP_hash_map std::hash_map
-#else
-#define SCP_hash_map stdext::hash_map
-#endif
+	#if defined(_MSC_VER)
+		#if _MSC_VER < 1900
+			#include <hash_map>
+			#if _MSC_VER < 1400
+			#define SCP_hash_map std::hash_map
+			#else
+			#define SCP_hash_map stdext::hash_map
+			#endif
+		#else
+			#include <unordered_map>
+			#define SCP_hash_map std::unordered_map
+		#endif
+	#endif
 #endif // ! defined __GNUC__
 
 #if defined(_MSC_VER) && _MSC_VER >= 1400 || !defined(_MSC_VER)
@@ -127,6 +135,9 @@ class SCP_multimap : public std::multimap<T, U, std::less<T>, SCP_vm_allocator<s
 template< typename T >
 class SCP_queue : public std::queue< T, std::deque< T, SCP_vm_allocator< T > > > { };
 
+template< typename T >
+class SCP_deque : public std::deque< T, SCP_vm_allocator< T > > { };
+
 template <class T1, class T2>
 bool operator==(const SCP_vm_allocator<T1>&, const SCP_vm_allocator<T2>&) throw()
 {
@@ -145,6 +156,7 @@ bool operator!=(const SCP_vm_allocator<T1>&, const SCP_vm_allocator<T2>&) throw(
 #define SCP_map std::map
 #define SCP_multimap std::multimap
 #define SCP_queue std::queue
+#define SCP_deque std::deque
 #define SCP_vector std::vector
 #define SCP_list std::list
 

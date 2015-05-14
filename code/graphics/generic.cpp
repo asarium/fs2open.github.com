@@ -20,6 +20,17 @@
 //we check background type to avoid messed up colours for ANI
 #define ANI_BPP_CHECK		(ga->ani.bg_type == BM_TYPE_PCX) ? 16 : 32
 
+// These two functions find if a bitmap or animation exists by filename, no extension needed.
+bool generic_bitmap_exists(const char *filename)
+{
+	return cf_exists_full_ext(filename, CF_TYPE_ANY, BM_NUM_TYPES, bm_ext_list);
+}
+
+bool generic_anim_exists(const char *filename)
+{
+	return cf_exists_full_ext(filename, CF_TYPE_ANY, BM_ANI_NUM_TYPES, bm_ani_ext_list);
+}
+
 // Goober5000
 int generic_anim_init_and_stream(generic_anim *anim, const char *anim_filename, ubyte bg_type, bool attempt_hi_res)
 {
@@ -418,7 +429,7 @@ void generic_render_ani_stream(generic_anim *ga)
 	#endif
 }
 
-void generic_anim_render(generic_anim *ga, float frametime, int x, int y)
+void generic_anim_render(generic_anim *ga, float frametime, int x, int y, bool menu)
 {
 	float keytime = 0.0;
 
@@ -487,8 +498,8 @@ void generic_anim_render(generic_anim *ga, float frametime, int x, int y)
 		}
 		ga->previous_frame = ga->current_frame;
 		if(ga->use_hud_color)
-			gr_aabitmap(x,y);
+			gr_aabitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
 		else
-			gr_bitmap(x,y);
+			gr_bitmap(x, y, (menu ? GR_RESIZE_MENU : GR_RESIZE_FULL));
 	}
 }

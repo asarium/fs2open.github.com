@@ -74,6 +74,8 @@ struct image_desc
 #define CHA_COLLIDEBEAM		31
 #define CHA_ONACTION		32
 #define CHA_ONACTIONSTOPPED	33
+#define CHA_MSGRECEIVED		34
+#define CHA_HUDMSGRECEIVED	35
 
 // management stuff
 void scripting_state_init();
@@ -118,9 +120,9 @@ public:
 	bool AddCondition(script_condition *sc);
 	bool AddAction(script_action *sa);
 
-	bool ConditionsValid(int action, class object *objp=NULL, int more_data = 0);
+	bool ConditionsValid(int action, class object *objp = NULL, int more_data = 0);
 	bool IsOverride(class script_state *sys, int action);
-	bool Run(class script_state *sys, int action, char format='\0', void *data=NULL);
+	bool Run(class script_state *sys, int action, char format = '\0', void *data = NULL);
 };
 
 //**********Main script_state function
@@ -132,23 +134,21 @@ private:
 	int Langs;
 	struct lua_State *LuaState;
 	const struct script_lua_lib_list *LuaLibs;
-    int environmentSetupHandle = LUA_NOREF;
+	int environmentSetupHandle;
 
 	//Utility variables
 	SCP_vector<image_desc> ScriptImages;
 	SCP_vector<ConditionedHook> ConditionalHooks;
 
-    int loadFunction(lua_State* L, const char* s, size_t len, const char* name, ScriptingApi apiVersion);
-
 private:
 
-    void ParseChunkSub(int *out_lang, int *out_index, char* debug_str, ScriptingApi apiVersion);
-	int RunBytecodeSub(int in_lang, int in_idx, char format='\0', void *data=NULL);
+	void ParseChunkSub(int *out_lang, int *out_index, char* debug_str, ScriptingApi apiVersion);
+	int RunBytecodeSub(int in_lang, int in_idx, char format = '\0', void *data = NULL);
 
 	void SetLuaSession(struct lua_State *L);
 
 	void OutputLuaMeta(FILE *fp);
-	
+
 	//Lua private helper functions
 	bool OpenHookVarTable();
 	bool CloseHookVarTable();
@@ -158,6 +158,8 @@ private:
 
 	//Destroy everything
 	void Clear();
+
+	int loadFunction(lua_State* L, const char* s, size_t len, const char* name, ScriptingApi apiVersion);
 
 public:
 	//***Init/Deinit
@@ -169,7 +171,7 @@ public:
 	int LoadBm(char *name);
 	void UnloadImages();
 
-	lua_State *GetLuaSession(){return LuaState;}
+	lua_State *GetLuaSession(){ return LuaState; }
 
 	//***Init functions for langs
 	int CreateLuaState();
@@ -181,27 +183,27 @@ public:
 	//void MoveData(script_state &in);
 
 	//***Variable handling functions
-	bool GetGlobal(char *name, char format='\0', void *data=NULL);
+	bool GetGlobal(char *name, char format = '\0', void *data = NULL);
 	void RemGlobal(char *name);
 
-	void SetHookVar(char *name, char format, void *data=NULL);
+	void SetHookVar(char *name, char format, void *data = NULL);
 	void SetHookObject(char *name, object *objp);
 	void SetHookObjects(int num, ...);
-	bool GetHookVar(char *name, char format='\0', void *data=NULL);
+	bool GetHookVar(char *name, char format = '\0', void *data = NULL);
 	void RemHookVar(char *name);
 	void RemHookVars(unsigned int num, ...);
 
 	//***Hook creation functions
-    bool EvalString(const char* string, const char *format = NULL, void *rtn = NULL, const char *debug_str = NULL,
-        ScriptingApi apiVersion = ScriptingApi::InvalidVersion);
-    void ParseChunk(script_hook *dest, char* debug_str, ScriptingApi apiVersion);
-	bool ParseCondition(const char *filename="<Unknown>");
+	bool EvalString(const char *string, const char *format = NULL, void *rtn = NULL, const char *debug_str = NULL,
+		ScriptingApi apiVersion = ScriptingApi::InvalidVersion);
+	void ParseChunk(script_hook *dest, char* debug_str = NULL, ScriptingApi apiVersion = ScriptingApi::InvalidVersion);
+	bool ParseCondition(const char *filename = "<Unknown>");
 
 	//***Hook running functions
-	int RunBytecode(script_hook &hd, char format='\0', void *data=NULL);
+	int RunBytecode(script_hook &hd, char format = '\0', void *data = NULL);
 	bool IsOverride(script_hook &hd);
-	int RunCondition(int condition, char format='\0', void *data=NULL, class object *objp = NULL, int more_data = 0);
-	bool IsConditionOverride(int action, object *objp=NULL);
+	int RunCondition(int condition, char format = '\0', void *data = NULL, class object *objp = NULL, int more_data = 0);
+	bool IsConditionOverride(int action, object *objp = NULL);
 
 	//*****Other functions
 	void EndFrame();

@@ -13,7 +13,7 @@ extern "C" {
 //*************************Lua funcs*************************
 //Used to parse arguments on the stack to C values
 int ade_get_args(lua_State *L, const char *fmt, ...);
-int ade_set_args(lua_State *L, const char* fmt, ...);
+int ade_set_args(lua_State *L, const char *fmt, ...);
 void ade_stackdump(lua_State *L, char *stackdump);
 int ade_friendly_error(lua_State *L);
 

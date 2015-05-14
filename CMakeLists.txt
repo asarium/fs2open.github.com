@@ -1,15 +1,17 @@
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.2)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
+include(cmake/util.cmake)
+
 # Set a few policies
-cmake_policy(SET CMP0051 OLD)
-cmake_policy(SET CMP0053 NEW)
-cmake_policy(SET CMP0054 NEW)
+set_policy(CMP0051 OLD)
+set_policy(CMP0053 NEW)
+set_policy(CMP0054 NEW)
 
 SET(FSO_VERSION_MAJOR 3)
 SET(FSO_VERSION_MINOR 7)
-SET(FSO_VERSION_BUILD 1)
+SET(FSO_VERSION_BUILD 3)
 SET(FSO_VERSION_REVISION 0)
 
 SET(FSO_PROJECT_DESCRIPTION "Open source project based on the original FreeSpace 2 source code.")
@@ -110,9 +112,7 @@ IF (SET_INDEX LESS 0)
 	SET(FSO_INSTRUCTION_SET "")
 ENDIF(SET_INDEX LESS 0)
 
-OPTION(FSO_CMAKE_DEBUG "Enable cmake debugging in while generating build files" OFF)
-
-OPTION(COTIRE_ENABLE "Enable cotire, disabling may be useful for cmake files development" ON)
+OPTION(COTIRE_ENABLE "Enable cotire, this speeds up builds but may cause issues while developing (default = OFF)" OFF)
 
 MARK_AS_ADVANCED(FORCE FSO_CMAKE_DEBUG)
 MARK_AS_ADVANCED(FORCE FSO_BUILD_INCLUDED_LIBS)
@@ -133,8 +133,6 @@ INCLUDE(platforms)
 INCLUDE(headers)
 
 SET(GENERATED_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated_source)
-
-INCLUDE(compilerChecks)
 
 # This includes source code for some tools, either used in the build or also for something else
 ADD_SUBDIRECTORY(tools)
