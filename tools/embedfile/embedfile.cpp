@@ -77,7 +77,7 @@ void do_binary_content(std::ifstream& file_in, std::ofstream& file_out,
 		file_out << std::endl;
 	}
 
-	file_out << "static const unsigned char " << field_name << "[] = " << std::endl;
+	file_out << "const unsigned char " << field_name << "[] = " << std::endl;
 	file_out << "{" << std::endl;
 	file_out << "\t";
 
@@ -125,7 +125,7 @@ void do_text_content(std::ifstream& file_in, std::ofstream& file_out,
 	file_content.assign((std::istreambuf_iterator<char>(file_in)),
 				std::istreambuf_iterator<char>());
 
-	file_out << "char *" << field_name << " = " << std::endl;
+	file_out << "const char *" << field_name << " = " << std::endl;
 	file_out << "\"";
 
 	size_t pos = 0;
@@ -176,6 +176,32 @@ void do_text_content(std::ifstream& file_in, std::ofstream& file_out,
 	file_out << "\";" << std::endl;
 }
 
+void write_header(std::ostream& out, const std::string& fieldName, bool text_content)
+{
+	std::string headerDefine(fieldName);
+
+	std::transform(fieldName.begin(), fieldName.end(), headerDefine.begin(), ::toupper);
+
+	headerDefine = "SCP_" + headerDefine + "_H";
+
+	out << "#ifndef " << headerDefine << "\n";
+	out << "#define " << headerDefine << "\n";
+	out << "#pragma once\n";
+
+	out << "\n";
+
+	if (text_content)
+	{
+		out << "extern const char* " << fieldName << ";\n";
+	}
+	else
+	{
+		out << "extern const unsigned char " << fieldName << "[];\n";
+	}
+	out << "\n";
+	out << "#endif\n";
+}
+
 int main( int argc, char* argv[] )
 {
 	if (argc < 4 || argc > 6)
@@ -205,7 +231,7 @@ int main( int argc, char* argv[] )
 	}
 
 	std::string input_file(argv[argc_offset]);
-	std::string output_file(argv[argc_offset + 1]);
+	std::string output_basename(argv[argc_offset + 1]);
 	std::string field_name(argv[argc_offset + 2]);
 
 	std::ios::openmode mode = std::ios::in;
@@ -238,26 +264,39 @@ int main( int argc, char* argv[] )
 
 	file_in.seekg(0, std::ios::beg);
 
-	// Before conditioning, use this a the name of the .h
-	std::ofstream file_out(output_file.c_str());
-	if(file_out.bad())
+	// Generates two files, one header and one source file
+	std::string headerName = output_basename + ".h";
+	std::string sourceName = output_basename + ".cpp";
+
+	std::ofstream source_out(sourceName.c_str());
+	if (source_out.bad())
 	{
-		std::cout << "ERROR: Error opening output file: " << output_file << std::endl;
-		file_in.close();
+		std::cout << "ERROR: Error opening output file: " << sourceName << std::endl;
+		return error_cantoutputfile;
+	}
+
+	std::ofstream header_out(headerName.c_str());
+	if (header_out.bad())
+	{
+		std::cout << "ERROR: Error opening output file: " << headerName << std::endl;
 		return error_cantoutputfile;
 	}
 
 	if (text_content)
 	{
-		do_text_content(file_in, file_out, field_name, input_size);
+		do_text_content(file_in, source_out, field_name, input_size);
 	}
 	else
 	{
-		do_binary_content(file_in, file_out, field_name, input_size, wxWidgets_image);
+		do_binary_content(file_in, source_out, field_name, input_size, wxWidgets_image);
 	}
 
+	write_header(header_out, field_name, text_content);
+
 	file_in.close();
-	file_out.close();
+
+	source_out.close();
+	header_out.close();
 
 	return error_none;
 }

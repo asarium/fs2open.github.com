@@ -1,5 +1,5 @@
 
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8.12)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.2)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 include(cmake/util.cmake)
@@ -110,15 +110,7 @@ IF (SET_INDEX LESS 0)
 	SET(FSO_INSTRUCTION_SET "")
 ENDIF(SET_INDEX LESS 0)
 
-OPTION(FSO_CMAKE_DEBUG "Enable cmake debugging in while generating build files" OFF)
-
-if (WIN32)
-	set(cotire_default ON)
-else()
-	# There are a few issues for non-windows
-	set(cotire_default OFF)
-endif()
-OPTION(COTIRE_ENABLE "Enable cotire, disabling may be useful for cmake files development" ${cotire_default})
+OPTION(COTIRE_ENABLE "Enable cotire, this speeds up builds but may cause issues while developing (default = OFF)" OFF)
 
 MARK_AS_ADVANCED(FORCE FSO_CMAKE_DEBUG)
 MARK_AS_ADVANCED(FORCE FSO_BUILD_INCLUDED_LIBS)
@@ -139,8 +131,6 @@ INCLUDE(platforms)
 INCLUDE(headers)
 
 SET(GENERATED_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated_source)
-
-INCLUDE(compilerChecks)
 
 # This includes source code for some tools, either used in the build or also for something else
 ADD_SUBDIRECTORY(tools)

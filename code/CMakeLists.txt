@@ -64,3 +64,5 @@ ENDIF(FSO_BUILD_TOOLS)
 
 include(util)
 configure_cotire(code)
+
+include(Cxx11.cmake)

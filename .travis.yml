@@ -1,7 +1,9 @@
 language: cpp
+branches:
+  only:
+    - cmake
 os:
   - linux
-  #- osx
 env:
   - BUILD_TYPE=Release GENERATOR=Ninja
   - BUILD_TYPE=Debug GENERATOR=Ninja
@@ -9,17 +11,20 @@ compiler:
   - gcc
   - clang
 before_install:
-  - test "$TRAVIS_OS_NAME" = "linux" && sudo add-apt-repository --yes ppa:andykimpe/cmake || echo "NOT adding apt repo."
-  - test "$TRAVIS_OS_NAME" = "linux" && sudo add-apt-repository --yes ppa:zoogie/sdl2-snapshots  || echo "NOT adding apt repo."
-  - test "$TRAVIS_OS_NAME" = "linux" && sudo apt-get update -qq  || echo "NOT updating apt repo."
+  - sudo add-apt-repository --yes ppa:andykimpe/cmake
+  - sudo add-apt-repository --yes ppa:zoogie/sdl2-snapshots
+  - sudo apt-get update -qq
 install:
-  - test "$TRAVIS_OS_NAME" = "linux" && sudo apt-get install -y cmake ninja-build || echo "NOT installing from apt."
-  - test "$TRAVIS_OS_NAME" = "linux" && sudo apt-get install -y libopenal-dev libogg-dev libvorbis-dev libsdl2-dev libtheora-dev libreadline6-dev libpng12-dev libjpeg62-dev liblua5.1-0-dev libjansson-dev libtool || echo "NOT installing from apt."
-  - test "$TRAVIS_OS_NAME" = "osx" && brew install pkg-config ninja sdl2 theora libogg libvorbis openal-soft || echo "NOT osx."
+  - sudo apt-get install -y ninja-build
+  - sudo apt-get install -y libopenal-dev libogg-dev libvorbis-dev libsdl2-dev libtheora-dev libreadline6-dev libpng12-dev libjpeg62-dev liblua5.1-0-dev libjansson-dev libtool
+  - wget http://www.cmake.org/files/v3.2/cmake-3.2.2-Linux-x86_64.tar.gz
+  - tar -xzf cmake-3.2.2-Linux-x86_64.tar.gz
+  - mkdir -p $HOME/cmake/
+  - cp -fR cmake-3.2.2-Linux-x86_64/* $HOME/cmake/
 before_script:
-  - cmake --version
-  - mkdir travis-build
-script:
+  - $HOME/cmake/bin/cmake --version
+  - mkdir -p travis-build
   - cd travis-build
-  - cmake -G "$GENERATOR" -DCMAKE_BUILD_TYPE=$BUILD_TYPE ..
-  - cmake --build .
+  - $HOME/cmake/bin/cmake -G "$GENERATOR" -DCMAKE_BUILD_TYPE=$BUILD_TYPE ..
+script:
+  - $HOME/cmake/bin/cmake --build .

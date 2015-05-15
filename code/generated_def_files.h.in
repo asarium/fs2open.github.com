@@ -1,0 +1,13 @@
+
+typedef struct def_file
+{
+	const char* filename;
+	const char *contents;
+} def_file;
+
+@INCLUDE_LIST@
+
+def_file Default_files[] =
+{
+@ARRAY_ELEMENTS@
+};
