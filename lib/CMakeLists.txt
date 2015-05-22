@@ -22,11 +22,9 @@ IF (USE_SPEECH)
 ENDIF(USE_SPEECH)
 
 # These are only required for the web-ui which is non-Windows
-IF(UNIX)
-	ADD_SUBDIRECTORY(jansson)
+ADD_SUBDIRECTORY(jansson)
 
-	ADD_SUBDIRECTORY(mongoose)
-ENDIF(UNIX)
+ADD_SUBDIRECTORY(mongoose)
 
 IF(MSVC60 OR MSVC70)
 	INCLUDE(stlport.cmake)

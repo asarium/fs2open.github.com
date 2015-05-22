@@ -136,14 +136,6 @@ void multi_options_read_config()
 					NEXT_TOKEN();
 					if (tok != NULL) {
 						strncpy(Multi_options_g.std_passwd, tok, STD_PASSWD_LEN);
-#ifdef _WIN32
-						// yuck
-						extern HWND Multi_std_host_passwd;
-						SetWindowText(Multi_std_host_passwd, Multi_options_g.std_passwd);
-#else
-						// TODO: get password ?
-						// argh, gonna have to figure out how to do this - mharris 07/07/2002
-#endif
 					}
 				} else
 				// set standalone to low updates
@@ -309,11 +301,9 @@ void multi_options_read_config()
 		in = NULL;
 	}
 
-#ifndef _WIN32
 	if (Is_standalone) {
 		std_configLoaded(&Multi_options_g);
 	}
-#endif
 }
 
 // set netgame defaults 

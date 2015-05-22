@@ -15,9 +15,7 @@
 #include "network/multi.h"
 #include "network/multi_options.h"
 
-#ifndef _WIN32
-	void std_configLoaded(multi_global_options *options);
-#endif
+void std_configLoaded(multi_global_options *options);
 
 // ----------------------------------------------------------------------------------------
 // external variables

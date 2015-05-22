@@ -1,4 +1,3 @@
-#ifndef _WIN32
 
 #include <cstdlib>
 #include <iostream>
@@ -184,6 +183,8 @@ std::string base64_decode(std::string const& encoded_string) {
 #include "network/multi_endgame.h"
 
 #include "fs2netd/fs2netd_client.h"
+
+#include "osapi/osregistry.h"
 
 #include "mongoose.h"
 #include "jansson.h"
@@ -790,6 +791,11 @@ void std_init_standalone() {
     atexit(webapi_shutdown);
 }
 
+void std_init_os()
+{
+	os_init_registry_stuff(Osreg_company_name, Osreg_app_name, NULL);
+}
+
 void std_configLoaded(multi_global_options *options) {
 
     webapi_shutdown();
@@ -928,7 +934,3 @@ void std_reset_standalone_gui() {}
 void std_reset_timestamps() {}
 void std_multi_set_standalone_missiontime(float mission_time) {}
 
-// stub - not required for *nix standalone
-void std_init_os() {}
-
-#endif
