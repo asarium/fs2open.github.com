@@ -1,8 +1,8 @@
 /*
  * Copyright (C) Volition, Inc. 1999.  All rights reserved.
  *
- * All source code herein is the property of Volition, Inc. You may not sell 
- * or otherwise commercially exploit the source or things you created based on the 
+ * All source code herein is the property of Volition, Inc. You may not sell
+ * or otherwise commercially exploit the source or things you created based on the
  * source.
  *
 */
@@ -41,7 +41,7 @@ public:
 
 	outwnd_filter_struct()
 		: enabled( false )
-	{ 
+	{
 		name[ 0 ] = 0;
 	}
 };
@@ -229,7 +229,7 @@ void outwnd_print(const char *id, const char *tmp)
 
 	if (Log_debug_output_to_file) {
 		if (Log_fp != NULL) {
-			fputs(tmp, Log_fp);	
+			fputs(tmp, Log_fp);
 			fflush(Log_fp);
 		}
 	} else {
@@ -239,12 +239,12 @@ void outwnd_print(const char *id, const char *tmp)
 }
 
 
-void outwnd_init(int display_under_freespace_window)
+void outwnd_init()
 {
 	outwnd_inited = true;
 
 	char pathname[MAX_PATH_LEN];
-    
+
     /* Set where the log file is going to go */
     // Zacam: Set various conditions based on what type of log to generate.
     if (Fred_running) {
@@ -297,7 +297,7 @@ void safe_point_print(const char *format, ...)
 {
 	SCP_string temp;
 	va_list args;
-	
+
 	va_start(args, format);
 	vsprintf(temp, format, args);
 	va_end(args);

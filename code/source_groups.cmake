@@ -132,8 +132,6 @@ set (file_root_debugconsole
 	debugconsole/consolecmds.cpp
 	debugconsole/consoleparse.cpp
 	debugconsole/consoleparse.h
-	debugconsole/timerbar.cpp
-	debugconsole/timerbar.h
 )
 
 SET(file_root_def_files
@@ -389,21 +387,10 @@ set (file_root_io
 	io/timer.cpp
 	io/timer.h
 	io/joy.h
+	io/joy-sdl.cpp
 	io/joy_ff.h
+	io/joy_ff-sdl.cpp
 )
-
-IF(WIN32)
-	set (file_root_io
-		${file_root_io}
-		io/joy-sdl.cpp
-		io/joy_ff-sdl.cpp
-	)
-ELSEIF(UNIX)
-	set (file_root_io
-		${file_root_io}
-		io/joy-unix.cpp
-	)
-ENDIF(WIN32)
 
 # jpgutils files
 set (file_root_jpgutils
@@ -681,20 +668,18 @@ set (file_root_osapi
 	osapi/osapi.cpp
 	osapi/osregistry.h
 	osapi/outwnd.h
+	osapi/outwnd.cpp
 )
 
 IF(WIN32)
 set (file_root_osapi
 	${file_root_osapi}
-	osapi/monopub.h
 	osapi/osregistry.cpp
-	osapi/outwnd.cpp
 )
 ELSEIF(UNIX)
 set (file_root_osapi
 	${file_root_osapi}
 	osapi/osregistry_unix.cpp
-	osapi/outwnd_unix.cpp
 )
 ENDIF(WIN32)
 

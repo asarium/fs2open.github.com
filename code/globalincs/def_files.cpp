@@ -11,6 +11,12 @@
 #include <string.h>
 #include "globalincs/pstypes.h"
 
+struct def_file
+{
+	const char* filename;
+	const char *contents;
+};
+
 #include "globalincs/generated_def_files.h"
 
 const char *defaults_get_file(char *filename)

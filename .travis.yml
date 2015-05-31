@@ -1,7 +1,4 @@
 language: cpp
-branches:
-  only:
-    - cmake
 os:
   - linux
 env:

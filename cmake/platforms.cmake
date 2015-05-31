@@ -1,6 +1,5 @@
 
-SET(PLATFORM_INCLUDES "" CACHE INTERNAL "Compiler specific includes")
-SET(PLATFORM_LBRARIES "" CACHE INTERNAL "Compiler specific libraries")
+add_library(platform INTERFACE)
 
 IF(FSO_CMAKE_DEBUG)
 	INCLUDE(debug-vars)
@@ -12,7 +11,6 @@ ELSEIF(UNIX)
 	INCLUDE(platform-unix)
 	IF(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")
 		INCLUDE(platform-freebsd)
-#	ELSEIF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
 	ELSEIF(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
 		INCLUDE(platform-solaris)
 	ENDIF(${CMAKE_SYSTEM_NAME} MATCHES "FreeBSD")

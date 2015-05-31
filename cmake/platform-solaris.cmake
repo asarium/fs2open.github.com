@@ -1,1 +1,2 @@
-ADD_DEFINITIONS(-DSCP_SOLARIS)
+
+target_compile_definitions(platform INTERFACE SCP_SOLARIS)

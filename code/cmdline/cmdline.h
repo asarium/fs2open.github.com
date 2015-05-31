@@ -132,6 +132,7 @@ extern int Cmdline_drawelements;
 extern char* Cmdline_keyboard_layout;
 extern bool Cmdline_gl_finish;
 extern bool Cmdline_no_geo_sdr_effects;
+extern bool Cmdline_set_cpu_affinity;
 extern bool Cmdline_use_md5;
 
 // Developer/Testing related
@@ -148,7 +149,6 @@ extern int Cmdline_show_mem_usage;
 extern int Cmdline_show_pos;
 extern int Cmdline_show_stats;
 extern int Cmdline_save_render_targets;
-extern int Cmdline_debug_window;
 extern int Cmdline_verify_vps;
 extern int Cmdline_reparse_mainhall;
 extern bool Cmdline_frame_profile;
