@@ -5,6 +5,8 @@
 
 #include "globalincs/pstypes.h"
 
+#include <stdexcept>
+
 namespace cfile
 {
 	struct FileHandle;

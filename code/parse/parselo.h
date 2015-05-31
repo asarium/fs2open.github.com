@@ -14,7 +14,7 @@
 #include "cfile/cfile.h"
 #include "globalincs/pstypes.h"
 
-#include <exception>
+#include <stdexcept>
 
 // NOTE: although the main game doesn't need this anymore, FRED2 still does
 #define	MISSION_TEXT_SIZE	1000000

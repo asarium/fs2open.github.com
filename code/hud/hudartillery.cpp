@@ -154,7 +154,7 @@ void parse_ssm(const char *filename)
 // game init
 void ssm_init()
 {
-	if (cf_exists_full("ssm.tbl", CF_TYPE_TABLES)) {
+	if (cfile::exists("ssm.tbl", cfile::TYPE_TABLES)) {
 		mprintf(("TABLES => Starting parse of 'ssm.tbl'...\n"));
 		parse_ssm("ssm.tbl");
 	}
