@@ -3,6 +3,7 @@
 #define _FSMEMORY_H
 
 #include <new>
+#include <cstddef>
 
 #ifdef HAVE_CXX11
 // throw
