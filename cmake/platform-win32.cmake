@@ -1,14 +1,7 @@
 
 MESSAGE(STATUS "Configuring Windows specific things and stuff...")
 
-SET(PLATFORM_INCLUDES "" CACHE INTERNAL "Compiler specific includes")
-SET(PLATFORM_LBRARIES "" CACHE INTERNAL "Compiler specific libraries")
-
-# DirectX libraries are still used on windows
-SET(DIRECTX_DIRECTORY ${CMAKE_SOURCE_DIR}/code/directx)
-
-SET(PLATFORM_LBRARIES
-	comctl32.lib
+target_link_libraries(platform INTERFACE comctl32.lib
 	msacm32.lib
 	odbc32.lib
 	odbccp32.lib
@@ -16,9 +9,9 @@ SET(PLATFORM_LBRARIES
 	winmm.lib
 	wsock32.lib)
 
+target_compile_definitions(platform INTERFACE WIN32 USE_OPENAL _WINDOWS)
 
-ADD_DEFINITIONS(-DWIN32)
-ADD_DEFINITIONS(-DUSE_OPENAL)
-ADD_DEFINITIONS(-D_WINDOWS)
+# Specify minimum Windows version for the headers (currently this is XP)
+target_compile_definitions(platform INTERFACE NTDDI_VERSION=0x05010000 _WIN32_WINNT=0x0501)
 
 SET(EXE_GUI_TYPE WIN32)

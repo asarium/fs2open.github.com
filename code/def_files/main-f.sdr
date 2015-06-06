@@ -323,7 +323,11 @@ void main()
 #endif
 
 #ifdef FLAG_FOG
-   baseColor.rgb = mix(baseColor.rgb, gl_Fog.color.rgb * ((blend_alpha == 1) ? baseColor.a : 1.0), fogDist);
+	vec3 fogColor = gl_Fog.color.rgb;
+ #ifdef FLAG_DIFFUSE_MAP
+	if(blend_alpha == 1) fogColor *= baseColor.a;
+ #endif
+   baseColor.rgb = mix(baseColor.rgb, fogColor, fogDist);
 	specData.rgb *= fogDist;
 #endif
 

@@ -1,10 +1,7 @@
 
 # File to execute compiler specific commands
 
-SET(COMPILER_INCLUDES "" CACHE INTERNAL "Compiler specific includes")
-SET(COMPILER_LBRARIES "" CACHE INTERNAL "Compiler specific libraries")
-
-ADD_DEFINITIONS(-DNO_CD_CHECK)
+add_library(compiler INTERFACE)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	include(toolchain-gcc)

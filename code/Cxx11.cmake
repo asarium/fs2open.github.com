@@ -13,4 +13,5 @@ write_compiler_detection_header(
   PREFIX SCP
   COMPILERS AppleClang Clang GNU MSVC
   FEATURES ${OPTIONAL_FEATURES}
+  VERSION 3.2
 )

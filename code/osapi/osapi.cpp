@@ -195,10 +195,6 @@ const char *detect_home(void)
 // for the app name, which is where registry keys are stored.
 void os_init(const char * wclass, const char * title, const char *app_name, const char *version_string )
 {
-	// create default ini entries for the user
-	if (os_config_read_string(NULL, NOX("VideocardFs2open"), NULL) == NULL)
-		os_config_write_string(NULL, NOX("VideocardFs2open"), NOX("OGL -(640x480)x16 bit"));
-
 	os_init_registry_stuff(Osreg_company_name, title, version_string);
 
 	strcpy_s( szWinTitle, title );
@@ -228,8 +224,11 @@ void os_init(const char * wclass, const char * title, const char *app_name, cons
 	// check to see if we're running under msdev
 	os_check_debugger();
 
-	// deal with processor affinity
-	os_set_process_affinity();
+	if (Cmdline_set_cpu_affinity)
+	{
+		// deal with processor affinity
+		os_set_process_affinity();
+	}
 #endif // WIN32
 
 	atexit(os_deinit);
@@ -417,8 +416,16 @@ void os_poll()
 			}
 			break;
 		
+		case SDL_JOYDEVICEADDED:
+		case SDL_JOYDEVICEREMOVED:
+			joy_device_changed(event.jdevice.type, event.jdevice.which);
+			break;
 		case SDL_MOUSEMOTION:
 			mouse_event(event.motion.x, event.motion.y, event.motion.xrel, event.motion.yrel);
+			break;
+
+		case SDL_MOUSEWHEEL:
+			mousewheel_motion(event.wheel.x, event.wheel.y);
 			break;
 		}
 	}
