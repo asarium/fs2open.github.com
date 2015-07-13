@@ -24,6 +24,6 @@ before_script:
   - $HOME/cmake/bin/cmake --version
   - mkdir -p travis-build
   - cd travis-build
-  - $HOME/cmake/bin/cmake -G "$GENERATOR" -DCMAKE_BUILD_TYPE=$BUILD_TYPE ..
+  - $HOME/cmake/bin/cmake -G "$GENERATOR" -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DFSO_BUILD_QTFRED=ON ..
 script:
   - $HOME/cmake/bin/cmake --build .
