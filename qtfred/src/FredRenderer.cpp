@@ -1384,12 +1384,12 @@ namespace fso
 
                 if (Show_dock_points)
                 {
-                    j |= MR_BAY_PATHS ;
+                    j |= MR_DEPRECATED_BAY_PATHS;
                 }
 
                 if (Show_paths_fred)
                 {
-                    j |= MR_SHOW_PATHS ;
+                    j |= MR_DEPRECATED_SHOW_PATHS;
                 }
 
                 z = objp->instance;
@@ -1400,12 +1400,21 @@ namespace fso
                 {
                     if (Fred_outline)
                     {
-                        model_set_outline_color(Fred_outline >> 16, (Fred_outline >> 8) & 0xff, Fred_outline & 0xff);
-                        model_render(Ship_info[Ships[z].ship_info_index].model_num, &objp->orient, &objp->pos, j | MR_SHOW_OUTLINE, -1, -1, Ships[z].ship_replacement_textures);
+						model_render_params render_info;
+						render_info.set_color(Fred_outline >> 16, (Fred_outline >> 8) & 0xff, Fred_outline & 0xff);
+						render_info.set_replacement_textures(Ships[z].ship_replacement_textures);
+						render_info.set_flags(j | MR_SHOW_OUTLINE);
+
+                        model_render_immediate(&render_info, Ship_info[Ships[z].ship_info_index].model_num, &objp->orient, &objp->pos);
                     }
                     else
                     {
-                        model_render(Ship_info[Ships[z].ship_info_index].model_num, &objp->orient, &objp->pos, j, -1, -1, Ships[z].ship_replacement_textures);
+						model_render_params render_info;
+						render_info.set_color(Fred_outline >> 16, (Fred_outline >> 8) & 0xff, Fred_outline & 0xff);
+						render_info.set_replacement_textures(Ships[z].ship_replacement_textures);
+						render_info.set_flags(j);
+
+						model_render_immediate(&render_info, Ship_info[Ships[z].ship_info_index].model_num, &objp->orient, &objp->pos);
                     }
                 }
             }
@@ -1585,12 +1594,12 @@ namespace fso
 
                 if (Show_dock_points)
                 {
-                    j |= MR_BAY_PATHS ;
+                    j |= MR_DEPRECATED_BAY_PATHS ;
                 }
 
                 if (Show_paths_fred)
                 {
-                    j |= MR_SHOW_PATHS ;
+                    j |= MR_DEPRECATED_SHOW_PATHS ;
                 }
 
                 z = objp->instance;
@@ -1610,12 +1619,17 @@ namespace fso
 
                 if (Fred_outline)
                 {
-                    model_set_outline_color(Fred_outline >> 16, (Fred_outline >> 8) & 0xff, Fred_outline & 0xff);
                     j |= MR_SHOW_OUTLINE_HTL ;
                 }
 
+				model_render_params render_info;
+				render_info.set_color(Fred_outline >> 16, (Fred_outline >> 8) & 0xff, Fred_outline & 0xff);
+				render_info.set_replacement_textures(Ships[z].ship_replacement_textures);
+				render_info.set_flags(j);
+
                 g3_done_instance(0);
-                model_render(Ship_info[Ships[z].ship_info_index].model_num, &objp->orient, &objp->pos, j, -1, -1, Ships[z].ship_replacement_textures);
+
+                model_render_immediate(&render_info, Ship_info[Ships[z].ship_info_index].model_num, &objp->orient, &objp->pos);
             }
             else
             {
