@@ -35,6 +35,7 @@
 #include <ctype.h>
 #include <errno.h>
 
+#include "osapi/osapi.h"
 #include "inetfile/inetgetfile.h"
 #include "inetfile/chttpget.h"
 
@@ -63,7 +64,7 @@ int HTTPObjThread( void *obj )
 void ChttpGet::AbortGet()
 {
 	m_Aborting = true;
-	while(!m_Aborted) Sleep(50); //Wait for the thread to end
+	while(!m_Aborted) os_sleep(50); //Wait for the thread to end
 }
 
 ChttpGet::ChttpGet(char *URL,char *localfile,char *proxyip,unsigned short proxyport)
@@ -106,6 +107,9 @@ void ChttpGet::GetFile(char *URL,char *localfile)
 		m_State = HTTP_STATE_SOCKET_ERROR;
 		return;
 	}
+
+//	uint arg = 1;
+//	ioctlsocket( m_DataSock, FIONBIO, &arg );
 
 	char *pURL = URL;
 	if(strnicmp(URL,"http:",5)==0)
@@ -169,6 +173,8 @@ ChttpGet::~ChttpGet()
 	if (thread_id)
 		SDL_WaitThread(thread_id, NULL);
 
+	fclose(LOCALFILE);
+    
 	if (m_DataSock != INVALID_SOCKET) {
 		shutdown(m_DataSock, 2);
 		closesocket(m_DataSock);
@@ -267,7 +273,7 @@ if (!p) return;
 
 				}
 
-				Sleep(1);
+				os_sleep(1);
 			}while(!idataready);
 		ReadDataChannel();
 		return;
@@ -308,7 +314,7 @@ int ChttpGet::ConnectSocket()
 			}
 			rcode = http_Asyncgethostbyname(&ip,NW_AGHBN_READ,m_szHost);
 
-			Sleep(1);
+			os_sleep(1);
 		}while(rcode==0);
 	}
 	
@@ -352,7 +358,7 @@ int ChttpGet::ConnectSocket()
 				}
 				rcode = http_Asyncgethostbyname(&ip,NW_AGHBN_READ,m_ProxyIP);
 
-				Sleep(1);
+				os_sleep(1);
 			}while(rcode==0);
 			
 			
@@ -411,7 +417,7 @@ int ChttpGet::ConnectSocket()
 				break;
 			}
 
-			Sleep(1);
+			os_sleep(1);
 		}
 	}
 
@@ -455,7 +461,7 @@ char *ChttpGet::GetHTTPLine()
 				gotdata = true;
 			}
 
-			Sleep(1);
+			os_sleep(1);
 		}while(!gotdata);
 		
 		if(chunk[0]==0x0d)
@@ -481,7 +487,7 @@ char *ChttpGet::GetHTTPLine()
 					gotdata = true;
 				}
 
-				Sleep(1);
+				os_sleep(1);
 			}while(!gotdata);
 			igotcrlf = 1;	
 		}
@@ -490,7 +496,7 @@ char *ChttpGet::GetHTTPLine()
 			strcat_s(recv_buffer,chunk);
 		}
 		
-		Sleep(1);
+		os_sleep(1);
 	}while(igotcrlf==0);
 	return recv_buffer;	
 }
@@ -548,7 +554,7 @@ uint ChttpGet::ReadDataChannel()
 			fwrite(sDataBuffer, nBytesRecv, 1, LOCALFILE);
     	}
 		
-		Sleep(1);
+		os_sleep(1);
 	} while (nBytesRecv > 0);
 
 	fclose(LOCALFILE);	

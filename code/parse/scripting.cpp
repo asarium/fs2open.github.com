@@ -15,6 +15,7 @@
 #include "controlconfig/controlsconfig.h"
 #include "freespace.h"
 #include "weapon/beam.h"
+#include "osapi/osapi.h"
 
 //tehe. Declare the main event
 script_state Script_system("FS2_Open Scripting");
@@ -80,7 +81,12 @@ flag_def_list Script_actions[] =
 	{"On Primary Fire",			CHA_PRIMARYFIRE,	0},
 	{"On Secondary Fire",		CHA_SECONDARYFIRE,	0},
 	{"On Ship Arrive",			CHA_ONSHIPARRIVE,	0},
-	{"On Beam Collision",		CHA_COLLIDEBEAM,	0}
+	{"On Beam Collision",		CHA_COLLIDEBEAM,	0},
+	{"On Message Received",		CHA_MSGRECEIVED,	0},
+    {"On HUD Message Received", CHA_HUDMSGRECEIVED, 0},
+	{ "On Afterburner Engage",	CHA_AFTERBURNSTART, 0 },
+	{ "On Afterburner Stop",	CHA_AFTERBURNEND,	0 },
+	{ "On Beam Fire",			CHA_BEAMFIRE,		0 }
 };
 
 int Num_script_actions = sizeof(Script_actions)/sizeof(flag_def_list);
@@ -107,46 +113,42 @@ bool script_hook_valid(script_hook *hook)
 void script_parse_table(const char *filename)
 {
 	script_state *st = &Script_system;
-	int rval;
-	if ((rval = setjmp(parse_abort)) != 0)
+	
+	try
 	{
-		mprintf(("TABLES: Unable to parse '%s'!  Error code = %i.\n", filename, rval));
-		return;
-	}
+		read_file_text(filename, CF_TYPE_TABLES);
+		reset_parse();
 
-	read_file_text(filename, CF_TYPE_TABLES);
-	reset_parse();
+		if (optional_string("#Global Hooks"))
+		{
+			//int num = 42;
+			//Script_system.SetHookVar("Version", 'i', &num);
+			if (optional_string("$Global:")) {
+				st->ParseChunk(&Script_globalhook, "Global");
+			}
 
-	if(optional_string("#Global Hooks"))
-	{
-		//int num = 42;
-		//Script_system.SetHookVar("Version", 'i', &num);
-		if(optional_string("$Global:")) {
-			st->ParseChunk(&Script_globalhook, "Global");
+			if (optional_string("$Splash:")) {
+				st->ParseChunk(&Script_splashhook, "Splash");
+			}
+
+			if (optional_string("$GameInit:")) {
+				st->ParseChunk(&Script_gameinithook, "GameInit");
+			}
+
+			if (optional_string("$Simulation:")) {
+				st->ParseChunk(&Script_simulationhook, "Simulation");
+			}
+
+			if (optional_string("$HUD:")) {
+				st->ParseChunk(&Script_hudhook, "HUD");
+			}
+
+			required_string("#End");
 		}
-
-		if(optional_string("$Splash:")) {
-			st->ParseChunk(&Script_splashhook, "Splash");
-		}
-
-		if(optional_string("$GameInit:")) {
-			st->ParseChunk(&Script_gameinithook, "GameInit");
-		}
-
-		if(optional_string("$Simulation:")) {
-			st->ParseChunk(&Script_simulationhook, "Simulation");
-		}
-
-		if(optional_string("$HUD:")) {
-			st->ParseChunk(&Script_hudhook, "HUD");
-		}
-
-		required_string("#End");
-	}
-/*
-	if(optional_string("#State Hooks"))
-	{
-		while(optional_string("$State:")) {
+		/*
+			if(optional_string("#State Hooks"))
+			{
+			while(optional_string("$State:")) {
 			char buf[NAME_LENGTH];
 			int idx;
 			stuff_string(buf, F_NAME, sizeof(buf));
@@ -155,25 +157,31 @@ void script_parse_table(const char *filename)
 
 			if(optional_string("$Hook:"))
 			{
-				if(idx > -1) {
-					GS_state_hooks[idx] = st->ParseChunk(buf);
-				} else {
-					st->ParseChunk(buf);
-				}
+			if(idx > -1) {
+			GS_state_hooks[idx] = st->ParseChunk(buf);
+			} else {
+			st->ParseChunk(buf);
 			}
+			}
+			}
+			required_string("#End");
+			}
+			*/
+		if (optional_string("#Conditional Hooks"))
+		{
+			while (st->ParseCondition(filename));
+			required_string("#End");
 		}
-		required_string("#End");
-	}
-*/
-	if(optional_string("#Conditional Hooks"))
-	{
-		while(st->ParseCondition(filename));
-		required_string("#End");
-	}
 
-	// add tbl/tbm to multiplayer validation list
-	extern void fs2netd_add_table_validation(const char *tblname);
-	fs2netd_add_table_validation(filename);
+		// add tbl/tbm to multiplayer validation list
+		extern void fs2netd_add_table_validation(const char *tblname);
+		fs2netd_add_table_validation(filename);
+	}
+	catch (const parse::ParseException& e)
+	{
+		mprintf(("TABLES: Unable to parse '%s'!  Error message = %s.\n", filename, e.what()));
+		return;
+	}
 }
 
 //Initializes the (global) scripting system, as well as any subsystems.
@@ -420,6 +428,11 @@ bool ConditionedHook::ConditionsValid(int action, object *objp, int more_data)
 							}
 							case CHA_SECONDARYFIRE: {
 								if (stricmp(Weapon_info[shipp->weapons.secondary_bank_weapons[shipp->weapons.current_secondary_bank]].name, scp->data.name))
+									return false;
+								break;
+							}
+							case CHA_BEAMFIRE: {
+								if (!(stricmp(Weapon_info[more_data].name, scp->data.name) == 0))
 									return false;
 								break;
 							}
@@ -670,6 +683,8 @@ void script_state::SetHookVar(char *name, char format, void *data)
 			{
 				if(format == 's')
 					ade_set_args(LuaState, fmt, data);
+				else if (format == 'i')
+					ade_set_args(LuaState, fmt, *(int*)data);
 				else
 					ade_set_args(LuaState, fmt, *(ade_odata*)data);
 			}
@@ -1001,13 +1016,13 @@ int script_state::OutputMeta(char *filename)
 		return 0; 
 	}
 
-	if (FS_VERSION_BUILD == 0 && FS_VERSION_REVIS == 0) //-V547
+	if (FS_VERSION_BUILD == 0 && FS_VERSION_HAS_REVIS == 0) //-V547
 	{
 		fprintf(fp, "<html>\n<head>\n\t<title>Script Output - FSO v%i.%i (%s)</title>\n</head>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, StateName);
 		fputs("<body>", fp);
 		fprintf(fp,"\t<h1>Script Output - FSO v%i.%i (%s)</h1>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, StateName);
 	}
-	else if (FS_VERSION_REVIS == 0)
+	else if (FS_VERSION_HAS_REVIS == 0)
 	{
 		fprintf(fp, "<html>\n<head>\n\t<title>Script Output - FSO v%i.%i.%i (%s)</title>\n</head>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD, StateName);
 		fputs("<body>", fp);
@@ -1015,9 +1030,9 @@ int script_state::OutputMeta(char *filename)
 	}
 	else
 	{
-		fprintf(fp, "<html>\n<head>\n\t<title>Script Output - FSO v%i.%i.%i.%i (%s)</title>\n</head>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD, FS_VERSION_REVIS, StateName);
+		fprintf(fp, "<html>\n<head>\n\t<title>Script Output - FSO v%i.%i.%i.%s (%s)</title>\n</head>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD, FS_VERSION_REVIS, StateName);
 		fputs("<body>", fp);
-		fprintf(fp,"\t<h1>Script Output - FSO v%i.%i.%i.%i (%s)</h1>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD, FS_VERSION_REVIS, StateName);
+		fprintf(fp,"\t<h1>Script Output - FSO v%i.%i.%i.%s (%s)</h1>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD, FS_VERSION_REVIS, StateName);
 	}
 		
 	//Scripting languages links
@@ -1066,7 +1081,7 @@ int script_state::OutputMeta(char *filename)
 	return 1;
 }
 
-bool script_state::EvalString(char* string, char *format, void *rtn, char *debug_str)
+bool script_state::EvalString(const char *string, const char *format, void *rtn, const char *debug_str)
 {
 	char lastchar = string[strlen(string)-1];
 

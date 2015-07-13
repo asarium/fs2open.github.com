@@ -3,19 +3,7 @@
 #define SCP_DEFINES_H
 #pragma once
 
-#include "compiler.h"
-
-#ifdef HAS_CXX11_NOEXCEPT
-#define SCP_NOEXCEPT noexcept
-#else
-#define SCP_NOEXCEPT
-#endif
-
-#ifdef HAS_CXX11_OVERRIDE
-#define SCP_OVERRIDE override
-#else
-#define SCP_OVERRIDE
-#endif
+#include "scp_compiler_detection.h"
 
 
 #endif // SCP_DEFINES_H

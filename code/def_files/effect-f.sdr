@@ -1,0 +1,6 @@
+uniform sampler2D baseMap;
+void main()
+{
+	vec4 fragmentColor = texture2D(baseMap, gl_TexCoord[0].xy)*gl_Color.a;
+	gl_FragColor = fragmentColor;
+}

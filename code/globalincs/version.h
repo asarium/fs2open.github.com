@@ -32,10 +32,7 @@
 //   the first version is 3.0 :-)
 //   Major.Minor.Bugfix
 
-#define FS_VERSION_MAJOR 3					// major version
-#define FS_VERSION_MINOR 7					// increase by 1 for minor revs
-#define FS_VERSION_BUILD 1					// bugfix release
-#define FS_VERSION_REVIS 0000				// SVN revision
+#include "project.h"
 
 #define VERSION_LOC_FNAME			"version.nfo"
 #define MOTD_LOC_FNAME				"motd.txt"

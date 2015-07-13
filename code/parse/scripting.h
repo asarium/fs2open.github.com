@@ -74,6 +74,11 @@ struct image_desc
 #define CHA_COLLIDEBEAM		31
 #define CHA_ONACTION		32
 #define CHA_ONACTIONSTOPPED	33
+#define CHA_MSGRECEIVED		34
+#define CHA_HUDMSGRECEIVED	35
+#define CHA_AFTERBURNSTART	36
+#define CHA_AFTERBURNEND    37
+#define CHA_BEAMFIRE        38
 
 // management stuff
 void scripting_state_init();
@@ -189,7 +194,7 @@ public:
 	void RemHookVars(unsigned int num, ...);
 
 	//***Hook creation functions
-	bool EvalString(char* string, char *format=NULL, void *rtn=NULL, char *debug_str=NULL);
+	bool EvalString(const char *string, const char *format=NULL, void *rtn=NULL, const char *debug_str=NULL);
 	void ParseChunk(script_hook *dest, char* debug_str=NULL);
 	bool ParseCondition(const char *filename="<Unknown>");
 

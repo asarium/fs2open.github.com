@@ -1,1 +1,2 @@
-ADD_DEFINITIONS(-DSCP_BSD)
+
+target_compile_definitions(platform INTERFACE SCP_BSD)

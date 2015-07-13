@@ -14,7 +14,6 @@ set (file_root_ai
 	ai/aigoals.cpp
 	ai/aigoals.h
 	ai/aiinternal.h
-	ai/ailocal.h
 	ai/aiturret.cpp
 )
 
@@ -112,16 +111,44 @@ set (file_root_debris
 # DebugConsole files
 set (file_root_debugconsole
 	debugconsole/console.cpp
-	debugconsole/timerbar.cpp
-	debugconsole/timerbar.h
+	debugconsole/console.h
+	debugconsole/consolecmds.cpp
+	debugconsole/consoleparse.cpp
+	debugconsole/consoleparse.h
 )
 
+
 SET(file_root_def_files
+	def_files/def_files.h
+)
+if(WIN32)
+	SET(file_root_def_files
+		${file_root_def_files}
+		def_files/def_files-win32.cpp
+	)
+else()
+	SET(file_root_def_files
+		${file_root_def_files}
+		def_files/def_files-generic.cpp
+	)
+endif()
+
+SET(file_root_def_files_files
 	def_files/ai_profiles.tbl
 	def_files/autopilot.tbl
 	def_files/blur-f.sdr
 	def_files/brightpass-f.sdr
 	def_files/controlconfigdefaults.tbl
+	def_files/deferred-clear-f.sdr
+	def_files/deferred-clear-v.sdr
+	def_files/deferred-f.sdr
+	def_files/deferred-v.sdr
+	def_files/effect-distort-f.sdr
+	def_files/effect-distort-v.sdr
+	def_files/effect-f.sdr
+	def_files/effect-particle-f.sdr
+	def_files/effect-screen-g.sdr
+	def_files/effect-v.sdr
 	def_files/fonts.tbl
 	def_files/fxaa-f.sdr
 	def_files/fxaa-v.sdr
@@ -130,16 +157,18 @@ SET(file_root_def_files
 	def_files/iff_defs.tbl
 	def_files/ls-f.sdr
 	def_files/main-f.sdr
+	def_files/main-g.sdr
 	def_files/main-v.sdr
 	def_files/objecttypes.tbl
-	def_files/particle-f.sdr
-	def_files/particle-v.sdr
 	def_files/post-f.sdr
 	def_files/post-v.sdr
 	def_files/post_processing.tbl
+	def_files/shadowdebug-f.sdr
+	def_files/shadowdebug-v.sdr
 	def_files/species_defs.tbl
 	def_files/video-f.sdr
-	def_files/video-v.sdr)
+	def_files/video-v.sdr
+)
 
 # ExceptionHandler files
 set (file_root_exceptionhandler
@@ -196,15 +225,13 @@ set (file_root_gamesnd
 
 set(file_root_generated
 	${GENERATED_SOURCE_DIR}/project.h
-	${GENERATED_SOURCE_DIR}/compiler.h
+	${GENERATED_SOURCE_DIR}/code/scp_compiler_detection.h
 )
 
 # GlobalIncs files
 set (file_root_globalincs
 	globalincs/alphacolors.cpp
 	globalincs/alphacolors.h
-	globalincs/def_files.cpp
-	globalincs/def_files.h
 	globalincs/fsmemory.cpp
 	globalincs/fsmemory.h
 	globalincs/globals.h
@@ -239,6 +266,8 @@ set (file_root_graphics
 	graphics/grbatch.h
 	graphics/grinternal.h
 	graphics/tmapper.h
+	graphics/shadows.cpp
+	graphics/shadows.h
 )
 
 # Graphics -> OpenGLGr files
@@ -352,21 +381,10 @@ set (file_root_io
 	io/timer.cpp
 	io/timer.h
 	io/joy.h
+	io/joy-sdl.cpp
 	io/joy_ff.h
+	io/joy_ff-sdl.cpp
 )
-
-IF(WIN32)
-	set (file_root_io
-		${file_root_io}
-		io/joy-sdl.cpp
-		io/joy_ff-sdl.cpp
-	)
-ELSEIF(UNIX)
-	set (file_root_io
-		${file_root_io}
-		io/joy-unix.cpp
-	)
-ENDIF(WIN32)
 
 # jpgutils files
 set (file_root_jpgutils
@@ -487,14 +505,10 @@ set (file_root_missionui
 	missionui/missionloopbrief.h
 	missionui/missionpause.cpp
 	missionui/missionpause.h
-	missionui/missionrecommend.cpp
-	missionui/missionrecommend.h
 	missionui/missionscreencommon.cpp
 	missionui/missionscreencommon.h
 	missionui/missionshipchoice.cpp
 	missionui/missionshipchoice.h
-	missionui/missionstats.cpp
-	missionui/missionstats.h
 	missionui/missionweaponchoice.cpp
 	missionui/missionweaponchoice.h
 	missionui/redalert.cpp
@@ -516,6 +530,8 @@ set (file_root_model
 	model/modelinterp.cpp
 	model/modeloctant.cpp
 	model/modelread.cpp
+	model/modelrender.h
+	model/modelrender.cpp
 	model/modelsinc.h
 )
 
@@ -641,22 +657,22 @@ set (file_root_observer
 set (file_root_osapi
 	osapi/osapi.h
 	osapi/osapi.cpp
+	osapi/dialogs.h
+	osapi/dialogs.cpp
 	osapi/osregistry.h
 	osapi/outwnd.h
+	osapi/outwnd.cpp
 )
 
 IF(WIN32)
 set (file_root_osapi
 	${file_root_osapi}
-	osapi/monopub.h
 	osapi/osregistry.cpp
-	osapi/outwnd.cpp
 )
 ELSEIF(UNIX)
 set (file_root_osapi
 	${file_root_osapi}
 	osapi/osregistry_unix.cpp
-	osapi/outwnd_unix.cpp
 )
 ENDIF(WIN32)
 
@@ -911,7 +927,8 @@ source_group("Cutscene"                           FILES ${file_root_cutscene})
 source_group("ddsutils"                           FILES ${file_root_ddsutils})
 source_group("Debris"                             FILES ${file_root_debris})
 source_group("DebugConsole"                       FILES ${file_root_debugconsole})
-SOURCE_GROUP("Default files"                      FILES ${file_root_def_files})
+source_group("Default files"                      FILES ${file_root_def_files})
+source_group("Default files\\Files"               FILES ${file_root_def_files_files})
 source_group("ExceptionHandler"                   FILES ${file_root_exceptionhandler})
 source_group("ExternalDLL"                        FILES ${file_root_externaldll})
 source_group("Fireball"                           FILES ${file_root_fireball})
@@ -986,6 +1003,7 @@ set (file_root
 	${file_root_debris}
 	${file_root_debugconsole}
 	${file_root_def_files}
+	${file_root_def_files_files}
 	${file_root_exceptionhandler}
 	${file_root_externaldll}
 	${file_root_fireball}

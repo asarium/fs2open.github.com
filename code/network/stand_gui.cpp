@@ -36,6 +36,7 @@
 #include "ship/ship.h"
 #include "cfile/cfile.h"
 #include "fs2netd/fs2netd_client.h"
+#include "osapi/osapi.h"
 
 #include <string>
 
@@ -388,7 +389,7 @@ void std_connect_set_gamename(char *name)
 		// update fs2netd
 		if (MULTI_IS_TRACKER_GAME) {
 			fs2netd_gameserver_disconnect();
-			Sleep(50);
+			os_sleep(50);
 			fs2netd_gameserver_start();
 		}
 	}
@@ -428,7 +429,7 @@ void std_connect_handle_name_change()
 		// update fs2netd with the info
 		if (MULTI_IS_TRACKER_GAME) {
 			fs2netd_gameserver_disconnect();
-			Sleep(50);
+			os_sleep(50);
 			fs2netd_gameserver_start();
 		}
 	}
@@ -1067,7 +1068,7 @@ static HWND Player_stats[MAX_PLAYER_STAT_FIELDS];		// text boxes for player allt
 static HWND Player_mstats[MAX_PLAYER_STAT_FIELDS];		// text boxes for player mission statistics info
 
 // sprintf and set window text to the passed int
-#define STD_ADDSTRING(hwnd,val) { sprintf(txt,"%d",(int)val); SetWindowText(hwnd,txt); }
+#define STD_ADDSTRING(hwnd,val) { snprintf(txt,sizeof(txt)-1,"%d",(int)val); SetWindowText(hwnd,txt); }
 
 // intialize all the controls in the player info tab
 void std_pinfo_init_player_info_controls(HWND hwndDlg);
@@ -1078,7 +1079,8 @@ int std_pinfo_player_is_active(net_player *p);
 // start displaying info for the passed player on this page
 void std_pinfo_display_player_info(net_player *p)
 {
-	char txt[40];		
+	char txt[40];
+	txt[sizeof(txt)-1] = '\0';
 
 	// set his ship type
 	SetWindowText(Player_ship_type,Ship_info[p->p_info.ship_class].name);
@@ -2040,12 +2042,12 @@ void std_build_title_string(char *str)
 	// build the version #
 	memset(ver_str, 0, sizeof(ver_str));
 
-	if (FS_VERSION_BUILD == 0 && FS_VERSION_REVIS == 0) { //-V547
+	if (FS_VERSION_BUILD == 0 && FS_VERSION_HAS_REVIS == 0) { //-V547
 		snprintf(ver_str, sizeof(ver_str)-1, "%i.%i", FS_VERSION_MAJOR, FS_VERSION_MINOR);
-	} else if (FS_VERSION_REVIS == 0) {
+	} else if (FS_VERSION_HAS_REVIS == 0) {
 		snprintf(ver_str, sizeof(ver_str)-1, "%i.%i.%i", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD);
 	} else {
-		snprintf(ver_str, sizeof(ver_str)-1, "%i.%i.%i.%i", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD, FS_VERSION_REVIS);
+		snprintf(ver_str, sizeof(ver_str)-1, "%i.%i.%i.%s", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD, FS_VERSION_REVIS);
 	}
 
 	// now build the title

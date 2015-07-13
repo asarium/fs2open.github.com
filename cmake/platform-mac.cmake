@@ -1,3 +1,0 @@
-
-MESSAGE(STATUS "Doing Mac OSX specific things...")
-SET(EXE_GUI_TYPE MACOSX_BUNDLE)

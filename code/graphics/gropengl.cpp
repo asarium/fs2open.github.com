@@ -22,7 +22,7 @@
 #include "io/timer.h"
 #include "ddsutils/ddsutils.h"
 #include "model/model.h"
-#include "debugconsole/timerbar.h"
+#include "debugconsole/console.h"
 #include "graphics/gropenglbmpman.h"
 #include "graphics/gropengllight.h"
 #include "graphics/gropengltexture.h"
@@ -199,8 +199,8 @@ void gr_opengl_activate(int active)
 
 void gr_opengl_clear()
 {
-	glClearColor(gr_screen.current_clear_color.red / 255.0f, 
-		gr_screen.current_clear_color.green / 255.0f, 
+	glClearColor(gr_screen.current_clear_color.red / 255.0f,
+		gr_screen.current_clear_color.green / 255.0f,
 		gr_screen.current_clear_color.blue / 255.0f, gr_screen.current_clear_color.alpha / 255.0f);
 
 	glClear ( GL_COLOR_BUFFER_BIT );
@@ -215,6 +215,9 @@ void gr_opengl_flip()
 
 	mouse_reset_deltas();
 
+	if (Cmdline_gl_finish)
+		glFinish();
+
 	SDL_GL_SwapWindow(os_get_window());
 
 	opengl_tcache_frame();
@@ -228,7 +231,7 @@ void gr_opengl_flip()
 #endif
 }
 
-void gr_opengl_set_clip(int x, int y, int w, int h, bool resize)
+void gr_opengl_set_clip(int x, int y, int w, int h, int resize_mode)
 {
 	// check for sanity of parameters
 	if (x < 0) {
@@ -239,10 +242,14 @@ void gr_opengl_set_clip(int x, int y, int w, int h, bool resize)
 		y = 0;
 	}
 
-	int to_resize = (resize && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)));
+	int to_resize = (resize_mode != GR_RESIZE_NONE && (gr_screen.custom_size || (gr_screen.rendering_to_texture != -1)));
 
 	int max_w = ((to_resize) ? gr_screen.max_w_unscaled : gr_screen.max_w);
 	int max_h = ((to_resize) ? gr_screen.max_h_unscaled : gr_screen.max_h);
+
+	if ((gr_screen.rendering_to_texture != -1) && to_resize) {
+		gr_unsize_screen_pos(&max_w, &max_h);
+	}
 
 	if (x >= max_w) {
 		x = max_w - 1;
@@ -259,7 +266,7 @@ void gr_opengl_set_clip(int x, int y, int w, int h, bool resize)
 	if (y + h > max_h) {
 		h = max_h - y;
 	}
-	
+
 	if (w > max_w) {
 		w = max_w;
 	}
@@ -278,8 +285,7 @@ void gr_opengl_set_clip(int x, int y, int w, int h, bool resize)
 	gr_screen.clip_height_unscaled = h;
 
 	if (to_resize) {
-		gr_resize_screen_pos(&x, &y);
-		gr_resize_screen_pos(&w, &h);
+		gr_resize_screen_pos(&x, &y, &w, &h, resize_mode);
 	} else {
 		gr_unsize_screen_pos( &gr_screen.offset_x_unscaled, &gr_screen.offset_y_unscaled );
 		gr_unsize_screen_pos( &gr_screen.clip_right_unscaled, &gr_screen.clip_bottom_unscaled );
@@ -448,7 +454,7 @@ void gr_opengl_print_screen(const char *filename)
 }
 
 void gr_opengl_cleanup(int minimize)
-{	
+{
 	if ( !GL_initted ) {
 		return;
 	}
@@ -480,52 +486,50 @@ void gr_opengl_fog_set(int fog_mode, int r, int g, int b, float fog_near, float 
 	Assert((r >= 0) && (r < 256));
 	Assert((g >= 0) && (g < 256));
 	Assert((b >= 0) && (b < 256));
-	
+
 	if (fog_mode == GR_FOGMODE_NONE) {
 		if ( GL_state.Fog() ) {
 			GL_state.Fog(GL_FALSE);
 		}
 
 		gr_screen.current_fog_mode = fog_mode;
-		
+
 		return;
 	}
-	
-  	if (gr_screen.current_fog_mode != fog_mode) {
-	  	if (OGL_fogmode == 3) {
-			glFogf(GL_FOG_DISTANCE_MODE_NV, GL_EYE_RADIAL_NV);
-			glFogf(GL_FOG_COORDINATE_SOURCE, GL_FRAGMENT_DEPTH);
-		}
-		// Um.. this is not the correct way to fog in software, probably doesn't matter though
-		else if ( (OGL_fogmode == 2) && Cmdline_nohtl ) {
-			glFogf(GL_FOG_COORDINATE_SOURCE_EXT, GL_FOG_COORDINATE_EXT);
-			fog_near *= fog_near;		// it's faster this way
-			fog_far *= fog_far;		
-		} else {
-			glFogf(GL_FOG_COORDINATE_SOURCE, GL_FRAGMENT_DEPTH);
-		}
 
-		GL_state.Fog(GL_TRUE); 
-		glFogf(GL_FOG_MODE, GL_LINEAR);
-		glFogf(GL_FOG_START, fog_near);
-		glFogf(GL_FOG_END, fog_far);
-
-		gr_screen.current_fog_mode = fog_mode;
+  	if (OGL_fogmode == 3) {
+		glFogf(GL_FOG_DISTANCE_MODE_NV, GL_EYE_RADIAL_NV);
+		glFogf(GL_FOG_COORDINATE_SOURCE, GL_FRAGMENT_DEPTH);
 	}
-	
+	// Um.. this is not the correct way to fog in software, probably doesn't matter though
+	else if ( (OGL_fogmode == 2) && Cmdline_nohtl ) {
+		glFogf(GL_FOG_COORDINATE_SOURCE_EXT, GL_FOG_COORDINATE_EXT);
+		fog_near *= fog_near;		// it's faster this way
+		fog_far *= fog_far;
+	} else {
+		glFogf(GL_FOG_COORDINATE_SOURCE, GL_FRAGMENT_DEPTH);
+	}
+
+	GL_state.Fog(GL_TRUE);
+	glFogf(GL_FOG_MODE, GL_LINEAR);
+	glFogf(GL_FOG_START, fog_near);
+	glFogf(GL_FOG_END, fog_far);
+
+	gr_screen.current_fog_mode = fog_mode;
+
 	if ( (gr_screen.current_fog_color.red != r) ||
 			(gr_screen.current_fog_color.green != g) ||
 			(gr_screen.current_fog_color.blue != b) )
 	{
 		GLfloat fc[4];
-		
+
 		gr_init_color( &gr_screen.current_fog_color, r, g, b );
-	
+
 		fc[0] = (float)r/255.0f;
 		fc[1] = (float)g/255.0f;
 		fc[2] = (float)b/255.0f;
 		fc[3] = 1.0f;
-		
+
 		glFogfv(GL_FOG_COLOR, fc);
 	}
 
@@ -753,7 +757,7 @@ void gr_opengl_get_region(int front, int w, int h, ubyte *data)
 	GL_state.SetTextureSource(TEXTURE_SOURCE_NO_FILTERING);
 	GL_state.SetAlphaBlendMode(ALPHA_BLEND_NONE);
 	GL_state.SetZbufferType(ZBUFFER_TYPE_NONE);
-	
+
 	if (gr_screen.bits_per_pixel == 16) {
 		glReadPixels(0, gr_screen.max_h-h, w, h, GL_BGRA, GL_UNSIGNED_SHORT_1_5_5_5_REV, data);
 	} else if (gr_screen.bits_per_pixel == 32) {
@@ -878,7 +882,7 @@ void gr_opengl_restore_screen(int bmp_id)
 		return;
 
 	gr_set_bitmap(GL_saved_screen_id);
-	gr_bitmap(0, 0, false);	// don't scale here since we already have real screen size
+	gr_bitmap(0, 0, GR_RESIZE_NONE);	// don't scale here since we already have real screen size
 }
 
 void gr_opengl_free_screen(int bmp_id)
@@ -949,7 +953,7 @@ void gr_opengl_dump_frame_start(int first_frame, int frames_between_dumps)
 	GL_dump_frame_count = 0;
 	GL_dump_frame_count_max = frames_between_dumps; // only works if it's 1
 	GL_dump_frame_size = gr_screen.max_w * gr_screen.max_h * 3;
-	
+
 	if ( !GL_dump_buffer ) {
 		int size = GL_dump_frame_count_max * GL_dump_frame_size;
 
@@ -966,11 +970,11 @@ void gr_opengl_dump_frame_stop()
 	if ( !GL_dump_frames )	{
 		Int3();		//  We're not dumping frames.  See John.
 		return;
-	}	
+	}
 
 	// dump any remaining frames
 	opengl_flush_frame_dump();
-	
+
 	GL_dump_frames = 0;
 
 	if ( GL_dump_buffer )	{
@@ -992,24 +996,29 @@ void gr_opengl_dump_frame()
 void gr_opengl_set_fill_mode(int mode)
 {
 	if (mode == GR_FILL_MODE_SOLID) {
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		GL_state.SetPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		return;
 	}
 
 	if (mode == GR_FILL_MODE_WIRE) {
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		GL_state.SetPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		return;
 	}
 
 	// default setting
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	GL_state.SetPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
 void gr_opengl_zbias(int bias)
 {
 	if (bias) {
 		GL_state.PolygonOffsetFill(GL_TRUE);
-		glPolygonOffset(0.0, -i2fl(bias));
+		if(bias < 0) {
+			GL_state.SetPolygonOffset(1.0, -i2fl(bias));
+		}
+		else {
+			GL_state.SetPolygonOffset(0.0, -i2fl(bias));
+		}
 	} else {
 		GL_state.PolygonOffsetFill(GL_FALSE);
 	}
@@ -1277,14 +1286,13 @@ int opengl_init_display_device()
 	Gr_ta_alpha.scale = 17;
 
 	// allocate storage for original gamma settings
-	if (!Cmdline_no_set_gamma && (GL_original_gamma_ramp == NULL)) {
-		GL_original_gamma_ramp = (ushort*) vm_malloc_q(3 * 256 * sizeof(ushort));
+	if ( !Cmdline_no_set_gamma && (GL_original_gamma_ramp == NULL) ) {
+		GL_original_gamma_ramp = (ushort*) vm_malloc_q( 3 * 256 * sizeof(ushort) );
 
 		if (GL_original_gamma_ramp == NULL) {
 			mprintf(("  Unable to allocate memory for gamma ramp!  Disabling...\n"));
 			Cmdline_no_set_gamma = 1;
-		}
-		else {
+		} else {
 			// assume identity ramp by default, to be overwritten by true ramp later
 			for (ushort x = 0; x < 256; x++) {
 				GL_original_gamma_ramp[x] = GL_original_gamma_ramp[x + 256] = GL_original_gamma_ramp[x + 512] = (x << 8) | x;
@@ -1307,9 +1315,9 @@ int opengl_init_display_device()
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, (bpp == 32) ? 24 : 16);
 	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, (bpp == 32) ? 8 : 1);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, db);
-	
+
 	int fsaa_samples = os_config_read_uint(NULL, "OGL_AntiAliasSamples", 0);
-	
+
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, (fsaa_samples == 0) ? 0 : 1);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, fsaa_samples);
 
@@ -1370,13 +1378,13 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_flip				= gr_opengl_flip;
 	gr_screen.gf_set_clip			= gr_opengl_set_clip;
 	gr_screen.gf_reset_clip			= gr_opengl_reset_clip;
-	
+
 	gr_screen.gf_clear				= gr_opengl_clear;
 //	gr_screen.gf_bitmap				= gr_opengl_bitmap;
 	gr_screen.gf_bitmap_ex			= gr_opengl_bitmap_ex;
 	gr_screen.gf_aabitmap			= gr_opengl_aabitmap;
 	gr_screen.gf_aabitmap_ex		= gr_opengl_aabitmap_ex;
-	
+
 //	gr_screen.gf_rect				= gr_opengl_rect;
 //	gr_screen.gf_shade				= gr_opengl_shade;
 	gr_screen.gf_string				= gr_opengl_string;
@@ -1402,7 +1410,7 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_fade_out			= gr_opengl_fade_out;
 	gr_screen.gf_flash				= gr_opengl_flash;
 	gr_screen.gf_flash_alpha		= gr_opengl_flash_alpha;
-	
+
 	gr_screen.gf_zbuffer_get		= gr_opengl_zbuffer_get;
 	gr_screen.gf_zbuffer_set		= gr_opengl_zbuffer_set;
 	gr_screen.gf_zbuffer_clear		= gr_opengl_zbuffer_clear;
@@ -1411,18 +1419,18 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_stencil_clear		= gr_opengl_stencil_clear;
 
 	gr_screen.gf_alpha_mask_set		= gr_opengl_alpha_mask_set;
-	
+
 	gr_screen.gf_save_screen		= gr_opengl_save_screen;
 	gr_screen.gf_restore_screen		= gr_opengl_restore_screen;
 	gr_screen.gf_free_screen		= gr_opengl_free_screen;
-	
+
 	gr_screen.gf_dump_frame_start	= gr_opengl_dump_frame_start;
 	gr_screen.gf_dump_frame_stop	= gr_opengl_dump_frame_stop;
 	gr_screen.gf_dump_frame			= gr_opengl_dump_frame;
-	
+
 	gr_screen.gf_set_gamma			= gr_opengl_set_gamma;
 
-	gr_screen.gf_fog_set			= gr_opengl_fog_set;	
+	gr_screen.gf_fog_set			= gr_opengl_fog_set;
 
 	// UnknownPlayer : Don't recognize this - MAY NEED DEBUGGING
 	gr_screen.gf_get_region			= gr_opengl_get_region;
@@ -1463,12 +1471,13 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_destroy_buffer		= gr_opengl_destroy_buffer;
 	gr_screen.gf_render_buffer		= gr_opengl_render_buffer;
 	gr_screen.gf_set_buffer			= gr_opengl_set_buffer;
+	gr_screen.gf_update_buffer_object		= gr_opengl_update_buffer_object;
 
-	gr_screen.gf_create_stream_buffer		= gr_opengl_create_stream_buffer;
-	gr_screen.gf_update_stream_buffer		= gr_opengl_update_stream_buffer;
+	gr_screen.gf_update_transform_buffer	= gr_opengl_update_transform_buffer;
+	gr_screen.gf_set_transform_buffer_offset	= gr_opengl_set_transform_buffer_offset;
+
+	gr_screen.gf_create_stream_buffer		= gr_opengl_create_stream_buffer_object;
 	gr_screen.gf_render_stream_buffer		= gr_opengl_render_stream_buffer;
-	gr_screen.gf_render_stream_buffer_start	= gr_opengl_render_stream_buffer_start;
-	gr_screen.gf_render_stream_buffer_end	= gr_opengl_render_stream_buffer_end;
 
 	gr_screen.gf_start_instance_matrix			= gr_opengl_start_instance_matrix;
 	gr_screen.gf_end_instance_matrix			= gr_opengl_end_instance_matrix;
@@ -1490,11 +1499,17 @@ void opengl_setup_function_pointers()
 
 	gr_screen.gf_scene_texture_begin = gr_opengl_scene_texture_begin;
 	gr_screen.gf_scene_texture_end = gr_opengl_scene_texture_end;
+	gr_screen.gf_copy_effect_texture = gr_opengl_copy_effect_texture;
+
+	gr_screen.gf_deferred_lighting_begin = gr_opengl_deferred_lighting_begin;
+	gr_screen.gf_deferred_lighting_end = gr_opengl_deferred_lighting_end;
+	gr_screen.gf_deferred_lighting_finish = gr_opengl_deferred_lighting_finish;
 
 	gr_screen.gf_start_clip_plane	= gr_opengl_start_clip_plane;
 	gr_screen.gf_end_clip_plane		= gr_opengl_end_clip_plane;
 
 	gr_screen.gf_lighting			= gr_opengl_set_lighting;
+	gr_screen.gf_set_light_factor	= gr_opengl_set_light_factor;
 
 	gr_screen.gf_set_proj_matrix	= gr_opengl_set_projection_matrix;
 	gr_screen.gf_end_proj_matrix	= gr_opengl_end_projection_matrix;
@@ -1505,6 +1520,7 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_push_scale_matrix	= gr_opengl_push_scale_matrix;
 	gr_screen.gf_pop_scale_matrix	= gr_opengl_pop_scale_matrix;
 	gr_screen.gf_center_alpha		= gr_opengl_center_alpha;
+	gr_screen.gf_set_thrust_scale	= gr_opengl_set_thrust_scale;
 
 	gr_screen.gf_setup_background_fog	= gr_opengl_setup_background_fog;
 
@@ -1519,14 +1535,19 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_line_htl			= gr_opengl_line_htl;
 	gr_screen.gf_sphere_htl			= gr_opengl_sphere_htl;
 
+	gr_screen.gf_set_animated_effect = gr_opengl_shader_set_animated_effect;
+
 	gr_screen.gf_maybe_create_shader = gr_opengl_maybe_create_shader;
-
-	gr_screen.gf_flush_data_states	= gr_opengl_flush_data_states;
-
-	gr_screen.gf_set_team_color		= gr_opengl_set_team_color;
-	gr_screen.gf_disable_team_color = gr_opengl_disable_team_color;
+	gr_screen.gf_shadow_map_start	= gr_opengl_shadow_map_start;
+	gr_screen.gf_shadow_map_end		= gr_opengl_shadow_map_end;
 
 	gr_screen.gf_update_texture = gr_opengl_update_texture;
+	gr_screen.gf_get_bitmap_from_texture = gr_opengl_get_bitmap_from_texture;
+
+	gr_screen.gf_clear_states	= gr_opengl_clear_states;
+
+	gr_screen.gf_set_team_color		= gr_opengl_set_team_color;
+
 	// NOTE: All function pointers here should have a Cmdline_nohtl check at the top
 	//       if they shouldn't be run in non-HTL mode, Don't keep separate entries.
 	// *****************************************************************************
@@ -1583,18 +1604,21 @@ bool gr_opengl_init()
 
 	// setup the lighting stuff that will get used later
 	opengl_light_init();
-	
+
 	// init state system (must come AFTER light is set up)
 	GL_state.init();
 
 	GLint max_texture_units = GL_supported_texture_units;
+	GLint max_texture_coords = GL_supported_texture_units;
 
 	if (Use_GLSL) {
 		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB, &max_texture_units);
 	}
 
+	glGetIntegerv(GL_MAX_TEXTURE_COORDS, &max_texture_coords);
+
 	GL_state.Texture.init(max_texture_units);
-	GL_state.Array.init(max_texture_units);
+	GL_state.Array.init(max_texture_coords);
 
 	opengl_set_texture_target();
 	GL_state.Texture.SetActiveUnit(0);
@@ -1632,7 +1656,7 @@ bool gr_opengl_init()
 
 	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	
+
 	glFlush();
 
 	Gr_current_red = &Gr_red;
@@ -1652,6 +1676,7 @@ bool gr_opengl_init()
 	glGetIntegerv(GL_MAX_ELEMENTS_INDICES, &GL_max_elements_indices);
 
 	mprintf(( "  Max texture units: %i (%i)\n", GL_supported_texture_units, max_texture_units ));
+	mprintf(( "  Max client texture states: %i (%i)\n", GL_supported_texture_units, max_texture_coords ));
 	mprintf(( "  Max elements vertices: %i\n", GL_max_elements_vertices ));
 	mprintf(( "  Max elements indices: %i\n", GL_max_elements_indices ));
 	mprintf(( "  Max texture size: %ix%i\n", GL_max_texture_width, GL_max_texture_height ));
@@ -1684,56 +1709,61 @@ bool gr_opengl_init()
 
 DCF(ogl_minimize, "Minimizes opengl")
 {
+	bool minimize_ogl = false;
+
 	if ( gr_screen.mode != GR_OPENGL ) {
 		dc_printf("Command only available in OpenGL mode.\n");
 		return;
 	}
 
-	if (Dc_command) {
-		dc_get_arg(ARG_TRUE);
-
-		if ( Dc_arg_type & ARG_TRUE ) {
-			opengl_minimize();
-		}
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf("[bool] If true is passed, then the OpenGL window will minimize.\n");
+		return;
 	}
+	dc_stuff_boolean(&minimize_ogl);
 
-	if (Dc_help)
-		dc_printf("If set to true then the OpenGL window will minimize.\n");
+	if (minimize_ogl) {
+		opengl_minimize();
+	}
 }
 
 DCF(ogl_anisotropy, "toggles anisotropic filtering")
 {
+	bool process = true;
+	int value;
+
 	if ( gr_screen.mode != GR_OPENGL ) {
 		dc_printf("Can only set anisotropic filter in OpenGL mode.\n");
 		return;
 	}
 
-	if ( Dc_command && !Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
+	if (dc_optional_string_either("help", "--help")) {
+		dc_printf("Sets OpenGL anisotropic filtering level.\n");
+		dc_printf("GL_anisotropy [int]  Valid values are 0 to %i. 0 turns off anisotropic filtering.\n", (int)opengl_get_max_anisotropy());
+		process = false;
+	}
+
+	if (dc_optional_string_either("status", "--status") || dc_optional_string_either("?", "--?")) {
+		dc_printf("Current anisotropic filter value is %i\n", (int)GL_anisotropy);
+		process = false;
+	}
+
+	if (!process) {
+		return;
+	}
+
+	if ( !Is_Extension_Enabled(OGL_EXT_TEXTURE_FILTER_ANISOTROPIC) ) {
 		dc_printf("Error: Anisotropic filter is not settable!\n");
 		return;
 	}
 
-	if ( Dc_command ) {
-		dc_get_arg(ARG_INT | ARG_NONE);
-
-		if ( Dc_arg_type & ARG_NONE ) {
+	if (!dc_maybe_stuff_int(&value)) {
+		// No arg passed, set to default
 			GL_anisotropy = 1.0f;
 		//	opengl_set_anisotropy();
 			dc_printf("Anisotropic filter value reset to default level.\n");
-		}
-
-		if ( Dc_arg_type & ARG_INT ) {
-			GL_anisotropy = (GLfloat)Dc_arg_float;
+	} else {
+		GL_anisotropy = (GLfloat)value;
 		//	opengl_set_anisotropy( (float)Dc_arg_float );
-		}
-	}
-
-	if ( Dc_status ) {
-		dc_printf("Current anisotropic filter value is %i\n", (int)GL_anisotropy);
-	}
-
-	if (Dc_help) {
-		dc_printf("Sets OpenGL anisotropic filtering level.\n");
-		dc_printf("Valid values are 1 to %i, or 0 to turn off.\n", (int)opengl_get_max_anisotropy());
 	}
 }

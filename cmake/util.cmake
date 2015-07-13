@@ -3,29 +3,12 @@ FUNCTION(MAKE_CACHE_INTERNAL VARIABLE)
 	SET(${VARIABLE} ${${VARIABLE}} CACHE INTERNAL "Internal cache variable")
 ENDFUNCTION(MAKE_CACHE_INTERNAL)
 
-FUNCTION(ADD_IMPORTED_LIB NAME INCLUDES LIBS LIB_TYPE)
-	ADD_LIBRARY(${NAME} ${LIB_TYPE} IMPORTED GLOBAL)
+FUNCTION(ADD_IMPORTED_LIB NAME INCLUDES LIBS)
+	ADD_LIBRARY(${NAME} INTERFACE)
 
-	LIST(GET LIBS 0 MAIN_LIB)
-	LIST(LENGTH LIBS LIBS_SIZE)
+	target_link_libraries(${NAME} INTERFACE "${LIBS}")
 
-	SET(INTERFACE_LIBS)
-
-	if(${LIBS_SIZE} GREATER 1)
-		math(EXPR LIBS_SIZE "${LIBS_SIZE} - 1")
-		foreach(i RANGE 1 ${LIBS_SIZE})
-			LIST(GET LIBS ${i} LIB)
-
-			SET(INTERFACE_LIBS ${INTERFACE_LIBS} "${LIB}")
-		endforeach(i)
-	endif(${LIBS_SIZE} GREATER 1)
-
-	set_target_properties(${NAME}
-		PROPERTIES
-			IMPORTED_LOCATION "${MAIN_LIB}"
-			INTERFACE_INCLUDE_DIRECTORIES "${INCLUDES}"
-			IMPORTED_LINK_INTERFACE_LIBRARIES "${INTERFACE_LIBS}"
-	)
+	target_include_directories(${NAME} INTERFACE "${INCLUDES}")
 ENDFUNCTION(ADD_IMPORTED_LIB)
 
 MACRO(PKG_CONFIG_LIB_RESOLVE NAME OUTVAR)
@@ -51,11 +34,11 @@ MACRO (CMAKE_SEARCH_LIBS v_func v_lib func)
     IF (NOT ${v_func})
         FOREACH (lib ${ARGN})
             CHECK_LIBRARY_EXISTS (${lib} ${func} "" "HAVE_${func}_IN_${lib}")
-            IF ("HAVE_${func}_IN_${lib}")
+            IF (${HAVE_${func}_IN_${lib}})
                 SET (${v_func} TRUE)
                 SET (${v_lib} "${lib}" CACHE INTERNAL "Library providing ${func}")
                 BREAK()
-            ENDIF ("HAVE_${func}_IN_${lib}")
+            ENDIF (${HAVE_${func}_IN_${lib}})
         ENDFOREACH (lib)
     ENDIF (NOT ${v_func})
 ENDMACRO (CMAKE_SEARCH_LIBS)
@@ -90,6 +73,37 @@ MACRO(COPY_FILES_TO_TARGET _target)
 		)
 	ENDFOREACH(file)
 ENDMACRO(COPY_FILES_TO_TARGET)
+
+macro(set_policy policy value)
+	if (POLICY ${policy})
+		cmake_policy(SET ${policy} ${value})
+	endif ()
+endmacro(set_policy)
+
+macro(configure_cotire target)
+	IF(COTIRE_ENABLE)
+		# Disable unity build as it doesn't work well for us
+		set_target_properties(${target} PROPERTIES COTIRE_ADD_UNITY_BUILD FALSE)
+
+		# add ignored paths for the precompiled header here
+		set_target_properties(code PROPERTIES COTIRE_PREFIX_HEADER_IGNORE_PATH
+			"${CMAKE_SOURCE_DIR};${CMAKE_BINARY_DIR}")
+
+		IF(DEFINED CMAKE_CONFIGURATION_TYPES)
+			cotire(${target} CONFIGURATIONS ${CMAKE_CONFIGURATION_TYPES})
+		ELSE(DEFINED CMAKE_CONFIGURATION_TYPES)
+			cotire(${target})
+		ENDIF(DEFINED CMAKE_CONFIGURATION_TYPES)
+	ENDIF(COTIRE_ENABLE)
+endmacro(configure_cotire)
+
+macro(add_target_copy_files)
+	INSTALL(FILES ${ARGN}
+			DESTINATION ${BINARY_DESTINATION}
+	)
+
+	SET(TARGET_COPY_FILES ${TARGET_COPY_FILES} ${ARGN} CACHE INTERNAL "" FORCE)
+endmacro(add_target_copy_files)
 
 function(list_target_dependencies _target _out_var)
 	set(out_list)

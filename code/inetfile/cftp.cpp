@@ -29,6 +29,7 @@
 #define WSAGetLastError()  (errno)
 #endif
 
+#include "osapi/osapi.h"
 #include "inetfile/cftp.h"
 
 
@@ -93,6 +94,7 @@ CFtpGet::CFtpGet(char *URL, char *localfile, char *Username, char *Password)
 	}
 	else
 	{
+		memset(&listensockaddr, 0, sizeof(SOCKADDR_IN));
 		listensockaddr.sin_family = AF_INET;		
 		listensockaddr.sin_port = 0;
 		listensockaddr.sin_addr.s_addr = INADDR_ANY;
@@ -186,6 +188,10 @@ CFtpGet::~CFtpGet()
 {
 	if (thread_id)
 		SDL_WaitThread(thread_id, NULL);
+    
+	fclose(LOCALFILE);
+    
+	fclose(LOCALFILE);
 
 	if(m_ListenSock != INVALID_SOCKET)
 	{
@@ -392,8 +398,11 @@ int CFtpGet::ConnectControlSocket()
 	//m_ControlSock
 	if(m_Aborting)
 		return 0;
-	se = getservbyname("ftp", NULL);
 
+	memset(&hostaddr, 0, sizeof(SOCKADDR_IN));
+    
+	se = getservbyname("ftp", NULL);
+    
 	if(se == NULL)
 	{
 		hostaddr.sin_port = htons(21);
@@ -490,7 +499,7 @@ uint CFtpGet::ReadFTPServerReply()
 			strcat_s(recv_buffer,chunk);
 		}
 		
-		Sleep(1);	
+		os_sleep(1);	
 	}while(igotcrlf==0);
 					
 	if(recv_buffer[3] == '-')
@@ -530,7 +539,7 @@ uint CFtpGet::ReadDataChannel()
 			fwrite(sDataBuffer,nBytesRecv,1,LOCALFILE);
     	}
 
-		Sleep(1);
+		os_sleep(1);
 	}while (nBytesRecv > 0);
 	fclose(LOCALFILE);							
 	// Close the file and check for error returns.
@@ -569,6 +578,6 @@ void CFtpGet::FlushControlChannel()
 	{
 		recv(m_ControlSock,flushbuff,1,0);
 
-		Sleep(1);
+		os_sleep(1);
 	}
 }

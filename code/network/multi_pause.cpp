@@ -26,6 +26,7 @@
 #include "network/multi.h"
 #include "globalincs/alphacolors.h"
 #include "io/timer.h"
+#include "osapi/osapi.h"
 
 
 
@@ -127,8 +128,8 @@ extern void game_flush();
 extern void weapon_pause_sounds();
 extern void weapon_unpause_sounds();
 
-extern void audiostream_pause_all();
-extern void audiostream_unpause_all();
+extern void audiostream_pause_all(bool via_sexp_or_script = false);
+extern void audiostream_unpause_all(bool via_sexp_or_script = false);
 
 // ----------------------------------------------------------------------------------
 // PAUSE FUNCTIONS
@@ -400,7 +401,7 @@ void multi_pause_do()
 		// set the background image
 		if (Multi_paused_background >= 0) {
 			gr_set_bitmap(Multi_paused_background);
-			gr_bitmap(0, 0);
+			gr_bitmap(0, 0, GR_RESIZE_MENU);
 		}
 
 		// if we're inside of popup code right now, don't process the window
@@ -440,7 +441,7 @@ void multi_pause_do()
 	}
 	// standalone pretty much does nothing here
 	else {
-		Sleep(1);
+		os_sleep(1);
 	}
 }
 
@@ -531,6 +532,6 @@ void multi_pause_render_callsign()
 
 		// blit it
 		gr_set_color_fast(&Color_bright);
-		gr_string(Mp_callsign_coords[gr_screen.res][0], Mp_callsign_coords[gr_screen.res][1], pause_str);
+		gr_string(Mp_callsign_coords[gr_screen.res][0], Mp_callsign_coords[gr_screen.res][1], pause_str, GR_RESIZE_MENU);
 	} 	
 }

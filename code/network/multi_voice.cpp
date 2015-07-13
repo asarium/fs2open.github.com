@@ -22,20 +22,13 @@
 #include "menuui/optionsmenumulti.h"
 #include "network/multi.h"
 #include "playerman/player.h"
-
+#include "debugconsole/console.h"
 
 
 // --------------------------------------------------------------------------------------------------
 // MULTI VOICE DEFINES/VARS
 //
-// Extern variables.
-int Multi_voice_can_record = 0;
-int Multi_voice_can_play = 0;
 
-// local muting preferences
-int Multi_voice_local_prefs = 0xffffffff;
-
-namespace {
 // #define MULTI_VOICE_POST_DECOMPRESS									// when we're _not_ using streaming
 #define MULTI_VOICE_PRE_DECOMPRESS										// when we _are_ using streaming
 
@@ -45,28 +38,27 @@ namespace {
 
 // flag indicating the status of the multi voice system
 int Multi_voice_inited = 0;
-
+int Multi_voice_can_record = 0;
+int Multi_voice_can_play = 0;
 int Multi_voice_send_mode = MULTI_MSG_NONE;							// gotten from the multi_msg system when we start recording
 
 // packet code defines
-enum MV_CODES {
-	MV_CODE_GIVE_TOKEN = 0, // received player side - he now has the token to speak
-	MV_CODE_DENY_TOKEN = 1,	// received player side - server has denied this request
-	MV_CODE_TAKE_TOKEN = 2, // received player side - the server is forcibly taking his token
-	MV_CODE_RELEASE_TOKEN = 3, // received server side - player is relinquishing token
-	MV_CODE_REQUEST_TOKEN = 4, // received server side - player is requesting token
-	MV_CODE_PLAYER_PREFS = 5, // received server side - player bitflags for who he'll receive from
-	MV_CODE_DATA = 6, // sound data
-	MV_CODE_DATA_DUMMY = 7 // in place of a packet which has been deemed too large, so that receivers don't time out early
-};
+#define MV_CODE_GIVE_TOKEN								0					// received player side - he now has the token to speak
+#define MV_CODE_DENY_TOKEN								1					// received player side - server has denied this request
+#define MV_CODE_TAKE_TOKEN								2					// received player side - the server is forcibly taking his token
+#define MV_CODE_RELEASE_TOKEN							3					// received server side - player is relinquishing token
+#define MV_CODE_REQUEST_TOKEN							4					// received server side - player is requesting token
+#define MV_CODE_PLAYER_PREFS							5					// received server side - player bitflags for who he'll receive from
+#define MV_CODE_DATA										6					// sound data
+#define MV_CODE_DATA_DUMMY								7					// in place of a packet which has been deemed too large, so that receivers don't time out early
 
 // default quality of sound
-const int MV_DEFAULT_QOS = 10; // default quality of sound
+#define MV_DEFAULT_QOS									10					// default quality of sound
 int Multi_voice_qos;															// default quality of sound
 
 // sounds added to the front and end of a playing voice stream (set to -1 if none are wanted)
-const int MULTI_VOICE_PRE_SOUND = SND_CUE_VOICE;
-const int MULTI_VOICE_POST_SOUND = SND_END_VOICE;
+#define MULTI_VOICE_PRE_SOUND							SND_CUE_VOICE
+#define MULTI_VOICE_POST_SOUND						SND_END_VOICE
 int Multi_voice_pre_sound_size = 0;
 
 // sound data
@@ -75,20 +67,20 @@ int Multi_voice_pre_sound_size = 0;
 //			 sending voice to a specific target under IPX. you should use multi_voice_max_chunk_size(...) when 
 //        determining if a given chunk will fit into an individual freespace packet
 // max size of a data packet header (note, this changes as the code itself changes - should probably never use this except for reference)
-const int MULTI_VOICE_MAX_HEADER_SIZE = 22;
+#define MULTI_VOICE_MAX_HEADER_SIZE					22
 // size of an individual chunk (CHUNK == block of data stuck into a packet), in the worst case of header size (see above)
-const int MULTI_VOICE_MAX_CHUNK_SIZE = 488;
+#define MULTI_VOICE_MAX_CHUNK_SIZE					488
 
 // total max size of an incoming or an outgoing uncompressed buffer (note this is probably too big, but we won't worry about that for now)
-const int MULTI_VOICE_MAX_BUFFER_SIZE = ((1<<16)+(1<<14));		// 80k
+#define MULTI_VOICE_MAX_BUFFER_SIZE					((1<<16)+(1<<14))		// 80k
 
 // overall size of an total accum buffer for a stream
-const int MULTI_VOICE_ACCUM_BUFFER_SIZE = (1<<14);					// 16k
+#define MULTI_VOICE_ACCUM_BUFFER_SIZE				(1<<14)					// 16k
 
 // how many accum buffers need to be in a total accum buffer
 // NOTE : we reference MULTI_VOICE_MAX_CHUNK_SIZE here because it is worst case. ie, we'll always have enough
 //        accum buffers in anything better than the worst case if we use MULTI_VOICE_MAX_CHUNK_SIZE
-const int MULTI_VOICE_ACCUM_BUFFER_COUNT = (MULTI_VOICE_ACCUM_BUFFER_SIZE / MULTI_VOICE_MAX_CHUNK_SIZE);
+#define MULTI_VOICE_ACCUM_BUFFER_COUNT				(MULTI_VOICE_ACCUM_BUFFER_SIZE / MULTI_VOICE_MAX_CHUNK_SIZE)
 
 int Multi_voice_max_time;													// current maximum recording time
 char *Multi_voice_record_buffer = NULL;								// buffer for recording back voice
@@ -100,21 +92,21 @@ char *Multi_voice_playback_buffer = NULL;								// buffer for processing the ac
 #endif
 
 // the max amount of tokens we want to be floating about (max sound streams)
-const int MULTI_VOICE_MAX_STREAMS = 1;
+#define MULTI_VOICE_MAX_STREAMS						1
 
 // voice algorithm stuff
 // it would probably be good to base the timeout time on some multiple of our average ping to the server
-const int MV_ALG_TIMEOUT = 500;										// if start get new data for a window then a pause this long, play the window
+#define MV_ALG_TIMEOUT	500												// if start get new data for a window then a pause this long, play the window
 int Multi_voice_stamps[MULTI_VOICE_MAX_STREAMS];
 
 // NOTE : this should be > then MULTI_VOICE_MAX_TIME + the time for the data to come over a network connection!!
-const int MULTI_VOICE_TOKEN_TIMEOUT = 7000;				// timeout - server will take the token back if he does not hear from the guy in this amount of time
+#define MULTI_VOICE_TOKEN_TIMEOUT					7000				// timeout - server will take the token back if he does not hear from the guy in this amount of time
 
-const float MULTI_VOICE_TOKEN_RELEASE_WAIT = (1.0f);			// wait 1 second
+#define MULTI_VOICE_TOKEN_RELEASE_WAIT				(1.0f)			// wait 1 second
 
 // the token index of a voice stream is set to one of these values, or the index of the player who has the token
-const int MULTI_VOICE_TOKEN_INDEX_FREE = -1;				// the token (and the stream are free)
-const int MULTI_VOICE_TOKEN_INDEX_RELEASED = static_cast<int>(0xDEADBEAD);		// the token has been released but the stream is still active
+#define MULTI_VOICE_TOKEN_INDEX_FREE				-1					// the token (and the stream are free)
+#define MULTI_VOICE_TOKEN_INDEX_RELEASED			0xBEAD		// the token has been released but the stream is still active
 
 typedef struct voice_stream {		
 	int token_status;															// status of the token (player index if a player has it) or one of the above defines
@@ -138,7 +130,7 @@ typedef struct voice_stream {
 voice_stream Multi_voice_stream[MULTI_VOICE_MAX_STREAMS];		// voice streams themselves
 
 // player-side data
-const int MULTI_VOICE_KEY = KEY_LAPOSTRO;	// key used for realtime voice
+#define MULTI_VOICE_KEY									KEY_LAPOSTRO	// key used for realtime voice
 int Multi_voice_keydown = 0;												// is the record key currently being pressed
 int Multi_voice_recording = 0;											// flag indicating if we're currently recording or not
 int Multi_voice_token = 0;													// if we currently have a token or not
@@ -152,10 +144,11 @@ ubyte Multi_voice_next_stream_id = 0;									// kept on the server - given to t
 int Multi_voice_player_prefs[MAX_PLAYERS];							// player bitflag preferences
 
 // voice status data - used for determing the result of multi_voice_status
-const int MULTI_VOICE_DENIED_TIME = 1000;				// how long to display the "denied" status
-int Multi_voice_denied_stamp = -1;	
-// timestamp for when we got denied a token
-}
+#define MULTI_VOICE_DENIED_TIME						1000				// how long to display the "denied" status
+int Multi_voice_denied_stamp = -1;										// timestamp for when we got denied a token
+
+// local muting preferences
+int Multi_voice_local_prefs = 0xffffffff;
 
 
 // --------------------------------------------------------------------------------------------------
@@ -219,7 +212,7 @@ int multi_voice_get_stream(int stream_id);
 void multi_voice_alg_init();
 
 // process incoming sound data in whatever way necessary (this function should take care of playing data when necessary)
-void multi_voice_alg_process_data(int player_index,int stream_index,ushort chunk_index,ushort chunk_size);		
+void multi_voice_alg_process_data(int stream_index);
 
 // process existing streams
 void multi_voice_alg_process_streams();
@@ -490,16 +483,17 @@ void multi_voice_process()
 // voice settings debug console function
 void multi_voice_dcf()
 {
-	dc_get_arg(ARG_STRING);
+	SCP_string arg;
+	int value;
+
+	dc_stuff_string_white(arg);
 
 	// set the quality of sound
-	if (strcmp(Dc_arg, NOX("qos")) == 0) {
-		dc_get_arg(ARG_INT);
-		if(Dc_arg_type & ARG_INT){
-			if((Dc_arg_int >= 1) && (Dc_arg_int <= 10) && (Net_player->flags & NETINFO_FLAG_AM_MASTER)){
-				multi_voice_set_vars(Dc_arg_int,-1);
-				dc_printf("Quality of sound : %d\n",Dc_arg_int);
-			}
+	if (arg == NOX("qos")) {
+		dc_stuff_int(&value);
+		if((value >= 1) && (value <= 10) && (Net_player->flags & NETINFO_FLAG_AM_MASTER)){
+			multi_voice_set_vars(value,-1);
+			dc_printf("Quality of sound : %d\n", value);
 		}
 	}
 }
@@ -1234,7 +1228,7 @@ int multi_voice_process_data(ubyte *data, int player_index,int msg_mode,net_play
 			
 		// pass the data into the smart voice algorithm
 		if(player_index != -1){
-			multi_voice_alg_process_data(player_index,stream_index,chunk_index,chunk_size);		
+			multi_voice_alg_process_data(stream_index);
 		}
 	}
 
@@ -1848,7 +1842,6 @@ void multi_voice_client_send_pending()
 		// add the current stream id#
 		ADD_DATA(Multi_voice_stream_id);
 
-		Assert(str->accum_buffer_usize[sent] < MULTI_VOICE_MAX_BUFFER_SIZE);
 		uc_size = (ushort)str->accum_buffer_usize[sent];
 		ADD_USHORT(uc_size);
 
@@ -1977,13 +1970,8 @@ int multi_voice_alg_should_play(int stream_index)
 }
 
 // process incoming sound data in whatever way necessary (this function should take care of playing data when necessary)
-void multi_voice_alg_process_data(int player_index,int stream_index,ushort chunk_index,ushort chunk_size)
+void multi_voice_alg_process_data(int stream_index)
 {
-	// do this so we don't get compiler warnings
-	chunk_index = 0;
-	chunk_size = 0;
-	player_index = 0;
-
 	// update the timestamp for this window
 	Multi_voice_stamps[stream_index] = timestamp(MV_ALG_TIMEOUT);	
 }
