@@ -23,6 +23,10 @@ ENDIF(NOT DEFINED CMAKE_INSTALL_PREFIX)
 SET(TARGET_COPY_FILES "" CACHE INTERNAL "" FORCE)
 SET(TARGET_COPY_DIRS "" CACHE INTERNAL "" FORCE)
 
+IF(DEFINED CMAKE_CONFIGURATION_TYPES)
+	set(CMAKE_CONFIGURATION_TYPES Debug Release CACHE STRING "Available configurations" FORCE)
+ENDIF(DEFINED CMAKE_CONFIGURATION_TYPES)
+
 PROJECT(FS2_Open)
 
 IF(CMAKE_CROSSCOMPILING)
@@ -50,10 +54,6 @@ IF(RESET_INSTALL_PREFIX)
 		MESSAGE(STATUS "NO FS2PATH environment variable found, you can define this to point to your freespace install but it is not required.")
 	ENDIF(NOT $ENV{FS2PATH} STREQUAL "")
 ENDIF(RESET_INSTALL_PREFIX)
-
-IF(DEFINED CMAKE_CONFIGURATION_TYPES)
-	set(CMAKE_CONFIGURATION_TYPES Debug Release CACHE STRING "Available configurations" FORCE)
-ENDIF(DEFINED CMAKE_CONFIGURATION_TYPES)
 
 ### Define options and editable variables in the section below:
 # This is only needed for single configuration generators so don't annoy others

@@ -1,0 +1,3 @@
+include(BundleUtilities)
+
+FIXUP_BUNDLE("$<TARGET_FILE:Freespace2>" "" "@FSO_MAC_FRAMEWORKS@")

@@ -11,7 +11,6 @@
 
 #include <fstream>
 #include <iostream>
-#include <string>
 #include <algorithm>
 #include <iomanip>
 
@@ -49,7 +48,7 @@ static const size_t INPUT_BUFFER_SIZE = 1024;
 
 typedef unsigned char ubyte;
 
-void write_byte(std::ostream& stream, ubyte byte, int i)
+void write_byte(std::ostream& stream, ubyte byte, size_t i)
 {
 	stream << "0x" << std::hex << std::setw(2) << std::setfill('0') << std::uppercase << int(byte);
 
@@ -247,7 +246,7 @@ int main( int argc, char* argv[] )
 		mode |= std::ios::binary;
 	}
 
-	std::ifstream file_in(input_file.c_str(), std::ios::binary);
+	std::ifstream file_in(input_file.c_str(), mode);
 	if( file_in.bad() )
 	{
 		std::cout << "ERROR: Error opening input file: " << input_file << std::endl;
