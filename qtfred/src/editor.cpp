@@ -42,8 +42,10 @@ void initialize(const std::string &cfilepath, InitializerCallback listener)
         {std::bind(os_init_registry_stuff, Osreg_company_name, Osreg_app_name, nullptr), SubSystem::OSRegistry},
         {timer_init, SubSystem::Timer},
         {[&cfilepath](void){
-            cfile_chdir(cfilepath.c_str());
-            cfile_init(cfilepath.c_str());
+			// cfile needs a file path...
+			auto file_path = cfilepath + DIR_SEPARATOR_STR + "qtfred.exe";
+
+            cfile_init(file_path.c_str());
         }, SubSystem::CFile},
         {std::bind(lcl_init, FS2_OPEN_DEFAULT_LANGUAGE), SubSystem::Locale},
         {[](){
