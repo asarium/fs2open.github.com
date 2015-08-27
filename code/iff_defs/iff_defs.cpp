@@ -6,13 +6,13 @@
 
 
 
-#include "globalincs/def_files.h"
-#include "iff_defs/iff_defs.h"
-#include "parse/parselo.h"
+#include "def_files/def_files.h"
 #include "hud/hud.h"
-#include "mission/missionparse.h"
-#include "ship/ship.h"
+#include "iff_defs/iff_defs.h"
 #include "io/timer.h"
+#include "mission/missionparse.h"
+#include "parse/parselo.h"
+#include "ship/ship.h"
 
 extern int radar_target_id_flags;
 
@@ -61,8 +61,8 @@ int iff_get_alpha_value(bool is_bright)
  */
 int iff_init_color(int r, int g, int b)
 {
-	typedef struct temp_color_t {
-		int	r;
+	typedef struct {
+		int r;
 		int g;
 		int b;
 	} temp_color_t;
@@ -134,7 +134,7 @@ void iff_init()
 		if (cfile::exists("iff_defs.tbl", cfile::TYPE_TABLES))
 			read_file_text("iff_defs.tbl", cfile::TYPE_TABLES);
 		else
-			read_file_text_from_array(defaults_get_file("iff_defs.tbl"));
+			read_file_text_from_default(defaults_get_file("iff_defs.tbl"));
 
 		reset_parse();
 

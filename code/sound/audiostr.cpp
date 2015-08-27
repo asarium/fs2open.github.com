@@ -10,15 +10,15 @@
 
 #define NEED_STRHDL		// for STRHTL struct in audiostr.h
 
+#include "cfile/cfile.h"
 #include "globalincs/pstypes.h"
-#include "sound/openal.h"
+#include "io/timer.h"
+#include "sound/acm.h"
 #include "sound/audiostr.h"
 #include "sound/ds.h"
-#include "sound/acm.h"
-#include "cfile/cfile.h"
-#include "sound/sound.h"
 #include "sound/ogg/ogg.h"
-#include "io/timer.h"
+#include "sound/openal.h"
+#include "sound/sound.h"
 
 #define THREADED
 #include "osapi/osapi.h"
@@ -133,9 +133,9 @@ static int dbg_print_ogg_error(const char *filename, int rc)
 	return fatal;
 }
 
-static int audiostr_read_uint(cfile::FileHandle *rw, uint *i)
+static int audiostr_read_uint(cfile::FileHandle* cf, uint *i)
 {
-	int rc = cfile::io::read((void *)i, sizeof(uint), 1, rw);
+	int rc = cfile::io::read(i, sizeof(uint), 1, cf);
 
 	if (rc != 1)
 		return 0;
@@ -145,9 +145,9 @@ static int audiostr_read_uint(cfile::FileHandle *rw, uint *i)
 	return 1;
 }
 
-static int audiostr_read_word(cfile::FileHandle *rw, WORD *i)
+static int audiostr_read_word(cfile::FileHandle* cf, WORD *i)
 {
-	int rc = cfile::io::read((void *)i, sizeof(WORD), 1, rw);
+	int rc = cfile::io::read(i, sizeof(WORD), 1, cf);
 
 	if (rc != 1)
 		return 0;
@@ -157,9 +157,9 @@ static int audiostr_read_word(cfile::FileHandle *rw, WORD *i)
 	return 1;
 }
 
-static int audiostr_read_dword(cfile::FileHandle *rw, DWORD *i)
+static int audiostr_read_dword(cfile::FileHandle* cf, DWORD *i)
 {
-	int rc = cfile::io::read((void *)i, sizeof(DWORD), 1, rw);
+	int rc = cfile::io::read(i, sizeof(DWORD), 1, cf);
 
 	if (rc != 1)
 		return 0;
@@ -294,7 +294,7 @@ protected:
 // constructor
 void Timer::constructor(void)
 {
-	m_nIDTimer = NULL;
+	m_nIDTimer = 0;
 }
 
 
@@ -303,7 +303,7 @@ void Timer::destructor(void)
 {
 	if (m_nIDTimer) {
 		SDL_RemoveTimer(m_nIDTimer);
-		m_nIDTimer = NULL;
+		m_nIDTimer = 0;
 	}
 }
 
@@ -321,7 +321,7 @@ bool Timer::Create (uint nPeriod, uint nRes, ptr_u dwUser, TIMERCALLBACK pfnCall
 	m_dwUser = dwUser;
 	m_pfnCallback = pfnCallback;
 
-	if ((m_nIDTimer = SDL_AddTimer(m_nPeriod, TimeProc, (void*)this)) == NULL) {
+	if ((m_nIDTimer = SDL_AddTimer(m_nPeriod, TimeProc, (void*)this)) == 0) {
 	  bRtn = false;
 	}
 
@@ -346,7 +346,7 @@ uint Timer::TimeProc(uint interval, void *dwUser)
 		return interval;
     } else {
 		SDL_RemoveTimer(ptimer->m_nIDTimer);
-		ptimer->m_nIDTimer = NULL;
+		ptimer->m_nIDTimer = 0;
 		return 0;
     }
 }
@@ -457,14 +457,14 @@ bool WaveFile::Open(char *pszFilename, bool keep_ext)
 		strcat_s( filename, audio_ext_list[rc] );
 	}
 
-	m_snd_info.cfp = cfile::io::open(fullName, cfile::MODE_READ, cfile::OPEN_NORMAL);
+	m_snd_info.cfp = cfile::io::open(fullName);
 
 	if (m_snd_info.cfp == NULL)
 		goto OPEN_ERROR;
-
+	
 	// if Ogg Vorbis...
 	if (rc == 0) {
-		if (ov_open_callbacks(m_snd_info.cfp, &m_snd_info.vorbis_file, NULL, 0, cfile_callbacks) == 0) {
+		if ( ov_open_callbacks(m_snd_info.cfp, &m_snd_info.vorbis_file, NULL, 0, cfile_callbacks) == 0 ) {
 			// got an Ogg Vorbis, so lets read the info in
 			ov_info(&m_snd_info.vorbis_file, -1);
 
@@ -552,7 +552,7 @@ bool WaveFile::Open(char *pszFilename, bool keep_ext)
 
 						// Read those extra bytes, append to WAVEFORMATEX structure
 						if (cbExtra != 0)
-							cfile::io::read(((char *)(m_pwfmt_original)+sizeof(WAVEFORMATEX)), 1, (int)cbExtra, m_snd_info.cfp);
+							cfile::io::read(((char *)(m_pwfmt_original) + sizeof(WAVEFORMATEX)), cbExtra, 1, m_snd_info.cfp);
 					} else {
 						Int3();		// malloc failed
 						goto OPEN_ERROR;
@@ -694,8 +694,7 @@ bool WaveFile::Cue (void)
 	if (m_wave_format == OGG_FORMAT_VORBIS) {
 		rval = (int)ov_raw_seek(&m_snd_info.vorbis_file, m_data_offset);
 	} else {
-		cfile::io::seek(m_snd_info.cfp, m_data_offset, cfile::SEEK_MODE_SET);
-		rval = cfile::io::tell(m_snd_info.cfp);
+		rval = cfile::io::seek(m_snd_info.cfp, m_data_offset, cfile::SEEK_MODE_SET);
 	}
 
 	if ( rval == -1 ) {
@@ -957,7 +956,7 @@ int WaveFile::Read(ubyte *pbDest, uint cbSize, int service)
 		Assert(src_bytes_used <= num_bytes_read);
 		if ( src_bytes_used < num_bytes_read ) {
 			// seek back file pointer to reposition before unused source data
-			cfile::io::seek(m_snd_info.cfp, src_bytes_used - num_bytes_read, cfile::SEEK_MODE_CUR);
+			cfile::io::seek(m_snd_info.cfp, src_bytes_used - num_bytes_read, cfile::SEEK_MODE_SET);
 		}
 
 		// Adjust number of bytes left

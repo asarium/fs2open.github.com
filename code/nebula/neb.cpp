@@ -9,22 +9,22 @@
 
 
 
-#include "nebula/neb.h"
-#include "render/3d.h"
 #include "bmpman/bmpman.h"
-#include "object/object.h"
+#include "cmdline/cmdline.h"
+#include "ddsutils/ddsutils.h"
+#include "debugconsole/console.h"
 #include "freespace.h"
-#include "starfield/starfield.h"
+#include "jpgutils/jpgutils.h"
+#include "mission/missionparse.h"
+#include "nebula/neb.h"
+#include "object/object.h"
 #include "parse/parselo.h"
 #include "pcxutils/pcxutils.h"
-#include "tgautils/tgautils.h"
-#include "jpgutils/jpgutils.h"
 #include "pngutils/pngutils.h"
-#include "ddsutils/ddsutils.h"
-#include "mission/missionparse.h"
+#include "render/3d.h"
 #include "ship/ship.h"
-#include "cmdline/cmdline.h"
-#include "debugconsole/console.h"
+#include "starfield/starfield.h"
+#include "tgautils/tgautils.h"
 
 
 // --------------------------------------------------------------------------------------------------------
@@ -230,10 +230,10 @@ float neb2_get_alpha_offscreen(float sx, float sy, float incoming_alpha);
 void neb2_pre_render(camid cid);
 
 // fill in the position of the eye for this frame
-void neb2_get_eye_pos(vec3d *eye);
+void neb2_get_eye_pos(vec3d *eye_vector);
 
 // fill in the eye orient for this frame
-void neb2_get_eye_orient(matrix *eye);
+void neb2_get_eye_orient(matrix *eye_matrix);
 
 // get a (semi) random bitmap to use for a poof
 int neb2_get_bitmap();
@@ -1413,15 +1413,15 @@ void neb2_set_backg_color(int r, int g, int b)
 }
 
 // fill in the position of the eye for this frame
-void neb2_get_eye_pos(vec3d *eye)
+void neb2_get_eye_pos(vec3d *eye_vector)
 {
-	*eye = Eye_position;
+	*eye_vector = Eye_position;
 }
 
 // fill in the eye orient for this frame
-void neb2_get_eye_orient(matrix *eye)
+void neb2_get_eye_orient(matrix *eye_matrix)
 {
-	*eye = Eye_matrix;
+	*eye_matrix = Eye_matrix;
 }
 
 // get a (semi) random bitmap to use for a poof

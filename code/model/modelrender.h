@@ -10,10 +10,10 @@
 #ifndef _MODELRENDER_H
 #define _MODELRENDER_H
 
-#include "model/model.h"
-#include "math/vecmat.h"
-#include "lighting/lighting.h"
 #include "graphics/gropengltnl.h"
+#include "lighting/lighting.h"
+#include "math/vecmat.h"
+#include "model/model.h"
 
 extern light Lights[MAX_LIGHTS];
 extern int Num_lights;
@@ -351,7 +351,7 @@ public:
 	void set_center_alpha(int center_alpha);
 	void set_lighting(bool mode);
 	void set_buffer(int buffer);
-	void set_team_color(const team_color &color);
+	void set_team_color(const team_color &clr);
 	void set_team_color();
 	void set_color(const color &clr);
 	void set_animated_timer(float time);

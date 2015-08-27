@@ -12,11 +12,10 @@
 #include <time.h>
 #include <stdarg.h>
 
+#include "cfile/cfile.h"
 #include "globalincs/globals.h"
 #include "parse/generic_log.h"
-#include "cfile/cfile.h"
 #include "parse/parselo.h"
-
 
 
 // ----------------------------------------------------------------------------------------------------

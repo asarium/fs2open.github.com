@@ -21,58 +21,57 @@
 #include <setjmp.h>
 
 
-#include "mission/missionparse.h"
-#include "parse/generic_log.h"
-#include "parse/parselo.h"
-#include "mission/missiongoals.h"
-#include "mission/missionlog.h"
-#include "mission/missionmessage.h"
-#include "globalincs/linklist.h"
-#include "globalincs/alphacolors.h"
-#include "io/timer.h"
-#include "ship/ship.h"
 #include "ai/aigoals.h"
-#include "playerman/player.h"
-#include "starfield/starfield.h"
+#include "asteroid/asteroid.h"
 #include "bmpman/bmpman.h"
-#include "lighting/lighting.h"
+#include "cfile/cfile.h"
+#include "cmdline/cmdline.h"
+#include "debris/debris.h"
 #include "gamesnd/eventmusic.h"
+#include "globalincs/alphacolors.h"
+#include "globalincs/linklist.h"
+#include "hud/hudescort.h"
+#include "hud/hudets.h"
+#include "hud/hudwingmanstatus.h"
+#include "iff_defs/iff_defs.h"
+#include "io/timer.h"
+#include "jumpnode/jumpnode.h"
+#include "lighting/lighting.h"
+#include "localization/localize.h"
+#include "math/fvi.h"
+#include "math/staticrand.h"
 #include "mission/missionbriefcommon.h"
 #include "mission/missioncampaign.h"
-#include "ship/shipfx.h"
-#include "debris/debris.h"
-#include "starfield/nebula.h"
-#include "hud/hudets.h"
+#include "mission/missiongoals.h"
 #include "mission/missionhotkey.h"
-#include "hud/hudescort.h"
-#include "asteroid/asteroid.h"
-#include "ship/shiphit.h"
-#include "math/staticrand.h"
+#include "mission/missionlog.h"
+#include "mission/missionmessage.h"
+#include "mission/missionparse.h"
+#include "missionui/fictionviewer.h"
 #include "missionui/missioncmdbrief.h"
 #include "missionui/redalert.h"
-#include "hud/hudwingmanstatus.h"
-#include "jumpnode/jumpnode.h"
-#include "localization/localize.h"
 #include "nebula/neb.h"
 #include "nebula/neblightning.h"
-#include "math/fvi.h"
-#include "weapon/weapon.h"
-#include "cfile/cfile.h"
-#include "iff_defs/iff_defs.h"
 #include "network/multi.h"
-#include "network/multiutil.h"
-#include "network/multimsgs.h"
-#include "network/multi_respawn.h"
 #include "network/multi_endgame.h"
+#include "network/multi_respawn.h"
+#include "network/multimsgs.h"
+#include "network/multiutil.h"
 #include "object/parseobjectdock.h"
 #include "object/waypoint.h"
-#include "missionui/fictionviewer.h"
-#include "cmdline/cmdline.h"
+#include "parse/generic_log.h"
+#include "parse/parselo.h"
+#include "parse/scripting.h"
+#include "playerman/player.h"
 #include "popup/popup.h"
 #include "popup/popupdead.h"
-#include "sound/sound.h"
+#include "ship/ship.h"
+#include "ship/shipfx.h"
+#include "ship/shiphit.h"
 #include "sound/ds.h"
-#include "parse/scripting.h"
+#include "starfield/nebula.h"
+#include "starfield/starfield.h"
+#include "weapon/weapon.h"
 
 LOCAL struct {
 	char docker[NAME_LENGTH];
@@ -570,9 +569,9 @@ void parse_mission_info(mission *pm, bool basic = false)
 	// for each species, store whether support is available
 	for (int species = 0; species < (int)Species_info.size(); species++)
 	{
-		for (int ship_class = 0; ship_class < Num_ship_classes; ship_class++)
+		for (auto it = Ship_info.cbegin(); it != Ship_info.cend(); ++it)
 		{
-			if ((Ship_info[ship_class].flags & SIF_SUPPORT) && (Ship_info[ship_class].species == species))
+			if ((it->flags & SIF_SUPPORT) && (it->species == species))
 			{
 				pm->support_ships.support_available_for_species |= (1 << species);
 				break;
@@ -888,13 +887,13 @@ void parse_player_info2(mission *pm)
 			// do we do?  choose the first allowable one?
 			if (Game_mode & GM_CAMPAIGN_MODE || (MULTIPLAYER_CLIENT)) {
 				if ( !(Campaign.ships_allowed[ptr->default_ship]) ) {
-					for (i = 0; i < MAX_SHIP_CLASSES; i++ ) {
+					for (i = 0; i < static_cast<int>(Ship_info.size()); i++ ) {
 						if ( Campaign.ships_allowed[i] ) {
 							ptr->default_ship = i;
 							break;
 						}
 					}
-					Assertion( i < MAX_SHIP_CLASSES, "Mission: %s: Could not find a valid default ship.\n", pm->name );
+					Assertion( i < static_cast<int>(Ship_info.size()), "Mission: %s: Could not find a valid default ship.\n", pm->name );
 				}
 			}
 		}
@@ -973,7 +972,7 @@ void parse_cutscenes(mission *pm)
 	{
 		mission_cutscene scene;
 
-		while (true)
+		while (!optional_string("#end"))
 		{
 			// this list should correspond to the MOVIE_* #defines
 			scene.type = optional_string_one_of(6,
@@ -1000,9 +999,6 @@ void parse_cutscenes(mission *pm)
 			// add it
 			pm->cutscenes.push_back(scene);
 		}
-
-		// for reverse compatibility, check that we have a closing tag
-		optional_string("#end");
 	}
 }
 
@@ -1450,7 +1446,7 @@ void parse_briefing(mission *pm, int flags)
 
 				find_and_stuff("$team:", &bi->team, F_NAME, temp_team_names, Num_iffs, "team name");
 
-				find_and_stuff("$class:", &bi->ship_class, F_NAME, Ship_class_names, Num_ship_classes, "ship class");
+				find_and_stuff("$class:", &bi->ship_class, F_NAME, Ship_class_names, Ship_info.size(), "ship class");
 
 				// Goober5000 - import
 				if (flags & MPF_IMPORT_FSM)
@@ -1838,6 +1834,7 @@ int parse_create_object_sub(p_object *p_objp)
 
 	shipp->ship_max_shield_strength = p_objp->ship_max_shield_strength;
 	shipp->ship_max_hull_strength =  p_objp->ship_max_hull_strength;
+	shipp->max_shield_recharge = p_objp->max_shield_recharge;
 
 	// Goober5000 - ugh, this is really stupid having to do this here; if the
 	// ship creation code was better organized this wouldn't be necessary
@@ -2211,13 +2208,29 @@ int parse_create_object_sub(p_object *p_objp)
 						ptr->weapons.secondary_bank_weapons[j] = sssp->secondary_banks[j];
 
 				// Goober5000
-				for (j = 0; j < MAX_SHIP_PRIMARY_BANKS; j++)
-					ptr->weapons.primary_bank_ammo[j] = sssp->primary_ammo[j];
+				for (j = 0; j < ptr->weapons.num_primary_banks; j++)
+				{
+					if (Fred_running) {
+						ptr->weapons.primary_bank_ammo[j] = sssp->primary_ammo[j];
+					} else if (Weapon_info[ptr->weapons.primary_bank_weapons[j]].wi_flags2 & WIF2_BALLISTIC) {
+						Assert(Weapon_info[ptr->weapons.primary_bank_weapons[j]].cargo_size > 0.0f);
 
-				// AL 3-5-98:  This is correct for FRED, but not for FreeSpace... but is this even used?
-				//					As far as I know, turrets cannot run out of ammo
-				for (j = 0; j < MAX_SHIP_SECONDARY_BANKS; j++)
-					ptr->weapons.secondary_bank_ammo[j] = sssp->secondary_ammo[j];
+						int capacity = fl2i(sssp->primary_ammo[j]/100.0f * ptr->weapons.primary_bank_capacity[j] + 0.5f);
+						ptr->weapons.primary_bank_ammo[j] = fl2i(capacity / Weapon_info[ptr->weapons.primary_bank_weapons[j]].cargo_size + 0.5f);
+					}
+				}
+
+				for (j = 0; j < ptr->weapons.num_secondary_banks; j++)
+				{
+					if (Fred_running) {
+						ptr->weapons.secondary_bank_ammo[j] = sssp->secondary_ammo[j];
+					} else {
+						Assert(Weapon_info[ptr->weapons.secondary_bank_weapons[j]].cargo_size > 0.0f);
+
+						int capacity = fl2i(sssp->secondary_ammo[j]/100.0f * ptr->weapons.secondary_bank_capacity[j] + 0.5f);
+						ptr->weapons.secondary_bank_ammo[j] = fl2i(capacity / Weapon_info[ptr->weapons.secondary_bank_weapons[j]].cargo_size + 0.5f);
+					}
+				}
 
 				ptr->subsys_cargo_name = sssp->subsys_cargo_name;
 
@@ -2250,7 +2263,7 @@ int parse_create_object_sub(p_object *p_objp)
 		Objects[objnum].hull_strength = p_objp->initial_hull * shipp->ship_max_hull_strength / 100.0f;
 		for (iLoop = 0; iLoop<Objects[objnum].n_quadrants; iLoop++)
 		{
-			Objects[objnum].shield_quadrant[iLoop] = (float) (p_objp->initial_shields * get_max_shield_quad(&Objects[objnum]) / 100.0f);
+			Objects[objnum].shield_quadrant[iLoop] = (float) (shipp->max_shield_recharge * p_objp->initial_shields * get_max_shield_quad(&Objects[objnum]) / 100.0f);
 		}
 
 		// initial velocities now do not apply to ships which warp in after mission starts
@@ -2664,7 +2677,7 @@ int parse_object(mission *pm, int flag, p_object *p_objp)
 		error_display(0, NOX("Redundant ship name: %s\n"), p_objp->name);
 
 
-	find_and_stuff("$Class:", &p_objp->ship_class, F_NAME, Ship_class_names, Num_ship_classes, "ship class");
+	find_and_stuff("$Class:", &p_objp->ship_class, F_NAME, Ship_class_names, Ship_info.size(), "ship class");
 	if (p_objp->ship_class < 0)
 	{
 		if (Fred_running) {
@@ -3110,6 +3123,7 @@ int parse_object(mission *pm, int flag, p_object *p_objp)
 	}
 
 	Assert(p_objp->ship_max_hull_strength > 0.0f);	// Goober5000: div-0 check (not shield because we might not have one)
+	p_objp->max_shield_recharge = Ship_info[p_objp->ship_class].max_shield_recharge;
 
 
 	// if the kamikaze flag is set, we should have the next flag
@@ -5706,11 +5720,11 @@ void post_process_mission()
 				sprintf(error_msg, "%s.\n\nIn sexpression: %s\n(Error appears to be: %s)", sexp_error_message(result), sexp_str.c_str(), Sexp_nodes[bad_node].text);
 
 				if (!Fred_running) {
-					nprintf(("Error", error_msg.c_str()));
-					Error(LOCATION, error_msg.c_str());
+					nprintf(("Error", "%s", error_msg.c_str()));
+					Error(LOCATION, "%s", error_msg.c_str());
 				} else {
-					nprintf(("Warning", error_msg.c_str()));
-					Warning(LOCATION, error_msg.c_str());
+					nprintf(("Warning", "%s", error_msg.c_str()));
+					Warning(LOCATION, "%s", error_msg.c_str());
 				}
 			}
 		}
@@ -5895,10 +5909,11 @@ int parse_main(const char *mission_name, int flags)
 	// fill in Ship_class_names array with the names from the ship_info struct;
 	Num_parse_names = 0;
 	Num_path_restrictions = 0;
-	Assert(Num_ship_classes <= MAX_SHIP_CLASSES);
+	Assert(Ship_info.size() <= MAX_SHIP_CLASSES);
 
-	for (i = 0; i < Num_ship_classes; i++)
-		Ship_class_names[i] = Ship_info[i].name;
+	i = 0;
+	for (auto it = Ship_info.begin(); it != Ship_info.end(); i++, ++it)
+		Ship_class_names[i] = it->name;
 	
 	do {
 		// don't do this for imports
@@ -7543,13 +7558,16 @@ void mission_bring_in_support_ship( object *requester_objp )
 		// 5/6/98 -- MWA  Don't need to do anything for multiplayer.  I think that we always want to use
 		// the species of the caller ship.
 
+		i = -1;
 		// get index of correct species support ship
-		for (i=0; i < Num_ship_classes; i++) {
-			if ( (Ship_info[i].species == requester_species) && (Ship_info[i].flags & SIF_SUPPORT) )
+		for (auto it = Ship_info.cbegin(); it != Ship_info.cend(); ++it) {
+			if ( (it->species == requester_species) && (it->flags & SIF_SUPPORT) ) {
+				i = std::distance(Ship_info.cbegin(), it);
 				break;
+			}
 		}
 
-		if ( i < Num_ship_classes )
+		if ( i != -1 )
 			pobj->ship_class = i;
 		else
 			Int3();				// BOGUS!!!!  gotta figure something out here
@@ -7558,6 +7576,7 @@ void mission_bring_in_support_ship( object *requester_objp )
 	// set support ship hitpoints
 	pobj->ship_max_hull_strength = Ship_info[i].max_hull_strength;
 	pobj->ship_max_shield_strength = Ship_info[i].max_shield_strength;
+	pobj->max_shield_recharge = Ship_info[i].max_shield_recharge;
 
 	pobj->team = requester_shipp->team;
 

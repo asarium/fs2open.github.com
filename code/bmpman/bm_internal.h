@@ -22,7 +22,6 @@
 #endif
 
 #include "bmpman/bmpman.h"
-#include "globalincs/pstypes.h"
 
 union bm_extra_info {
 	struct {
@@ -63,7 +62,7 @@ struct bitmap_entry {
 	cfile::DirType		dir_type; //!< which directory this was loaded from (to skip other locations with same name)
 
 	// compressed bitmap stuff (.dds) - RT please take a look at this and tell me if we really need it
-	int mem_taken;          //!< How much memory does this bitmap use? - UnknownPlayer
+	size_t mem_taken;          //!< How much memory does this bitmap use? - UnknownPlayer
 	int num_mipmaps;        //!< number of mipmap levels, we need to read all of them
 
 	// Stuff to keep track of usage

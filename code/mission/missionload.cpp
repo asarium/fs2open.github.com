@@ -9,17 +9,17 @@
 
 #include <algorithm>
 
+#include "freespace.h"
+#include "gamesequence/gamesequence.h"
+#include "globalincs/alphacolors.h"
+#include "hud/hudparse.h"
+#include "io/key.h"
+#include "mission/missioncampaign.h"
 #include "mission/missionload.h"
 #include "mission/missionparse.h"    
 #include "missionui/missionshipchoice.h"
-#include "mission/missioncampaign.h"
 #include "playerman/managepilot.h"
-#include "freespace.h"
-#include "io/key.h"
-#include "gamesequence/gamesequence.h"
 #include "ui/ui.h"
-#include "hud/hudparse.h"
-#include "globalincs/alphacolors.h"
 
 
 
@@ -388,4 +388,3 @@ void mission_load_menu_close()
 	mlm_window.destroy();
 
 }
-

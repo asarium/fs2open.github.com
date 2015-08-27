@@ -1,6 +1,8 @@
 
 INCLUDE(util)
 
+include(opengl.cmake)
+
 IF(APPLE)
 	ADD_SUBDIRECTORY(mac)
 ENDIF(APPLE)

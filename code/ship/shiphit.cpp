@@ -10,42 +10,42 @@
 
 
 
-#include "ship/shiphit.h"
-#include "object/object.h"
-#include "ship/ship.h"
-#include "weapon/weapon.h"
-#include "render/3d.h"
-#include "fireball/fireballs.h"
+#include "asteroid/asteroid.h"
 #include "debris/debris.h"
+#include "fireball/fireballs.h"
+#include "freespace.h"
+#include "gamesequence/gamesequence.h"
+#include "gamesnd/eventmusic.h"
+#include "gamesnd/gamesnd.h"
+#include "globalincs/linklist.h"
 #include "hud/hud.h"
+#include "hud/hudmessage.h"
+#include "hud/hudtarget.h"
+#include "iff_defs/iff_defs.h"
+#include "io/joy_ff.h"
 #include "io/timer.h"
 #include "mission/missionlog.h"
-#include "io/joy_ff.h"
-#include "playerman/player.h"
-#include "freespace.h"
-#include "globalincs/linklist.h"
-#include "hud/hudtarget.h"
-#include "gamesnd/gamesnd.h"
-#include "gamesnd/eventmusic.h"
-#include "ship/shipfx.h"
-#include "gamesequence/gamesequence.h"
-#include "weapon/shockwave.h"
-#include "hud/hudmessage.h"
-#include "popup/popup.h"
-#include "weapon/emp.h"
-#include "weapon/beam.h"
-#include "object/objectdock.h"
-#include "iff_defs/iff_defs.h"
-#include "network/multi.h"
-#include "network/multiutil.h"
-#include "network/multimsgs.h"
-#include "network/multi_respawn.h"
-#include "network/multi_pmsg.h"
-#include "asteroid/asteroid.h"
-#include "parse/scripting.h"
-#include "parse/parselo.h"
-#include "object/objectsnd.h"
 #include "mod_table/mod_table.h"
+#include "network/multi.h"
+#include "network/multi_pmsg.h"
+#include "network/multi_respawn.h"
+#include "network/multimsgs.h"
+#include "network/multiutil.h"
+#include "object/object.h"
+#include "object/objectdock.h"
+#include "object/objectsnd.h"
+#include "parse/parselo.h"
+#include "parse/scripting.h"
+#include "playerman/player.h"
+#include "popup/popup.h"
+#include "render/3d.h"
+#include "ship/ship.h"
+#include "ship/shipfx.h"
+#include "ship/shiphit.h"
+#include "weapon/beam.h"
+#include "weapon/emp.h"
+#include "weapon/shockwave.h"
+#include "weapon/weapon.h"
 
 //#pragma optimize("", off)
 //#pragma auto_inline(off)
@@ -1564,8 +1564,7 @@ void ship_hit_kill(object *ship_objp, object *other_obj, float percent_killed, i
 	{
 		//WMC - Do scripting stuff
 		Script_system.RunCondition(CHA_DEATH, 0, NULL, ship_objp);
-		Script_system.RemHookVar("Self");
-		Script_system.RemHookVar("Killer");
+		Script_system.RemHookVars(2, "Self", "Killer");
 		return;
 	}
 
@@ -2018,7 +2017,7 @@ static void ship_do_damage(object *ship_objp, object *other_obj, vec3d *hitpos, 
 			Assert((beam_get_weapon_info_index(other_obj) >= 0) && (beam_get_weapon_info_index(other_obj) < Num_weapon_types));
 			if (((Weapon_info[beam_get_weapon_info_index(other_obj)].subtype != WP_LASER) || special_check) && (Player_obj != NULL) && (ship_objp == Player_obj))
 			{
-				ship_hit_pain(damage * difficulty_scale_factor);
+				ship_hit_pain(damage * difficulty_scale_factor, quadrant);
 			}	
 		}
 		if (other_obj_is_weapon)
@@ -2026,7 +2025,7 @@ static void ship_do_damage(object *ship_objp, object *other_obj, vec3d *hitpos, 
 			Assert((Weapons[other_obj->instance].weapon_info_index > -1) && (Weapons[other_obj->instance].weapon_info_index < Num_weapon_types));
 			if (((Weapon_info[Weapons[other_obj->instance].weapon_info_index].subtype != WP_LASER) || special_check) && (Player_obj != NULL) && (ship_objp == Player_obj))
 			{
-				ship_hit_pain(damage * difficulty_scale_factor);
+				ship_hit_pain(damage * difficulty_scale_factor, quadrant);
 			}
 		}
 	}	// read violation sanity check
@@ -2571,11 +2570,25 @@ void ship_apply_wash_damage(object *ship_objp, object *other_obj, float damage)
 }
 
 // player pain
-void ship_hit_pain(float damage)
+void ship_hit_pain(float damage, int quadrant)
 {
+
+	ship *shipp = &Ships[Player_obj->instance];
+	ship_info *sip = &Ship_info[shipp->ship_info_index];
+
     if (!(Player_obj->flags & OF_INVULNERABLE))
     {
-    	game_flash( damage/15.0f, -damage/30.0f, -damage/30.0f );
+		if (Shield_pain_flash_factor != 0.0f && quadrant >= 0)
+			 {
+			float effect = (Shield_pain_flash_factor * Player_obj->shield_quadrant[quadrant] * 4) / shipp->ship_max_shield_strength;
+			
+				if (Shield_pain_flash_factor < 0.0f)
+				 effect -= Shield_pain_flash_factor;
+			
+				game_flash((sip->shield_color[0] * effect) / 255.0f, (sip->shield_color[1] * effect) / 255.0f, (sip->shield_color[2] * effect) / 255.0f);
+			}
+		else
+			 game_flash(damage * Generic_pain_flash_factor / 15.0f, -damage * Generic_pain_flash_factor / 30.0f, -damage * Generic_pain_flash_factor / 30.0f);
     }
 
 	// kill any active popups when you get hit.

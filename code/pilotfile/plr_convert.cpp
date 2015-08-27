@@ -6,9 +6,9 @@
  *    place of these major numbers for /any/ reason, *ever*!
  */
 
-#include "pilotfile/pilotfile_convert.h"
-#include "network/psnet2.h"
 #include "mission/missionbriefcommon.h"
+#include "network/psnet2.h"
+#include "pilotfile/pilotfile_convert.h"
 
 
 // this struct isn't well packed, and is written whole to the pilot file, so
@@ -864,7 +864,7 @@ bool pilotfile_convert::plr_convert(const char *fname, bool inferno)
 	cfp = cfile::io::open(filename, cfile::MODE_READ, cfile::OPEN_NORMAL, inferno ? cfile::TYPE_SINGLE_PLAYERS_INFERNO : cfile::TYPE_SINGLE_PLAYERS);
 
 	if ( !cfp ) {
-		mprintf(("  PL2 => Unable to open for import!\n", fname));
+		mprintf(("  PL2 => Unable to open '%s' for import!\n", fname));
 		return false;
 	}
 
@@ -888,7 +888,7 @@ bool pilotfile_convert::plr_convert(const char *fname, bool inferno)
 	cfp = cfile::io::open(filename, cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_PLAYERS);
 
 	if ( !cfp ) {
-		mprintf(("  PLR => Unable to open for export!\n", fname));
+		mprintf(("  PLR => Unable to open '%s' for export!\n", fname));
 		return false;
 	}
 
@@ -908,4 +908,3 @@ bool pilotfile_convert::plr_convert(const char *fname, bool inferno)
 
 	return rval;
 }
-

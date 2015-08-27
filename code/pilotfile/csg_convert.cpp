@@ -6,12 +6,12 @@
  *    place of these major numbers for /any/ reason, *ever*!
  */
 
+#include "cutscene/cutscenes.h"
+#include "menuui/techmenu.h"
 #include "pilotfile/pilotfile_convert.h"
 #include "ship/ship.h"
-#include "weapon/weapon.h"
 #include "stats/medals.h"
-#include "menuui/techmenu.h"
-#include "cutscene/cutscenes.h"
+#include "weapon/weapon.h"
 
 #include <iostream>
 #include <sstream>
@@ -1177,7 +1177,7 @@ bool pilotfile_convert::csg_convert(const char *fname, bool inferno)
 	cfp = cfile::io::open(filename, cfile::MODE_READ, cfile::OPEN_NORMAL, inferno ? cfile::TYPE_SINGLE_PLAYERS_INFERNO : cfile::TYPE_SINGLE_PLAYERS);
 
 	if ( !cfp ) {
-		mprintf(("    CS2 => Unable to open for import!\n", fname));
+		mprintf(("    CS2 => Unable to open '%s' for import!\n", fname));
 		delete csg;
 		csg = NULL;
 
@@ -1207,7 +1207,7 @@ bool pilotfile_convert::csg_convert(const char *fname, bool inferno)
 	cfp = cfile::io::open(filename.c_str(), cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_PLAYERS);
 
 	if ( !cfp ) {
-		mprintf(("    CSG => Unable to open for export!\n", fname));
+		mprintf(("    CSG => Unable to open '%s' for export!\n", fname));
 		return false;
 	}
 

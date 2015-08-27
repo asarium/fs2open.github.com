@@ -10,44 +10,44 @@
 
 
 
-#include "missionui/missionscreencommon.h"
-#include "missionui/missionshipchoice.h"
-#include "mission/missionparse.h"
-#include "parse/parselo.h"
-#include "missionui/missionbrief.h"
-#include "freespace.h"
-#include "gamesequence/gamesequence.h"
-#include "ship/ship.h"
-#include "io/key.h"
-#include "render/3d.h"
-#include "globalincs/linklist.h"
-#include "io/mouse.h"
-#include "playerman/player.h"
-#include "pilotfile/pilotfile.h"
-#include "menuui/snazzyui.h"
+#include "ai/aigoals.h"
 #include "anim/animplay.h"
 #include "anim/packunpack.h"
-#include "missionui/missionweaponchoice.h"
-#include "gamehelp/contexthelp.h"
-#include "gamesnd/gamesnd.h"
-#include "mission/missionhotkey.h"
-#include "popup/popup.h"
-#include "hud/hudwingmanstatus.h"
-#include "hud/hudparse.h"
-#include "globalincs/alphacolors.h"
-#include "localization/localize.h"
-#include "lighting/lighting.h"
-#include "cmdline/cmdline.h"
 #include "cfile/cfile.h"
+#include "cmdline/cmdline.h"
+#include "freespace.h"
+#include "gamehelp/contexthelp.h"
+#include "gamesequence/gamesequence.h"
+#include "gamesnd/gamesnd.h"
+#include "globalincs/alphacolors.h"
+#include "globalincs/linklist.h"
 #include "hud/hudbrackets.h"
-#include "species_defs/species_defs.h"
+#include "hud/hudparse.h"
+#include "hud/hudwingmanstatus.h"
+#include "io/key.h"
+#include "io/mouse.h"
+#include "io/timer.h"
+#include "lighting/lighting.h"
+#include "localization/localize.h"
+#include "menuui/snazzyui.h"
+#include "mission/missionhotkey.h"
+#include "mission/missionparse.h"
+#include "missionui/missionbrief.h"
+#include "missionui/missionscreencommon.h"
+#include "missionui/missionshipchoice.h"
+#include "missionui/missionweaponchoice.h"
 #include "network/multi.h"
 #include "network/multimsgs.h"
-#include "network/multiui.h"
 #include "network/multiteamselect.h"
+#include "network/multiui.h"
 #include "network/multiutil.h"
-#include "ai/aigoals.h"
-#include "io/timer.h"
+#include "parse/parselo.h"
+#include "pilotfile/pilotfile.h"
+#include "playerman/player.h"
+#include "popup/popup.h"
+#include "render/3d.h"
+#include "ship/ship.h"
+#include "species_defs/species_defs.h"
 #include "weapon/weapon.h"
 
 
@@ -436,7 +436,7 @@ void ss_set_carried_icon(int from_slot, int ship_class)
 void clear_active_list()
 {
 	int i;
-	for ( i = 0; i < Num_ship_classes; i++ ) { //DTP singleplayer ship choice fix 
+	for ( i = 0; i < static_cast<int>(Ship_info.size()); i++ ) { //DTP singleplayer ship choice fix 
 	//for ( i = 0; i < MAX_WSS_SLOTS; i++ ) { 
 		SS_active_items[i].flags = 0;
 		SS_active_items[i].ship_class = -1;
@@ -452,7 +452,7 @@ void clear_active_list()
 ss_active_item *get_free_active_list_node()
 {
 	int i;
-	for ( i = 0; i < Num_ship_classes; i++ ) { 
+	for ( i = 0; i < static_cast<int>(Ship_info.size()); i++ ) { 
 	//for ( i = 0; i < MAX_WSS_SLOTS; i++ ) { //DTP, ONLY MAX_WSS_SLOTS SHIPS ???
 	if ( SS_active_items[i].flags == 0 ) {
 			SS_active_items[i].flags |= SS_ACTIVE_ITEM_USED;
@@ -504,7 +504,7 @@ void init_active_list()
 	clear_active_list();
 
 	// build the active list
-	for ( i = 0; i < MAX_SHIP_CLASSES; i++ ) {
+	for ( i = 0; i < static_cast<int>(Ship_info.size()); i++ ) {
 		if ( Ss_pool[i] > 0 ) {
 			sai = get_free_active_list_node();
 			if ( sai != NULL ) {
@@ -920,7 +920,7 @@ void ship_select_blit_ship_info()
 	int y_start, line_height;
 	ship_info *sip;
 	char str[100];
-	color *header = &Color_white;
+	color *header_clr = &Color_white;
 	color *text = &Color_green;
 
 
@@ -940,7 +940,7 @@ void ship_select_blit_ship_info()
 	memset(str,0,100);
 
 	// blit the ship class (name)
-	gr_set_color_fast(header);
+	gr_set_color_fast(header_clr);
 	gr_string(Ship_info_coords[gr_screen.res][SHIP_SELECT_X_COORD], y_start, XSTR("Class",739), GR_RESIZE_MENU);
 	y_start += line_height;
 	if(strlen((sip->alt_name[0]) ? sip->alt_name : sip->name)){
@@ -956,7 +956,7 @@ void ship_select_blit_ship_info()
 	y_start += line_height;
 
 	// blit the ship type
-	gr_set_color_fast(header);
+	gr_set_color_fast(header_clr);
 	gr_string(Ship_info_coords[gr_screen.res][SHIP_SELECT_X_COORD], y_start, XSTR("Type",740), GR_RESIZE_MENU);
 	y_start += line_height;
 	gr_set_color_fast(text);
@@ -971,7 +971,7 @@ void ship_select_blit_ship_info()
 	y_start+=line_height;
 
 	// blit the ship length
-	gr_set_color_fast(header);
+	gr_set_color_fast(header_clr);
 	gr_string(Ship_info_coords[gr_screen.res][SHIP_SELECT_X_COORD], y_start, XSTR("Length",741), GR_RESIZE_MENU);
 	y_start += line_height;
 	gr_set_color_fast(text);
@@ -999,7 +999,7 @@ void ship_select_blit_ship_info()
 	y_start += line_height;
 
 	// blit the max velocity
-	gr_set_color_fast(header);
+	gr_set_color_fast(header_clr);
 	gr_string(Ship_info_coords[gr_screen.res][SHIP_SELECT_X_COORD], y_start, XSTR("Max Velocity",742), GR_RESIZE_MENU);	
 	y_start += line_height;
 	sprintf(str, XSTR("%d m/s",743),fl2i((float)sip->max_vel.xyz.z * Hud_speed_multiplier));
@@ -1008,7 +1008,7 @@ void ship_select_blit_ship_info()
 	y_start += line_height;
 
 	// blit the maneuverability
-	gr_set_color_fast(header);
+	gr_set_color_fast(header_clr);
 	gr_string(Ship_info_coords[gr_screen.res][SHIP_SELECT_X_COORD], y_start, XSTR("Maneuverability",744), GR_RESIZE_MENU);
 	y_start += line_height;
 	gr_set_color_fast(text);
@@ -1042,7 +1042,7 @@ void ship_select_blit_ship_info()
 	y_start += line_height;
 
 	// blit the armor
-	gr_set_color_fast(header);
+	gr_set_color_fast(header_clr);
 	gr_string(Ship_info_coords[gr_screen.res][SHIP_SELECT_X_COORD], y_start, XSTR("Armor",745), GR_RESIZE_MENU);
 	y_start += line_height;
 	gr_set_color_fast(text);
@@ -1081,7 +1081,7 @@ void ship_select_blit_ship_info()
 	y_start += line_height;
 
 	// blit the gun mounts 
-	gr_set_color_fast(header);
+	gr_set_color_fast(header_clr);
 	if((sip->gun_mounts != NULL) && strlen(sip->gun_mounts))
 	{
 		gr_string(Ship_info_coords[gr_screen.res][SHIP_SELECT_X_COORD], y_start, XSTR("Gun Mounts",746), GR_RESIZE_MENU);
@@ -1126,7 +1126,7 @@ void ship_select_blit_ship_info()
 	y_start += line_height;
 
 	// blit the missile banks
-	gr_set_color_fast(header);
+	gr_set_color_fast(header_clr);
 	gr_string(Ship_info_coords[gr_screen.res][SHIP_SELECT_X_COORD], y_start, XSTR("Missile Banks",747), GR_RESIZE_MENU);
 	y_start += line_height;
 	gr_set_color_fast(text);
@@ -1180,7 +1180,7 @@ void ship_select_blit_ship_info()
 		}
 		if(num_turrets)
 		{
-			gr_set_color_fast(header);
+			gr_set_color_fast(header_clr);
 			gr_string(Ship_info_coords[gr_screen.res][SHIP_SELECT_X_COORD], y_start, XSTR("Turrets",1627), GR_RESIZE_MENU);
 			y_start += line_height;
 			gr_set_color_fast(text);
@@ -1191,7 +1191,7 @@ void ship_select_blit_ship_info()
 	}
 
 	// blit the manufacturer
-	gr_set_color_fast(header);
+	gr_set_color_fast(header_clr);
 	gr_string(Ship_info_coords[gr_screen.res][SHIP_SELECT_X_COORD], y_start, XSTR("Manufacturer",748), GR_RESIZE_MENU);
 	y_start += line_height;
 	gr_set_color_fast(text);
@@ -1210,7 +1210,7 @@ void ship_select_blit_ship_info()
 	if (sip->desc == NULL)
 		return;
 
-	gr_set_color_fast(header);
+	gr_set_color_fast(header_clr);
 	gr_string(Ship_info_coords[gr_screen.res][SHIP_SELECT_X_COORD], y_start, XSTR("Description",1571), GR_RESIZE_MENU);
 	y_start += line_height;
 
@@ -2493,7 +2493,7 @@ void update_player_ship(int si_index)
  */
 int create_default_player_ship(int use_last_flown)
 {
-	int	player_ship_class=-1, i;
+	int	player_ship_class=-1;
 
 	// find the ship that matches the string stored in default_player_ship
 
@@ -2501,15 +2501,15 @@ int create_default_player_ship(int use_last_flown)
 		player_ship_class = Players[Player_num].last_ship_flown_si_index;
 	}
 	else {
-		for (i = 0; i < Num_ship_classes; i++) {
-			if ( !stricmp(Ship_info[i].name, default_player_ship) ) {
-				player_ship_class = i;
+		for (auto it = Ship_info.cbegin(); it != Ship_info.cend(); ++it) {
+			if ( !stricmp(it->name, default_player_ship) ) {
+				player_ship_class = std::distance(Ship_info.cbegin(), it);
 				Players[Player_num].last_ship_flown_si_index = player_ship_class;
 				break;
 			}
 		}
 
-		if (i == Num_ship_classes)
+		if (player_ship_class == -1)
 			return 1;
 	}
 
@@ -2681,7 +2681,7 @@ void ss_reset_selected_ship()
 
 	if ( Selected_ss_class == -1 ) {
 		Int3();
-		for ( i = 0; i < MAX_SHIP_CLASSES; i++ ) {
+		for ( i = 0; i < static_cast<int>(Ship_info.size()); i++ ) {
 			if ( Ss_pool[i] > 0 ) {
 				Selected_ss_class = i;
 			}

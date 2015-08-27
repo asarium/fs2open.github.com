@@ -21,7 +21,6 @@
 #include "graphics/2d.h"
 #include "freespaceresource.h"
 #include "globalincs/systemvars.h"
-#include "cfile/cfilesystem.h"
 #include "globalincs/globals.h"
 #include "parse/parselo.h"
 
@@ -55,7 +54,11 @@ void load_filter_info(void)
 	outwnd_filter_loaded = 1;
 
 	memset( pathname, 0, sizeof(pathname) );
-	snprintf( pathname, MAX_PATH_LEN, "%s\\%s\\%s", detect_home(), Pathtypes[CF_TYPE_DATA].path, NOX("debug_filter.cfg") );
+#ifdef WIN32
+	snprintf( pathname, MAX_PATH_LEN, "%s\\%s\\%s", detect_home(), "data", NOX("debug_filter.cfg") );
+#else
+	snprintf( pathname, MAX_PATH_LEN, "%s/%s/%s/%s", detect_home(), "data", NOX("debug_filter.cfg") );
+#endif
 
 	fp = fopen(pathname, "rt");
 
@@ -125,7 +128,11 @@ void save_filter_info(void)
 
 
 	memset( pathname, 0, sizeof(pathname) );
-	snprintf( pathname, MAX_PATH_LEN, "%s\\%s\\%s", detect_home(), Pathtypes[CF_TYPE_DATA].path, NOX("debug_filter.cfg") );
+#ifdef WIN32
+	snprintf( pathname, MAX_PATH_LEN, "%s\\%s\\%s", detect_home(), "data", NOX("debug_filter.cfg") );
+#else
+	snprintf( pathname, MAX_PATH_LEN, "%s/%s/%s/%s", detect_home(), Osreg_user_dir, "data", NOX("debug_filter.cfg") );
+#endif
 
 	fp = fopen(pathname, "wt");
 
@@ -239,7 +246,11 @@ void outwnd_init()
 		}
 
 		memset( pathname, 0, sizeof(pathname) );
-		snprintf(pathname, MAX_PATH_LEN-1, "%s\\%s\\%s", detect_home(), Pathtypes[CF_TYPE_DATA].path, FreeSpace_logfilename);
+#ifdef WIN32
+		snprintf(pathname, MAX_PATH_LEN-1, "%s\\%s\\%s", detect_home(), "data", FreeSpace_logfilename);
+#else
+		snprintf(pathname, MAX_PATH_LEN, "%s/%s/%s/%s", detect_home(), Osreg_user_dir, "data", FreeSpace_logfilename);
+#endif
 
 		Log_fp = fopen(pathname, "wb");
 

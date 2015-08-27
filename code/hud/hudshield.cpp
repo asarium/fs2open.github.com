@@ -10,22 +10,20 @@
 
 
 
+#include "gamesnd/gamesnd.h"
+#include "hud/hudescort.h"
+#include "hud/hudparse.h"
 #include "hud/hudshield.h"
-#include "graphics/2d.h"
+#include "hud/hudtargetbox.h"
+#include "io/timer.h"
+#include "network/multi.h"
 #include "object/object.h"
 #include "object/objectshield.h"
-#include "hud/hud.h"
-#include "hud/hudparse.h"
-#include "hud/hudtargetbox.h"
-#include "playerman/player.h"
-#include "gamesnd/gamesnd.h"
-#include "io/timer.h"
-#include "hud/hudescort.h"
-#include "weapon/emp.h"
 #include "parse/parselo.h"
-#include "ship/ship.h"
+#include "playerman/player.h"
 #include "render/3d.h"	//For g3_start_frame
-#include "network/multi.h"
+#include "ship/ship.h"
+#include "weapon/emp.h"
 
 
 
@@ -564,8 +562,8 @@ void hud_shield_quadrant_hit(object *objp, int quadrant)
 		return;
 	}
 
-	Assertion(shi->shield_hit_timers.size() > 0, "Shield hit info object for object '%s' has a size %d shield_hit_timers; get a coder!\n", Ships[objp->instance].ship_name, shi->shield_hit_timers.size());
-	Assertion(shi->hull_hit_index < (int) shi->shield_hit_timers.size(), "Shield hit info object for object '%s' has a hull_hit_index of %d (should be between 0 and %d); get a coder!\n", Ships[objp->instance].ship_name, shi->hull_hit_index, shi->shield_hit_timers.size() - 1);
+	Assertion(shi->shield_hit_timers.size() > 0, "Shield hit info object for object '%s' has a size " SIZE_T_ARG " shield_hit_timers; get a coder!\n", Ships[objp->instance].ship_name, shi->shield_hit_timers.size());
+	Assertion(shi->hull_hit_index < (int) shi->shield_hit_timers.size(), "Shield hit info object for object '%s' has a hull_hit_index of %d (should be between 0 and " SIZE_T_ARG "); get a coder!\n", Ships[objp->instance].ship_name, shi->hull_hit_index, shi->shield_hit_timers.size() - 1);
 
 	if ( quadrant >= 0 ) {
 		if ( !(Ship_info[Ships[objp->instance].ship_info_index].flags2 & SIF2_MODEL_POINT_SHIELDS) )
@@ -864,7 +862,7 @@ void HudGaugeShield::renderShieldIcon(coord2d coords[6])
 	int nx = 0, ny = 0, i;
 
 	if ( gr_screen.rendering_to_texture != -1 ) {
-		gr_set_screen_scale(canvas_w, canvas_h, -1, -1, target_w, target_h, true);
+		gr_set_screen_scale(canvas_w, canvas_h, -1, -1, target_w, target_h, target_w, target_h, true);
 	} else {
 		if ( reticle_follow ) {
 			nx = HUD_nose_x;

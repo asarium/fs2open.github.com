@@ -1,22 +1,21 @@
 
-#include "globalincs/pstypes.h"
+#include "cutscene/cutscenes.h"
+#include "freespace.h"
+#include "gamesnd/eventmusic.h"
+#include "hud/hudconfig.h"
+#include "io/joy.h"
+#include "io/mouse.h"
+#include "menuui/techmenu.h"
+#include "mission/missioncampaign.h"
+#include "mission/missionload.h"
+#include "missionui/missionscreencommon.h"
+#include "missionui/missionshipchoice.h"
 #include "pilotfile/pilotfile.h"
 #include "playerman/player.h"
 #include "ship/ship.h"
-#include "weapon/weapon.h"
-#include "stats/medals.h"
-#include "menuui/techmenu.h"
-#include "hud/hudconfig.h"
-#include "cutscene/cutscenes.h"
-#include "missionui/missionscreencommon.h"
-#include "mission/missioncampaign.h"
-#include "missionui/missionshipchoice.h"
-#include "mission/missionload.h"
 #include "sound/audiostr.h"
-#include "io/joy.h"
-#include "io/mouse.h"
-#include "gamesnd/eventmusic.h"
-#include "freespace.h"
+#include "stats/medals.h"
+#include "weapon/weapon.h"
 
 #define REDALERT_INTERNAL
 #include "missionui/redalert.h"
@@ -184,10 +183,10 @@ void pilotfile::csg_write_info()
 	startSection(Section::Info);
 
 	// ship list
-	cfile::io::write<int>(Num_ship_classes, cfp);
+	cfile::io::write<int>(static_cast<int>(Ship_info.size()), cfp);
 
-	for (idx = 0; idx < Num_ship_classes; idx++) {
-		cfile::io::writeStringLen(Ship_info[idx].name, cfp);
+	for (auto it = Ship_info.cbegin(); it != Ship_info.cend(); ++it) {
+		cfile::io::writeStringLen(it->name, cfp);
 	}
 
 	// weapon list
@@ -226,7 +225,7 @@ void pilotfile::csg_write_info()
 	cfile::io::write<int>(Campaign.num_missions_completed, cfp);
 
 	// allowed ships
-	for (idx = 0; idx < Num_ship_classes; idx++) {
+	for (idx = 0; idx < static_cast<int>(Ship_info.size()); idx++) {
 		cfile::io::write<ubyte>(Campaign.ships_allowed[idx], cfp);
 	}
 
@@ -402,7 +401,7 @@ void pilotfile::csg_write_missions()
 			cfile::io::write<uint>(missionp->stats.s_bonehead_hits, cfp);
 
 			// ship kills (scoring)
-			for (j = 0; j < Num_ship_classes; j++) {
+			for (j = 0; j < static_cast<int>(Ship_info.size()); j++) {
 				cfile::io::write<int>(missionp->stats.kills[j], cfp);
 			}
 
@@ -481,9 +480,9 @@ void pilotfile::csg_write_techroom()
 	startSection(Section::Techroom);
 
 	// visible ships
-	for (idx = 0; idx < Num_ship_classes; idx++) {
+	for (auto it = Ship_info.cbegin(); it != Ship_info.cend(); ++it) {
 		// only visible if not in techroom by default
-		if ( (Ship_info[idx].flags & SIF_IN_TECH_DATABASE) && !(Ship_info[idx].flags2 & SIF2_DEFAULT_IN_TECH_DATABASE) ) {
+		if ( (it->flags & SIF_IN_TECH_DATABASE) && !(it->flags2 & SIF2_DEFAULT_IN_TECH_DATABASE) ) {
 			visible = 1;
 		} else {
 			visible = 0;
@@ -643,7 +642,7 @@ void pilotfile::csg_write_loadout()
 	cfile::io::writeStringLen(Player_loadout.last_modified, cfp);
 
 	// ship pool
-	for (idx = 0; idx < Num_ship_classes; idx++) {
+	for (idx = 0; idx < static_cast<int>(Ship_info.size()); idx++) {
 		cfile::io::write<int>(Player_loadout.ship_pool[idx], cfp);
 	}
 
@@ -760,7 +759,7 @@ void pilotfile::csg_write_stats()
 	cfile::io::write<int>((int)p->stats.last_backup, cfp);
 
 	// ship kills (scoring)
-	for (idx = 0; idx < Num_ship_classes; idx++) {
+	for (idx = 0; idx < static_cast<int>(Ship_info.size()); idx++) {
 		cfile::io::write<int>(p->stats.kills[idx], cfp);
 	}
 
@@ -810,7 +809,7 @@ void pilotfile::csg_read_redalert()
 		} else if ( (i < 0 ) && (i >= RED_ALERT_LOWEST_VALID_SHIP_CLASS) ) {  // ship destroyed/exited
 			ras.ship_class = i;
 		} else {
-		ras.ship_class = ship_list[i].index;
+			ras.ship_class = ship_list[i].index;
 		}
 
 		// subsystem hits
@@ -1556,7 +1555,7 @@ bool pilotfile::save_savefile()
 	// assertion before writing so that we don't corrupt the .csg by asserting halfway through writing
 	// assertion should also prevent loss of major campaign progress
 	// i.e. lose one mission, not several missions worth (in theory)
-	Assertion(Red_alert_wingman_status.size() <= MAX_SHIPS, "Invalid number of Red_alert_wingman_status entries: %u\n", Red_alert_wingman_status.size());
+	Assertion(Red_alert_wingman_status.size() <= MAX_SHIPS, "Invalid number of Red_alert_wingman_status entries: " SIZE_T_ARG "\n", Red_alert_wingman_status.size());
 
 	// open it, hopefully...
 	cfp = cfile::io::open((char*)filename.c_str(), cfile::MODE_WRITE, cfile::OPEN_NORMAL, cfile::TYPE_PLAYERS);

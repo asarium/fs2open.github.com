@@ -6,9 +6,11 @@
 #define _CONFIG_H
 
 
-#if !defined BYTE_ORDER
+#ifndef BYTE_ORDER
 #include "SDL_endian.h"
+#endif
 
+#ifndef BYTE_ORDER
 #define LITTLE_ENDIAN 1234
 #define BIG_ENDIAN    4321
 
@@ -290,7 +292,6 @@ char *strnset( char *string, int fill, size_t count);
 #define _hypot(x, y)  hypot(x, y)
 
 int MulDiv(int number, int numerator, int denominator);
-void Sleep(int mili);
 
 struct POINT {
 	int x, y;

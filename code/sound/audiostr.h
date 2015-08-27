@@ -27,6 +27,7 @@
 
 #include "cfile/cfile.h"
 #include "sound/ogg/ogg.h"
+#include "cfile/cfile.h"
 
 #ifdef NEED_STRHDL
 

@@ -8,14 +8,12 @@
  */
 
 
-#include "globalincs/pstypes.h"
-#include "globalincs/def_files.h"
-#include "species_defs/species_defs.h"
 #include "cfile/cfile.h"
-#include "parse/parselo.h"
+#include "def_files/def_files.h"
 #include "iff_defs/iff_defs.h"
-#include "graphics/generic.h"
 #include "localization/localize.h"
+#include "parse/parselo.h"
+#include "species_defs/species_defs.h"
 
 
 SCP_vector<species_info> Species_info;
@@ -159,7 +157,7 @@ void parse_species_tbl(const char *filename)
 	try
 	{
 		if (filename == NULL)
-			read_file_text_from_array(defaults_get_file("species_defs.tbl"));
+			read_file_text_from_default(defaults_get_file("species_defs.tbl"));
 		else
 			read_file_text(filename, cfile::TYPE_TABLES);
 
@@ -328,7 +326,7 @@ void parse_species_tbl(const char *filename)
 					species->awacs_multiplier = 1.0f;
 
 				// let them know
-				Warning(LOCATION, "$AwacsMultiplier not specified for species %s in species_defs.tbl!  Defaulting to %.2d.\n", species->species_name, species->awacs_multiplier);
+				Warning(LOCATION, "$AwacsMultiplier not specified for species %s in species_defs.tbl!  Defaulting to %.2f.\n", species->species_name, species->awacs_multiplier);
 			}
 
 			// Goober5000 - countermeasure type

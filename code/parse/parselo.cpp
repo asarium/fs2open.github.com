@@ -14,17 +14,16 @@
 #include <stdarg.h>
 #include <setjmp.h>
 
+#include "ctype.h"
+#include "globalincs/version.h"
+#include "localization/fhash.h"
+#include "localization/localize.h"
+#include "mission/missionparse.h"
+#include "parse/encrypt.h"
 #include "parse/parselo.h"
 #include "parse/sexp.h"
-#include "mission/missionparse.h"
-#include "ctype.h"
-#include "parse/encrypt.h"
-#include "localization/localize.h"
-#include "localization/fhash.h"
-#include "cfile/cfile.h"
 #include "ship/ship.h"
 #include "weapon/weapon.h"
-#include "globalincs/version.h"
 
 
 
@@ -661,16 +660,21 @@ int optional_string_fred(char *pstr, char *end, char *end2)
 	return 1;
 }
 
-//	Return 0 or 1 for str1 match, str2 match.  Return -1 if neither matches.
-//	Does not update Mp if token found.  If not found, advances, trying to
-//	find the string.  Doesn't advance past the found string.
+/**
+ * @brief Checks for one of two required strings
+ *
+ * @retval 0 for str1 match
+ * @retval 1 for str2 match
+ * @throws parse::ParseException If neither strings were found
+ *
+ * @details Advances the Mp until a string is found or exceeds RS_MAX_TRIES. Once a string is found, Mp is located at
+ * the start of the found string.
+ */
 int required_string_either(char *str1, char *str2)
 {
-	int	count = 0;
-
 	ignore_white_space();
 
-	while (count < RS_MAX_TRIES) {
+	for (int count = 0; count < RS_MAX_TRIES; ++count) {
 		if (strnicmp(str1, Mp, strlen(str1)) == 0) {
 			// Mp += strlen(str1);
 			diag_printf("Found required string [%s]\n", token_found = str1);
@@ -685,19 +689,22 @@ int required_string_either(char *str1, char *str2)
 
 		advance_to_eoln(NULL);
 		ignore_white_space();
-		count++;
 	}
 
-	if (count == RS_MAX_TRIES) {
-		nprintf(("Error", "Error: Unable to find either required token [%s] or [%s]\n", str1, str2));
-        Warning(LOCATION, "Error: Unable to find either required token [%s] or [%s]\n", str1, str2);
-        throw parse::ParseException("Required string not found");
-	}
-
-	return -1;
+	nprintf(("Error", "Error: Unable to find either required token [%s] or [%s]\n", str1, str2));
+	Warning(LOCATION, "Error: Unable to find either required token [%s] or [%s]\n", str1, str2);
+	throw parse::ParseException("Required string not found");
+	return -1;	// Dead code, but some compilers still complain about it
 }
 
-// Generic version of old required_string_3 and required_string_4; written by ngld, with some tweaks by MageKing17
+/**
+ * @brief Checks for one of any of the given required strings.
+ *
+ * @returns The index number of the found string, if it was found
+ * @returns -1 if a string was not found
+ *
+ * @details By ngld, with some tweaks by MageKing17.
+ */
 int required_string_one_of(int arg_count, ...)
 {
 	Assertion(arg_count > 0, "required_string_one_of() called with arg_count of %d; get a coder!\n", arg_count);
@@ -930,7 +937,7 @@ void copy_text_until(char *outstr, char *instr, char *endstr, int max_chars)
 		outstr[foundstr - instr] = 0;
 
 	} else {
-		nprintf(("Error", "Error.  Too much text (%i chars, %i allowed) before %s\n",
+		nprintf(("Error", "Error.  Too much text (" SIZE_T_ARG " chars, %i allowed) before %s\n",
 			foundstr - instr - strlen(endstr), max_chars, endstr));
 
         throw parse::ParseException("Too much text found");
@@ -1990,7 +1997,7 @@ void read_file_text(const char *filename, cfile::DirType mode, char *processed_t
 }
 
 // Goober5000
-void read_file_text_from_array(const char *array, char *processed_text, char *raw_text)
+void read_file_text_from_default(const default_file& file, char *processed_text, char *raw_text)
 {
 	// we have no filename, so copy a substitute
 	strcpy_s(Current_filename_sub, "internal default file");
@@ -2001,15 +2008,22 @@ void read_file_text_from_array(const char *array, char *processed_text, char *ra
 	}
 
 	// make sure to do this before anything else
-	allocate_mission_text( strlen(array) + 1 );
+	allocate_mission_text(static_cast<int>(file.size + 1));
 
 	// if we have no raw buffer, set it as the default raw text area
 	if (raw_text == NULL)
 		raw_text = Mission_text_raw;
 
+	auto text = reinterpret_cast<const char*>(file.data);
+
 	// copy text in the array (but only if the raw text and the array are not the same)
-	if (raw_text != array)
-		strcpy(raw_text, array);
+	if (raw_text != file.data)
+	{
+		// Copy the file contents into the array and null-terminate it
+		// We have to make sure to adjust the size if the size of a char is more than 1
+		strncpy(raw_text, text, file.size / sizeof(char));
+		raw_text[file.size / sizeof(char)] = '\0';
+	}
 
 	if (processed_text == NULL)
 		processed_text = Mission_text;
@@ -3770,101 +3784,26 @@ bool can_construe_as_integer(const char *text)
 // yoinked gratefully from dbugfile.cpp
 void vsprintf(SCP_string &dest, const char *format, va_list ap)
 {
-	const int MAX_BUF = 64;
-	const char *handled_types = "diouxXcfsn%";
+	va_list copy;
+	
+#if defined(_MSC_VER) && _MSC_VER < 1800
+	// Only Visual Studio >= 2013 supports va_copy
+	// This isn't portable but should work for Visual Studio
+	copy = ap;
+#else
+	va_copy(copy, ap);
+#endif
 
-	int buf_src_len;
-	char buf_src[MAX_BUF];
-	char buf_dest[MAX_BUF];
+	int needed_length = vsnprintf(nullptr, 0, format, copy);
+	va_end(copy);
 
-	const char *p;
-	int *pint;
-	long ival;
-	double dval;
-
-	// clear string
-	dest = "";
-
-	// Add each extra parameter to string
-	for (p = format; *p; ++p)
-	{
-		if (*p != '%')
-		{
-			dest += *p;
-			continue;
-		}
-
-		// find the specifier that comes next
-		buf_src[0] = '%';
-		buf_src_len = 1;
-		do {
-			++p;
-			if (!*p || (buf_src_len >= MAX_BUF-1))
-			{
-				Warning(LOCATION, "Could not find a sprintf specifier within %d characters for format '%s', pos %d!", MAX_BUF-1, format, (p - format));
-
-				// unsafe to continue handling this va_list
-				dest += buf_src;
-				return;
-			}
-
-			buf_src[buf_src_len] = *p;
-			buf_src_len++;
-		} while (strchr(handled_types, *p) == NULL);
-		buf_src[buf_src_len] = 0;
-
-		// handle it
-		switch (*p)
-		{
-			case 'd':
-			case 'i':
-			case 'o':
-			case 'u':
-			case 'x':
-			case 'X':
-			{
-				ival = va_arg(ap, int);
-				sprintf(buf_dest, buf_src, ival);
-				dest += buf_dest;
-				break;
-			}
-			case 'c':
-			{
-				dest += (char) va_arg(ap, int);
-				break;
-			}
-			case 'f':
-			{
-				dval = va_arg(ap, double);
-				sprintf(buf_dest, buf_src, dval);
-				dest += buf_dest;
-				break;
-			}
-			case 's':
-			{
-				dest += va_arg(ap, char *);
-				break;
-			}
-			case 'n':
-			{
-				pint = va_arg(ap, int *);
-				Assert(pint != NULL);
-				*pint = dest.length();
-				break;
-			}
-			case '%':
-			{
-				dest += '%';	// escaped %
-				break;
-			}
-			default:
-			{
-				sprintf(buf_dest, "N/A: %%%c", *p);
-				dest += buf_dest;
-				break;
-			}
-		}
+	if (needed_length < 0) {
+		// Error
+		return;
 	}
+
+	dest.resize(static_cast<size_t>(needed_length));
+	vsnprintf(&dest[0], dest.size() + 1, format, ap);
 }
 
 void sprintf(SCP_string &dest, const char *format, ...)

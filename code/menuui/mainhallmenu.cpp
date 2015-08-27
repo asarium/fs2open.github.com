@@ -10,34 +10,34 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#include "menuui/mainhallmenu.h"
-#include "palman/palman.h"
-#include "gamesequence/gamesequence.h"
 #include "anim/animplay.h"
 #include "anim/packunpack.h"
-#include "io/key.h"
-#include "io/timer.h"
-#include "menuui/snazzyui.h"
-#include "playerman/player.h"
-#include "sound/audiostr.h"
-#include "gamesnd/gamesnd.h"
-#include "gamesnd/eventmusic.h"
-#include "io/mouse.h"
-#include "gamehelp/contexthelp.h"
 #include "cmdline/cmdline.h"
-#include "popup/popup.h"
-#include "menuui/playermenu.h"
 #include "freespace.h"
+#include "gamehelp/contexthelp.h"
+#include "gamesequence/gamesequence.h"
+#include "gamesnd/eventmusic.h"
+#include "gamesnd/gamesnd.h"
 #include "globalincs/alphacolors.h"
 #include "graphics/generic.h"
+#include "io/key.h"
+#include "io/mouse.h"
+#include "io/timer.h"
 #include "menuui/fishtank.h"
+#include "menuui/mainhallmenu.h"
+#include "menuui/playermenu.h"
+#include "menuui/snazzyui.h"
 #include "mission/missioncampaign.h"
-#include "parse/parselo.h"
-#include "parse/scripting.h"
+#include "network/multi.h"
+#include "network/multi_voice.h"
 #include "network/multiui.h"
 #include "network/multiutil.h"
-#include "network/multi_voice.h"
-#include "network/multi.h"
+#include "palman/palman.h"
+#include "parse/parselo.h"
+#include "parse/scripting.h"
+#include "playerman/player.h"
+#include "popup/popup.h"
+#include "sound/audiostr.h"
 
 #ifndef NDEBUG
 #include "cutscene/movie.h"
@@ -1839,11 +1839,11 @@ int main_hall_get_index(const SCP_string &name_to_find)
 int main_hall_get_resolution_index(int main_hall_num)
 {
 	unsigned int i;
-	float aspect_ratio = (float)gr_screen.max_w / (float)gr_screen.max_h;
+	float aspect_ratio = (float)gr_screen.center_w / (float)gr_screen.center_h;
 
 	for (i = Main_hall_defines.at(main_hall_num).size() - 1; i >= 1; i--) {
 		main_hall_defines* m = &Main_hall_defines.at(main_hall_num).at(i);
-		if (gr_screen.max_w >= m->min_width && gr_screen.max_h >= m->min_height && aspect_ratio >= m->min_aspect_ratio) {
+		if (gr_screen.center_w >= m->min_width && gr_screen.center_h >= m->min_height && aspect_ratio >= m->min_aspect_ratio) {
 			return i;
 		}
 	}
@@ -2125,7 +2125,7 @@ void parse_main_hall_table(const char* filename)
 						}
 					}
 					else {
-						snprintf(temp_string, MAX_FILENAME_LEN, "%d", count);
+						snprintf(temp_string, MAX_FILENAME_LEN, "%u", count);
 						m->name = temp_string;
 					}
 				}
@@ -2154,7 +2154,7 @@ void parse_main_hall_table(const char* filename)
 					if (temp_scp_string.size() > MAIN_HALL_MAX_CHEAT_LEN) {
 						// Since the value is longer than the cheat buffer it will never match.
 
-						Warning(LOCATION, "The value '%s' for '+Cheat String:' is too long! It can be at most %d characters long.", temp_scp_string.size(), MAIN_HALL_MAX_CHEAT_LEN);
+						Warning(LOCATION, "The value '%s' for '+Cheat String:' is too long! It can be at most %d characters long.", temp_scp_string.c_str(), MAIN_HALL_MAX_CHEAT_LEN);
 					}
 
 					required_string("+Anim To Change:");

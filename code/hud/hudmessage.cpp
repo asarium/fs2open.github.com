@@ -13,32 +13,29 @@
 #include <stdarg.h>
 
 
-#include "hud/hud.h"
-#include "hud/hudmessage.h"
-#include "hud/hudconfig.h"
+#include "anim/animplay.h"
 #include "freespace.h"
 #include "gamesequence/gamesequence.h"
+#include "gamesnd/gamesnd.h"
+#include "globalincs/alphacolors.h"
+#include "globalincs/linklist.h"
+#include "hud/hudconfig.h"
+#include "hud/hudmessage.h"
+#include "iff_defs/iff_defs.h"
 #include "io/key.h"
 #include "io/timer.h"
-#include "playerman/player.h"
-#include "globalincs/linklist.h"
-#include "mission/missionlog.h"
-#include "ui/ui.h"
-#include "missionui/missionscreencommon.h"
-#include "graphics/font.h"
-#include "gamesnd/gamesnd.h"
 #include "mission/missiongoals.h"
-#include "globalincs/alphacolors.h"
-#include "weapon/weapon.h"
-#include "sound/audiostr.h"
-#include "ship/ship.h"
-#include "parse/parselo.h"
+#include "mission/missionlog.h"
 #include "mission/missionmessage.h"		// for MAX_MISSION_MESSAGES
-#include "iff_defs/iff_defs.h"
+#include "missionui/missionscreencommon.h"
 #include "network/multi.h"
-#include "anim/packunpack.h" // for talking heads
-#include "anim/animplay.h"
+#include "parse/parselo.h"
 #include "parse/scripting.h"
+#include "playerman/player.h"
+#include "ship/ship.h"
+#include "sound/audiostr.h"
+#include "ui/ui.h"
+#include "weapon/weapon.h"
 
 
 /* replaced with those static ints that follow
@@ -407,18 +404,18 @@ void HudGaugeMessages::scrollMessages()
 				}
 			}
 		} else {
+			bool at_end = m == (active_messages.end() - 1);
+
+			if (at_end) {
+				// Iterator will be invalid
+				active_messages.pop_back();
+				break;
+			}
+
 			*m = active_messages.back();
 			active_messages.pop_back();
 
-			if (active_messages.empty())
-			{
-				// We may not use the iterator any longer
-				break;
-			}
-			else
-			{
-				continue;
-			}
+			continue;
 		}
 
 		++m;

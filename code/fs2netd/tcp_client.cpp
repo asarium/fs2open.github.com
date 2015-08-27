@@ -13,17 +13,20 @@
 
 
 
-#include "fs2netd/tcp_client.h"
-#include "fs2netd/protocol.h"
-#include "fs2netd/tcp_socket.h"
 #include "fs2netd/fs2netd_client.h"
-#include "network/multi_log.h"
+#include "fs2netd/protocol.h"
+#include "fs2netd/tcp_client.h"
+#include "fs2netd/tcp_socket.h"
+#include "globalincs/pstypes.h"
+#include "io/timer.h"
 #include "network/multi.h"
+#include "network/multi_log.h"
 #include "network/multiutil.h"
 #include "playerman/player.h"
 #include "ship/ship.h"
 #include "io/timer.h"
 #include "globalincs/pstypes.h"
+#include "osapi/osapi.h"
 
 #include <iostream>
 #include <string>
@@ -63,7 +66,7 @@ int FS2NetD_CheckSingleMission(const char *m_name, uint crc32, bool do_send)
 
 			rc_total += rc;
 
-			Sleep(20);
+			os_sleep(20);
 		} while ( FS2NetD_DataReady() && (rc_total < (int)sizeof(buffer)) );
 
 		if (rc < BASE_PACKET_SIZE) {
@@ -165,7 +168,7 @@ int FS2NetD_SendPlayerData(const char *player_name, player *pl, bool do_send)
 
 			rc_total += rc;
 
-			Sleep(20);
+			os_sleep(20);
 		} while ( FS2NetD_DataReady() && (rc_total < (int)sizeof(buffer)) );
 
 		if (rc < BASE_PACKET_SIZE) {
@@ -218,7 +221,8 @@ int FS2NetD_GetPlayerData(const char *player_name, player *pl, bool can_create, 
 		uint rc_total = 0;
 		ubyte reply_type = 0;
 		int si_index = 0;
-		ushort bogus, num_type_kills = 0, num_medals = 0;
+		ushort bogus __attribute__((unused));
+		ushort num_type_kills = 0, num_medals = 0;
 		char ship_name[NAME_LENGTH];
 		int idx;
 
@@ -231,7 +235,7 @@ int FS2NetD_GetPlayerData(const char *player_name, player *pl, bool can_create, 
 
 			rc_total += rc;
 
-			Sleep(20);
+			os_sleep(20);
 		} while ( FS2NetD_DataReady() && (rc_total < (int)sizeof(buffer)) );
 
 		if (rc < BASE_PACKET_SIZE) {
@@ -260,7 +264,7 @@ int FS2NetD_GetPlayerData(const char *player_name, player *pl, bool can_create, 
 				rc_total += rc;
 			}
 
-			Sleep(20);
+			os_sleep(20);
 		}
 
 		PXO_GET_DATA( reply_type );
@@ -343,7 +347,7 @@ int FS2NetD_GetBanList(SCP_vector<SCP_string> &mask_list, bool do_send)
 
 			rc_total += rc;
 
-			Sleep(20);
+			os_sleep(20);
 		} while ( FS2NetD_DataReady() && (rc_total < (int)sizeof(buffer)) );
 
 		if (rc < BASE_PACKET_SIZE) {
@@ -372,7 +376,7 @@ int FS2NetD_GetBanList(SCP_vector<SCP_string> &mask_list, bool do_send)
 				rc_total += rc;
 			}
 
-			Sleep(20);
+			os_sleep(20);
 		}
 
 		PXO_GET_INT( num_files );
@@ -417,7 +421,7 @@ int FS2NetD_GetMissionsList(SCP_vector<file_record> &m_list, bool do_send)
 
 			rc_total += rc;
 
-			Sleep(20);
+			os_sleep(20);
 		} while ( FS2NetD_DataReady() && (rc_total < (int)sizeof(buffer)) );
 
 		if (rc < BASE_PACKET_SIZE) {
@@ -446,7 +450,7 @@ int FS2NetD_GetMissionsList(SCP_vector<file_record> &m_list, bool do_send)
 				rc_total += rc;
 			}
 
-			Sleep(20);
+			os_sleep(20);
 		}
 
 		PXO_GET_INT( num_files );
@@ -488,8 +492,8 @@ int FS2NetD_Login(const char *username, const char *password, bool do_send)
 		int rc;
 		uint rc_total = 0;
 		ubyte login_status = 0;
-		int sid;
-		short pilots;
+		int sid __attribute__((unused));
+		short pilots __attribute__((unused));
 
 		do {
 			rc = FS2NetD_GetData(buffer+rc_total, sizeof(buffer)-rc_total);
@@ -500,7 +504,7 @@ int FS2NetD_Login(const char *username, const char *password, bool do_send)
 
 			rc_total += rc;
 
-			Sleep(20);
+			os_sleep(20);
 		} while ( FS2NetD_DataReady() && (rc_total < (int)sizeof(buffer)) );
 
 		if (rc < BASE_PACKET_SIZE) {
@@ -721,7 +725,7 @@ int FS2NetD_ValidateTableList(bool do_send)
 
 			rc_total += rc;
 
-			Sleep(20);
+			os_sleep(20);
 		} while ( FS2NetD_DataReady() && (rc_total < (int)sizeof(buffer)) );
 
 		if (rc < BASE_PACKET_SIZE) {
@@ -746,7 +750,7 @@ int FS2NetD_ValidateTableList(bool do_send)
 				rc_total += rc;
 			}
 
-			Sleep(20);
+			os_sleep(20);
 		}
 
 		PXO_GET_USHORT( num_tables );
@@ -832,4 +836,3 @@ void FS2NetD_CheckDuplicateLogin()
 
 	delete [] ids;
 }
-

@@ -6,11 +6,8 @@
 #include <Mmsystem.h>
 #endif
 
-#define NEED_STRHDL		// for STRHTL struct in audiostr.h
-
 #include "cfile/cfile.h"
 #include "sound/ogg/ogg.h"
-#include "sound/audiostr.h"
 
 
 int ogg_inited = 0;

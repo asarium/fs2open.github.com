@@ -1,22 +1,21 @@
 
-#include "globalincs/pstypes.h"
-#include "pilotfile/pilotfile.h"
-#include "playerman/player.h"
-#include "ship/ship.h"
-#include "menuui/techmenu.h"
-#include "weapon/weapon.h"
-#include "hud/hudconfig.h"
-#include "stats/medals.h"
-#include "hud/hudsquadmsg.h"
+#include "freespace.h"
 #include "gamesnd/eventmusic.h"
-#include "osapi/osregistry.h"
-#include "sound/audiostr.h"
+#include "hud/hudconfig.h"
+#include "hud/hudsquadmsg.h"
 #include "io/joy.h"
 #include "io/mouse.h"
-#include "network/multi.h"
-#include "freespace.h"
-#include "playerman/managepilot.h"
 #include "localization/localize.h"
+#include "menuui/techmenu.h"
+#include "network/multi.h"
+#include "osapi/osregistry.h"
+#include "pilotfile/pilotfile.h"
+#include "playerman/managepilot.h"
+#include "playerman/player.h"
+#include "ship/ship.h"
+#include "sound/audiostr.h"
+#include "stats/medals.h"
+#include "weapon/weapon.h"
 
 
 void pilotfile::plr_read_flags()
@@ -909,8 +908,8 @@ bool pilotfile::load_player(const char *callsign, player *_p)
 		size_t offset_pos = (start_pos + section_size) - cfile::io::tell(cfp);
 
 		if (offset_pos) {
-			cfile::io::seek(cfp, offset_pos, cfile::SEEK_MODE_CUR);
-			mprintf(("PLR => WARNING: Advancing to the next section. %i bytes were skipped!\n", offset_pos));
+			cfile::io::seek(cfp, offset_pos, cfile::SEEK_MODE_SET);
+			mprintf(("PLR => WARNING: Advancing to the next section. " SIZE_T_ARG " bytes were skipped!\n", offset_pos));
 		}
 	}
 
@@ -1122,4 +1121,3 @@ bool pilotfile::verify(const char *fname, int *rank, char *valid_language)
 
 	return true;
 }
-

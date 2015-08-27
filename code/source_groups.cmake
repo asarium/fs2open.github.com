@@ -14,7 +14,6 @@ set (file_root_ai
 	ai/aigoals.cpp
 	ai/aigoals.h
 	ai/aiinternal.h
-	ai/ailocal.h
 	ai/aiturret.cpp
 )
 
@@ -134,7 +133,23 @@ set (file_root_debugconsole
 	debugconsole/consoleparse.h
 )
 
+
 SET(file_root_def_files
+	def_files/def_files.h
+)
+if(WIN32)
+	SET(file_root_def_files
+		${file_root_def_files}
+		def_files/def_files-win32.cpp
+	)
+else()
+	SET(file_root_def_files
+		${file_root_def_files}
+		def_files/def_files-generic.cpp
+	)
+endif()
+
+SET(file_root_def_files_files
 	def_files/ai_profiles.tbl
 	def_files/autopilot.tbl
 	def_files/blur-f.sdr
@@ -161,8 +176,6 @@ SET(file_root_def_files
 	def_files/main-g.sdr
 	def_files/main-v.sdr
 	def_files/objecttypes.tbl
-	def_files/particle-f.sdr
-	def_files/particle-v.sdr
 	def_files/post-f.sdr
 	def_files/post-v.sdr
 	def_files/post_processing.tbl
@@ -228,15 +241,14 @@ set (file_root_gamesnd
 
 set(file_root_generated
 	${GENERATED_SOURCE_DIR}/project.h
-	${GENERATED_SOURCE_DIR}/code/scp_compiler_detection.h
+	${GENERATED_SOURCE_DIR}/scp_compiler_detection.h
+	${PLATFORM_CHECK_HEADER}
 )
 
 # GlobalIncs files
 set (file_root_globalincs
 	globalincs/alphacolors.cpp
 	globalincs/alphacolors.h
-	globalincs/def_files.cpp
-	globalincs/def_files.h
 	globalincs/fsmemory.cpp
 	globalincs/fsmemory.h
 	globalincs/globals.h
@@ -511,14 +523,10 @@ set (file_root_missionui
 	missionui/missionloopbrief.h
 	missionui/missionpause.cpp
 	missionui/missionpause.h
-	missionui/missionrecommend.cpp
-	missionui/missionrecommend.h
 	missionui/missionscreencommon.cpp
 	missionui/missionscreencommon.h
 	missionui/missionshipchoice.cpp
 	missionui/missionshipchoice.h
-	missionui/missionstats.cpp
-	missionui/missionstats.h
 	missionui/missionweaponchoice.cpp
 	missionui/missionweaponchoice.h
 	missionui/redalert.cpp
@@ -666,6 +674,8 @@ set (file_root_observer
 set (file_root_osapi
 	osapi/osapi.h
 	osapi/osapi.cpp
+	osapi/dialogs.h
+	osapi/dialogs.cpp
 	osapi/osregistry.h
 	osapi/outwnd.h
 	osapi/outwnd.cpp
@@ -935,7 +945,8 @@ source_group("Cutscene"                           FILES ${file_root_cutscene})
 source_group("ddsutils"                           FILES ${file_root_ddsutils})
 source_group("Debris"                             FILES ${file_root_debris})
 source_group("DebugConsole"                       FILES ${file_root_debugconsole})
-SOURCE_GROUP("Default files"                      FILES ${file_root_def_files})
+source_group("Default files"                      FILES ${file_root_def_files})
+source_group("Default files\\Files"               FILES ${file_root_def_files_files})
 source_group("ExceptionHandler"                   FILES ${file_root_exceptionhandler})
 source_group("ExternalDLL"                        FILES ${file_root_externaldll})
 source_group("Fireball"                           FILES ${file_root_fireball})
@@ -1011,6 +1022,7 @@ set (file_root
 	${file_root_debris}
 	${file_root_debugconsole}
 	${file_root_def_files}
+	${file_root_def_files_files}
 	${file_root_exceptionhandler}
 	${file_root_externaldll}
 	${file_root_fireball}
