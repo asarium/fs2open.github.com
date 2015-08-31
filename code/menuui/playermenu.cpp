@@ -868,7 +868,7 @@ int player_select_get_last_pilot()
 		}
 
 		// Copy all the pointers from the Pilots_arr array
-		for (int i = 0; i < MAX_PILOTS; ++i)
+		for (i = 0; i < MAX_PILOTS; ++i)
 		{
 			Pilots[i] = Pilots_arr[i];
 		}
@@ -926,7 +926,7 @@ void player_select_init_player_stuff(int mode)
 	}
 
 	// Copy all the pointers from the Pilots_arr array
-	for (int i = 0; i < MAX_PILOTS; ++i)
+	for (i = 0; i < MAX_PILOTS; ++i)
 	{
 		Pilots[i] = Pilots_arr[i];
 	}
@@ -935,7 +935,7 @@ void player_select_init_player_stuff(int mode)
 
 	// if we have a "last_player", and they're in the list, bash them to the top of the list
 	if (Player_select_last_pilot[0] != '\0') {
-		int i,j;
+		int j;
 		for (i = 0; i < Player_select_num_pilots; ++i) {
 			if (!stricmp(Player_select_last_pilot,Pilots[i])) {
 				break;

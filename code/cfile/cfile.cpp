@@ -303,7 +303,7 @@ namespace cfile
 #ifndef NDEBUG
 		for (auto fs : fileSystems)
 		{
-			mprintf(("Searching root %s ... %d files\n", fs->getName().c_str(), countFiles(fs)));
+			mprintf(("Searching root %s ... " SIZE_T_ARG " files\n", fs->getName().c_str(), countFiles(fs)));
 		}
 #endif
 

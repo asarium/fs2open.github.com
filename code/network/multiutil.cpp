@@ -2347,7 +2347,6 @@ void multi_file_xfer_notify(int handle)
 {
 	char *filename;
 	int len,idx;
-	int force_dir;
 	cfile::DirType cf_type;
 	int is_mission = 0;	
 

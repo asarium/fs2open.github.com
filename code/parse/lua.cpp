@@ -1177,9 +1177,9 @@ ADE_FUNC(getPath, l_File, NULL, "Determines path of the given file", "string", "
 
 	if (slash != std::string::npos)
 	{
-		SCP_string path(path.begin(), path.begin() + slash);
+		SCP_string dirPath(path.begin(), path.begin() + slash);
 
-		return ade_set_args(L, "s", path.c_str());
+		return ade_set_args(L, "s", dirPath.c_str());
 	}
 	else
 	{
@@ -1256,7 +1256,7 @@ ADE_FUNC(read, l_File, "number or string, ...",
 			{
 				char buf[10240];
 				size_t idx;
-				if (cfile::io::readLine(buf, (int)(sizeof(buf) / sizeof(char)), cfp->handle) == NULL)
+				if (!cfile::io::readLine(buf, (int)(sizeof(buf) / sizeof(char)), cfp->handle))
 				{
 					lua_pushnil(L);
 				}

@@ -366,11 +366,11 @@ namespace cfile
 
 				Assertion(diff >= 0, "Seeked before read length restriction start!");
 
-				if (diff > handle->maxReadLength)
+				if (static_cast<size_t>(diff) > handle->maxReadLength)
 				{
 					std::ostringstream os;
 
-					os << "Attempted to read " << (diff - static_cast<std::streampos>(handle->maxReadLength)) << "-byte(s) beyond length limit";
+					os << "Attempted to read " << (static_cast<size_t>(diff) - handle->maxReadLength) << "-byte(s) beyond length limit";
 
 					throw MaxReadLengthException(os.str());
 				}

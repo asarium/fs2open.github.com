@@ -57,7 +57,7 @@ void load_filter_info(void)
 #ifdef WIN32
 	snprintf( pathname, MAX_PATH_LEN, "%s\\%s\\%s", detect_home(), "data", NOX("debug_filter.cfg") );
 #else
-	snprintf( pathname, MAX_PATH_LEN, "%s/%s/%s/%s", detect_home(), "data", NOX("debug_filter.cfg") );
+	snprintf( pathname, MAX_PATH_LEN, "%s/%s/%s", detect_home(), "data", NOX("debug_filter.cfg") );
 #endif
 
 	fp = fopen(pathname, "rt");

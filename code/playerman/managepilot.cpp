@@ -339,7 +339,7 @@ void pilot_load_pic_list()
 		strcpy_s(Pilot_images_arr[i], iter->c_str());
 	}
 
-	for (int i = 0; i < MAX_PILOT_IMAGES; ++i)
+	for (i = 0; i < MAX_PILOT_IMAGES; ++i)
 	{
 		Pilot_image_names[i] = Pilot_images_arr[i];
 	}
@@ -367,7 +367,7 @@ void pilot_load_squad_pic_list()
 		strcpy_s(Pilot_squad_images_arr[i], iter->c_str());
 	}
 
-	for (int i = 0; i < MAX_PILOT_IMAGES; ++i)
+	for (i = 0; i < MAX_PILOT_IMAGES; ++i)
 	{
 		Pilot_squad_image_names[i] = Pilot_squad_images_arr[i];
 	}

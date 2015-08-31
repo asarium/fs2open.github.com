@@ -5250,7 +5250,7 @@ void multi_pxo_ban_parse_banner_file(int choose_existing)
 	}
 
 	// get the global banner url
-	if(cfile::io::readLine(file_url, 254, in) == NULL){
+	if(!cfile::io::readLine(file_url, 254, in)){
 		cfile::io::close(in);
 		cfile::deleteFile(PXO_BANNERS_CONFIG_FILE, cfile::TYPE_MULTI_CACHE);
 		return;
@@ -5262,11 +5262,11 @@ void multi_pxo_ban_parse_banner_file(int choose_existing)
 	num_banners = 0;
 	while(num_banners < 10){
 		// try and get the pcx
-		if(cfile::io::readLine(banners[num_banners], 254, in) == NULL){
+		if(!cfile::io::readLine(banners[num_banners], 254, in)){
 			break;
 		}
 		// try and get the url
-		if (cfile::io::readLine(urls[num_banners], 254, in) == NULL){
+		if (!cfile::io::readLine(urls[num_banners], 254, in)){
 			break;
 		}
 

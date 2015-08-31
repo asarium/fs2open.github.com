@@ -172,7 +172,6 @@ extern int mission_campaign_get_filenames(char *filename, char dest[][NAME_LENGT
 
 void mission_load_menu_init()
 {
-	int i;
 	char wild_card[256];
 	Assert( mlm_active == 0 );
 	mlm_active = 1;
@@ -209,7 +208,7 @@ void mission_load_menu_init()
 
 	mlm_mission_list.create( &mlm_window, 450, 150, 150, 200, mlm_nfiles, mlm_missions );
 
-	for ( i = 0; i < Num_recent_missions; i++ ) {
+	for (int i = 0; i < Num_recent_missions; i++ ) {
 		recent_missions[i] = Recent_missions[i];
 	}
 	recent_mission_list.create( &mlm_window, 250, 150, 150, 200, Num_recent_missions, recent_missions );
@@ -219,13 +218,13 @@ void mission_load_menu_init()
 
 
 	mission_campaign_build_list(0);
-	for ( i = 0; i < Num_campaigns; i++ ) {
+	for (int i = 0; i < Num_campaigns; i++ ) {
 		strcpy_s(Campaign_name_list[i+1], Campaign_names[i]);
 	}
 	strcpy_s(Campaign_name_list[0], NOX("All campaigns"));
 	strcpy_s(Campaign_name_list[1], NOX("Player Missions"));
 
-	for ( i = 0; i < Num_campaigns+2; i++ ) {
+	for (int i = 0; i < Num_campaigns+2; i++ ) {
 		campaign_names[i] = Campaign_name_list[i];
 	}
 
