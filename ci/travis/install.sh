@@ -13,8 +13,6 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
 fi
 
 mkdir -p $HOME/cmake/
-mkdir -p /tmp/cmake/
 
 wget -O /tmp/cmake.tar.gz http://www.cmake.org/files/v3.3/$FILENAME.tar.gz
-tar -xzf /tmp/cmake.tar.gz -C /tmp/cmake
-cp -fR /tmp/cmake/$FILENAME/* $HOME/cmake/
+tar -xzf /tmp/cmake.tar.gz -C $HOME/cmake/ --strip-components=1
