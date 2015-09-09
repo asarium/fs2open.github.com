@@ -13,15 +13,15 @@ namespace cfile
 	struct VP_FILE_HEADER
 	{
 		char id[4];
-		int version;
-		int index_offset;
-		int num_files;
+		int32_t version;
+		int32_t index_offset;
+		int32_t num_files;
 	};
 
 	struct VP_FILE
 	{
-		int	offset;
-		int	size;
+		int32_t	offset;
+		int32_t	size;
 		char filename[32];
 		_fs_time_t write_time;
 	};
@@ -160,8 +160,8 @@ namespace cfile
 				VPFileData data;
 				data.type = vfspp::FILE;
 
-				data.offset = file.offset;
-				data.size = file.size;
+				data.offset = static_cast<size_t>(file.offset);
+				data.size = static_cast<size_t>(file.size);
 				data.time = file.write_time;
 
 				data.name.assign(currentDir);
