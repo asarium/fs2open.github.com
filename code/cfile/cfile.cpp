@@ -22,6 +22,8 @@
 
 #include "parse/encrypt.h"
 
+#include <memory>
+
 #include <boost/bind.hpp>
 #include <boost/ref.hpp>
 
@@ -43,9 +45,9 @@ namespace cfile
 
 	fs::path userDir;
 
-	shared_ptr<object_pool<FileHandle>> cfilePool;
+	std::unique_ptr<object_pool<FileHandle>> cfilePool;
 
-	shared_ptr<MergedFileSystem> fileSystem;
+	std::unique_ptr<MergedFileSystem> fileSystem;
 
 	bool inited = false;
 
@@ -159,7 +161,7 @@ namespace cfile
 					VPFileSystem* system = new VPFileSystem(entry.path(), "");
 					fileSystems.push_back(system);
 				}
-				catch (std::exception& e)
+				catch (const std::exception& e)
 				{
 					Error(LOCATION, "Error while reading file %s: %s\n", entry.path().filename().string().c_str(), e.what());
 				}
@@ -175,7 +177,7 @@ namespace cfile
 					sevenzip::SevenZipFileSystem* system = new sevenzip::SevenZipFileSystem(entry.path());
 					fileSystems.push_back(system);
 				}
-				catch (std::exception& e)
+				catch (const std::exception& e)
 				{
 					Error(LOCATION, "Error while reading file %s: %s\n", entry.path().filename().string().c_str(), e.what());
 				}
@@ -191,7 +193,7 @@ namespace cfile
 					ZipFileSystem* system = new ZipFileSystem(entry.path());
 					fileSystems.push_back(system);
 				}
-				catch (std::exception& e)
+				catch (const std::exception& e)
 				{
 					Error(LOCATION, "Error while reading file %s: %s\n", entry.path().filename().string().c_str(), e.what());
 				}

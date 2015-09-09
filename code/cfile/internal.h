@@ -5,9 +5,10 @@
 
 #include "cfile/types.h"
 
+#include <memory>
+
 #include <boost/filesystem.hpp>
 
-#include <boost/smart_ptr.hpp>
 #include <boost/pool/object_pool.hpp>
 
 #include <VFSPP/merged.hpp>
@@ -45,9 +46,9 @@ namespace cfile
 
 	extern fs::path userDir;
 
-	extern boost::shared_ptr<boost::object_pool<FileHandle>> cfilePool;
+	extern std::unique_ptr<boost::object_pool<FileHandle>> cfilePool;
 
-	extern boost::shared_ptr<merged::MergedFileSystem> fileSystem;
+	extern std::unique_ptr<merged::MergedFileSystem> fileSystem;
 
 	extern bool inited;
 
