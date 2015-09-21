@@ -14,22 +14,22 @@
 
 
 
+#include "ai/ai.h"
+#include "fireball/fireballs.h"
 #include "globalincs/globals.h"		// for defintions of token lengths -- maybe move this elsewhere later (Goober5000 - moved to globals.h)
+#include "globalincs/pstypes.h"
 #include "graphics/2d.h"			// for color def
+#include "hud/hud.h"
+#include "hud/hudparse.h"
 #include "model/model.h"
 #include "model/modelanim.h"
-#include "palman/palman.h"
-#include "weapon/trails.h"
-#include "ai/ai.h"
 #include "network/multi_obj.h"
-#include "hud/hudparse.h"
-#include "render/3d.h"
+#include "palman/palman.h"
 #include "radar/radarsetup.h"
-#include "weapon/shockwave.h"
+#include "render/3d.h"
 #include "species_defs/species_defs.h"
-#include "globalincs/pstypes.h"
-#include "fireball/fireballs.h"
-#include "hud/hud.h"
+#include "weapon/shockwave.h"
+#include "weapon/trails.h"
 
 #include <string>
 
@@ -424,7 +424,7 @@ typedef struct ship_flag_name {
 	int flag_list;						// is this flag in the 1st or 2nd ship flags list?
 } ship_flag_name;
 
-#define MAX_SHIP_FLAG_NAMES					17
+#define MAX_SHIP_FLAG_NAMES					18
 extern ship_flag_name Ship_flag_names[];
 
 // states for the flags variable within the ship structure
@@ -505,6 +505,7 @@ extern ship_flag_name Ship_flag_names[];
 #define SF2_WEAPONS_LOCKED					(1<<25)		// Karajorma - Prevents the player from changing the weapons on the ship on the loadout screen
 #define SF2_SHIP_SELECTIVE_LINKING			(1<<26)		// RSAXVC - Allow pilot to pick firing configuration
 #define SF2_SCRAMBLE_MESSAGES				(1<<27)		// Goober5000 - all messages sent from this ship appear scrambled
+#define SF2_NO_SECONDARY_LOCKON				(1<<28)		// zookeeper - secondary lock-on disabled
 
 // If any of these bits in the ship->flags are set, ignore this ship when targeting
 extern int TARGET_SHIP_IGNORE_FLAGS;
@@ -591,6 +592,8 @@ public:
 
 	float ship_max_shield_strength;
 	float ship_max_hull_strength;
+
+	float max_shield_recharge;
 
 	int ship_guardian_threshold;	// Goober5000 - now also determines whether ship is guardian'd
 
@@ -1177,6 +1180,7 @@ public:
 	char		pof_file_hud[MAX_FILENAME_LEN];		// POF file to load for the HUD target box
 	int		num_detail_levels;				// number of detail levels for this ship
 	int		detail_distance[MAX_SHIP_DETAIL_LEVELS];					// distance to change detail levels at
+	int		collision_lod;						// check for collisions using a LOD
 	int		cockpit_model_num;					// cockpit model
 	int		model_num;							// ship model
 	int		model_num_hud;						// model to use when rendering to the HUD (eg, mini supercap)
@@ -1300,11 +1304,14 @@ public:
 
 	float	max_hull_strength;				// Max hull strength of this class of ship.
 	float	max_shield_strength;
-	float	auto_shield_spread;
-	bool	auto_shield_spread_bypass;
-	int		auto_shield_spread_from_lod;
+	float	auto_shield_spread;				// Thickness of the shield
+	bool	auto_shield_spread_bypass;		// Whether weapons fired up close can bypass shields
+	int		auto_shield_spread_from_lod;	// Which LOD to project the shield from
+	float	auto_shield_spread_min_span;	// Minimum distance weapons must travel until allowed to collide with the shield
 
 	int		shield_point_augment_ctrls[4];	// Re-mapping of shield augmentation controls for model point shields
+
+	float	max_shield_recharge;
 
 	float	hull_repair_rate;				//How much of the hull is repaired every second
 	float	subsys_repair_rate;		//How fast 
@@ -1429,6 +1436,7 @@ public:
 	float emp_resistance_mod;
 
 	float piercing_damage_draw_limit;
+	int shield_impact_explosion_anim;
 
 	int damage_lightning_type;
 
@@ -1441,6 +1449,23 @@ public:
 	SCP_map<SCP_string, path_metadata> pathMetadata;
 
 	SCP_unordered_map<int, void*> glowpoint_bank_override_map;
+
+	ship_info();
+	~ship_info();
+	void clone(const ship_info& other);
+
+	ship_info(ship_info&& other) NOEXCEPT;
+
+	ship_info &operator=(ship_info&& other) NOEXCEPT;
+
+	void free_strings();
+
+private:
+	void move(ship_info&& other);
+
+	// Private and unimplemented so nobody tries to use them by accident.
+	ship_info(const ship_info& other);
+	const ship_info &operator=(const ship_info& other);
 };
 
 extern int Num_wings;
@@ -1552,8 +1577,7 @@ extern int ai_paused;
 extern int CLOAKMAP;
 
 extern int Num_reinforcements;
-extern int Num_ship_classes;
-extern ship_info Ship_info[MAX_SHIP_CLASSES];
+extern SCP_vector<ship_info> Ship_info;
 extern reinforcements Reinforcements[MAX_REINFORCEMENTS];
 
 // structure definition for ship type counts.  Used to give a count of the number of ships
@@ -1631,7 +1655,8 @@ extern void physics_ship_init(object *objp);
 //	Stuff vector *pos with absolute position.
 extern int get_subsystem_pos(vec3d *pos, object *objp, ship_subsys *subsysp);
 
-int parse_ship_values(ship_info* sip, bool first_time, bool replace);
+int parse_ship_values(ship_info* sip, const bool is_template, const bool first_time, const bool replace);
+int ship_template_lookup(const char *name = NULL);
 void parse_ship_particle_effect(ship_info* sip, particle_effect* pe, char *id_string);
 
 extern int ship_info_lookup(const char *name = NULL);
@@ -1819,6 +1844,7 @@ int primary_out_of_ammo(ship_weapon *swp, int bank);
 int get_max_ammo_count_for_primary_bank(int ship_class, int bank, int ammo_type);
 
 int get_max_ammo_count_for_bank(int ship_class, int bank, int ammo_type);
+int get_max_ammo_count_for_turret_bank(ship_weapon *swp, int bank, int ammo_type);
 
 int is_support_allowed(object *objp, bool do_simple_check = false);
 

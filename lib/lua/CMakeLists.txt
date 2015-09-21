@@ -11,7 +11,7 @@ IF(FSO_USE_LUAJIT)
 	IF(LUAJIT_FOUND)
 		PKG_CONFIG_LIB_RESOLVE(LUAJIT LUAJIT_LIB)
 
-		ADD_IMPORTED_LIB(luajit "${LUAJIT_INCLUDE_DIRS}" "${LUAJIT_LIB}" SHARED)
+		ADD_IMPORTED_LIB(luajit "${LUAJIT_INCLUDE_DIRS}" "${LUAJIT_LIB}")
 
 		SET(LUA_LIBS luajit CACHE INTERNAL "LuaJIT library" FORCE)
 	ELSE(LUAJIT_FOUND)
@@ -68,19 +68,15 @@ IF(FSO_USE_LUAJIT)
 					IMPORTED_LOCATION ${source_dir}/src/lua51.dll
 					IMPORTED_IMPLIB ${source_dir}/src/lua51.lib
 			)
-		
-			INSTALL(FILES ${source_dir}/src/lua51.dll
-					DESTINATION ${BINARY_DESTINATION}
-			)
-			
-			SET(TARGET_COPY_FILES ${TARGET_COPY_FILES} "${source_dir}/src/lua51.dll" CACHE INTERNAL "")
+
+			add_target_copy_files("${source_dir}/src/lua51.dll")
 		ELSE(WIN32)
 			set_target_properties(luajit_lib
 				PROPERTIES
 					IMPORTED_LOCATION ${source_dir}/src/libluajit.a
 			)
 		ENDIF(WIN32)
-	
+
 		set_target_properties(luajit_lib
 			PROPERTIES
 				FOLDER "3rdparty"
@@ -99,7 +95,7 @@ ELSE(FSO_USE_LUAJIT)
 
 	IF (FSO_BUILD_INCLUDED_LIBS OR NOT LUA51_FOUND)
 		MESSAGE(STATUS "Building lua from source")
-		
+
 		SET(LUA51_SOURCES
 			lapi.c
 			lauxlib.c
@@ -157,9 +153,9 @@ ELSE(FSO_USE_LUAJIT)
 			)
 
 		ADD_LIBRARY(lua51 ${LUA51_SOURCES})
-		
+
 		INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-		
+
 		set_target_properties(lua51
 			PROPERTIES
 				COMPILE_DEFINITIONS _CRT_SECURE_NO_WARNINGS
@@ -178,16 +174,16 @@ ELSE(FSO_USE_LUAJIT)
 			PROPERTIES
 				FOLDER "3rdparty"
 		)
-		
+
 		IF(MSVC)
 			set_target_properties(lua51
 				PROPERTIES
 					STATIC_LIBRARY_FLAGS "/LTCG"
 			)
 		ENDIF(MSVC)
-		
+
 		SET(LUA_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR} CACHE INTERNAL "Lua 5.1 include directory")
-		
+
 		SET(LUA_LIBS lua51 CACHE INTERNAL "Lua 5.1 library")
 
 		IF(FSO_COPY_EXE AND BUILD_SHARED_LIBS)
@@ -201,7 +197,7 @@ ELSE(FSO_USE_LUAJIT)
 	ELSE(FSO_BUILD_INCLUDED_LIBS OR NOT LUA51_FOUND)
 		INCLUDE(util)
 
-		ADD_IMPORTED_LIB(lua "${LUA_INCLUDE_DIR}" "${LUA_LIBRARIES}" SHARED)
+		ADD_IMPORTED_LIB(lua "${LUA_INCLUDE_DIR}" "${LUA_LIBRARIES}")
 
 		SET(LUA_LIBS lua CACHE INTERNAL "lua library" FORCE)
 	ENDIF(FSO_BUILD_INCLUDED_LIBS OR NOT LUA51_FOUND)

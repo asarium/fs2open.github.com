@@ -1,21 +1,21 @@
 #include <stdio.h>
 #include <stdarg.h>
-#include "parse/scripting.h"
-#include "parse/lua.h"
-#include "parse/parselo.h"
-#include "globalincs/version.h"
-#include "gamesequence/gamesequence.h"
+
 #include "bmpman/bmpman.h"
-#include "globalincs/systemvars.h"
-#include "hud/hud.h"
-#include "ship/ship.h"
-#include "mission/missioncampaign.h"
-#include "weapon/weapon.h"
-#include "io/key.h"
 #include "controlconfig/controlsconfig.h"
 #include "freespace.h"
+#include "gamesequence/gamesequence.h"
+#include "globalincs/systemvars.h"
+#include "globalincs/version.h"
+#include "hud/hud.h"
+#include "io/key.h"
+#include "mission/missioncampaign.h"
+#include "parse/parselo.h"
+#include "parse/scripting.h"
+#include "ship/ship.h"
 #include "weapon/beam.h"
 #include "mod_table/mod_table.h"
+#include "weapon/weapon.h"
 
 #include "def_files/apiCompat.lua.h"
 
@@ -85,7 +85,10 @@ flag_def_list Script_actions[] =
 	{"On Ship Arrive",			CHA_ONSHIPARRIVE,	0},
 	{"On Beam Collision",		CHA_COLLIDEBEAM,	0},
 	{"On Message Received",		CHA_MSGRECEIVED,	0},
-    {"On HUD Message Received", CHA_HUDMSGRECEIVED, 0}
+    {"On HUD Message Received", CHA_HUDMSGRECEIVED, 0},
+	{ "On Afterburner Engage",	CHA_AFTERBURNSTART, 0 },
+	{ "On Afterburner Stop",	CHA_AFTERBURNEND,	0 },
+	{ "On Beam Fire",			CHA_BEAMFIRE,		0 }
 };
 
 int Num_script_actions = sizeof(Script_actions)/sizeof(flag_def_list);
@@ -430,6 +433,11 @@ bool ConditionedHook::ConditionsValid(int action, object *objp, int more_data)
 									return false;
 								break;
 							}
+							case CHA_BEAMFIRE: {
+								if (!(stricmp(Weapon_info[more_data].name, scp->data.name) == 0))
+									return false;
+								break;
+							}
 
 						}
 					} // case CHC_WEAPONCLASS
@@ -700,7 +708,7 @@ void script_state::SetHookVar(char *name, char format, void *data)
 		}
 		else
 		{
-			LuaError(LuaState, "Could not get HookVariable library to set hook variable '%s' - get a coder", name);
+			LuaError(LuaState, "Could not get HookVariable library to set hook variable '%s'", name);
 			if(data_ldx)
 				lua_pop(LuaState, 1);
 		}
@@ -740,7 +748,7 @@ bool script_state::GetHookVar(char *name, char format, void *data)
 		}
 		else
 		{
-			LuaError(LuaState, "Could not get HookVariable library to get hook variable '%' - get a coder", name);
+			LuaError(LuaState, "Could not get HookVariable library to get hook variable '%s'", name);
 		}
 	}
 
@@ -1022,13 +1030,13 @@ int script_state::OutputMeta(char *filename)
 		return 0; 
 	}
 
-	if (FS_VERSION_BUILD == 0 && FS_VERSION_REVIS == 0) //-V547
+	if (FS_VERSION_BUILD == 0 && FS_VERSION_HAS_REVIS == 0) //-V547
 	{
 		fprintf(fp, "<html>\n<head>\n\t<title>Script Output - FSO v%i.%i (%s)</title>\n</head>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, StateName);
 		fputs("<body>", fp);
 		fprintf(fp,"\t<h1>Script Output - FSO v%i.%i (%s)</h1>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, StateName);
 	}
-	else if (FS_VERSION_REVIS == 0)
+	else if (FS_VERSION_HAS_REVIS == 0)
 	{
 		fprintf(fp, "<html>\n<head>\n\t<title>Script Output - FSO v%i.%i.%i (%s)</title>\n</head>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD, StateName);
 		fputs("<body>", fp);
@@ -1036,9 +1044,9 @@ int script_state::OutputMeta(char *filename)
 	}
 	else
 	{
-		fprintf(fp, "<html>\n<head>\n\t<title>Script Output - FSO v%i.%i.%i.%i (%s)</title>\n</head>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD, FS_VERSION_REVIS, StateName);
+		fprintf(fp, "<html>\n<head>\n\t<title>Script Output - FSO v%i.%i.%i.%s (%s)</title>\n</head>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD, FS_VERSION_REVIS, StateName);
 		fputs("<body>", fp);
-		fprintf(fp,"\t<h1>Script Output - FSO v%i.%i.%i.%i (%s)</h1>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD, FS_VERSION_REVIS, StateName);
+		fprintf(fp,"\t<h1>Script Output - FSO v%i.%i.%i.%s (%s)</h1>\n", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD, FS_VERSION_REVIS, StateName);
 	}
 		
 	//Scripting languages links

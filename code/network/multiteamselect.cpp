@@ -787,7 +787,7 @@ void multi_ts_sync_interface()
 	
 	// item 1 - determine how many ship types are available in the ship pool
 	Multi_ts_avail_count = 0;
-	for(idx=0;idx<Num_ship_classes;idx++){
+	for(idx = 0; idx < static_cast<int>(Ship_info.size()); idx++) {
 		if(Ss_pool[idx] > 0){
 			Multi_ts_avail_count++;
 		}
@@ -1295,7 +1295,7 @@ void multi_ts_blit_avail_ships()
 	// blit the availability of all ship counts
 	display_count = 0;
 	ship_count = 0;
-	for(idx=0;idx<Num_ship_classes;idx++){
+	for(idx = 0; idx < static_cast<int>(Ship_info.size()); idx++) {
 		if(Ss_pool[idx] > 0){
 			// if our starting display index is after this, then skip it
 			if(ship_count < Multi_ts_avail_start){
@@ -1717,11 +1717,11 @@ void multi_ts_get_team_and_slot(char *ship_name,int *team_index,int *slot_index,
 	} 
 	// if we're _not_ in team vs. team mode
 	else {
-		int wing, ship;
+		int wing_index, ship;
 		for (idx = 0; idx < MAX_STARTING_WINGS; idx++) {
 			// get wing
 			if ( !strnicmp(ship_name, Starting_wing_names[idx], strlen(Starting_wing_names[idx])) && multi_ts_validate_ship(ship_name, Starting_wing_names[idx]) ) {
-				wing = idx;
+				wing_index = idx;
 				ship = (ship_name[strlen(ship_name)-1] - '1');
 
 				// just Assert(), if this is wrong then we're pretty much screwed either way
@@ -1729,7 +1729,7 @@ void multi_ts_get_team_and_slot(char *ship_name,int *team_index,int *slot_index,
 
 				// team is 0, slot is the starting slot for all ships
 				*team_index = 0;
-				*slot_index = wing * MULTI_TS_NUM_SHIP_SLOTS_TEAM + ship;
+				*slot_index = wing_index * MULTI_TS_NUM_SHIP_SLOTS_TEAM + ship;
 			}
 		}
 	}
@@ -2412,7 +2412,7 @@ int multi_ts_get_avail_ship_class(int index)
 
 	ship_count = index + Multi_ts_avail_start;
 	class_index = 0;
-	while((ship_count >= 0) && (class_index < MAX_SHIP_CLASSES)){
+	while((ship_count >= 0) && (class_index < static_cast<int>(Ship_info.size()))){
 		if(Ss_pool[class_index] > 0){
 			ship_count--;
 		}

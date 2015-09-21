@@ -9,13 +9,13 @@
 
 
 
-#include "palman/palman.h"
 #include "bmpman/bmpman.h"
-#include "debugconsole/console.h"
-#include "pcxutils/pcxutils.h"
-#include "parse/parselo.h"
-#include "graphics/grinternal.h"
 #include "cfile/cfile.h"
+#include "debugconsole/console.h"
+#include "graphics/grinternal.h"
+#include "palman/palman.h"
+#include "parse/parselo.h"
+#include "pcxutils/pcxutils.h"
 
 
 #define	SQUARE(x) ((x)*(x))
@@ -546,7 +546,6 @@ ubyte *palette_get_blend_table(float alpha)
 		if ( alpha <= blend_table_factors[i] )	
 			break;
 	} 
-	if ( i<0 ) i = 0;
 	if ( i>NUM_BLEND_TABLES-1 ) i = NUM_BLEND_TABLES-1;
 
 	return &palette_blend_table[i*256*256];

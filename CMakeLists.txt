@@ -9,11 +9,6 @@ set_policy(CMP0051 OLD)
 set_policy(CMP0053 NEW)
 set_policy(CMP0054 NEW)
 
-SET(FSO_VERSION_MAJOR 3)
-SET(FSO_VERSION_MINOR 7)
-SET(FSO_VERSION_BUILD 3)
-SET(FSO_VERSION_REVISION 0)
-
 SET(FSO_PROJECT_DESCRIPTION "Open source project based on the original FreeSpace 2 source code.")
 
 SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/bin CACHE PATH "Executable output path")
@@ -27,6 +22,10 @@ ENDIF(NOT DEFINED CMAKE_INSTALL_PREFIX)
 # Reset this variable
 SET(TARGET_COPY_FILES "" CACHE INTERNAL "" FORCE)
 SET(TARGET_COPY_DIRS "" CACHE INTERNAL "" FORCE)
+
+IF(DEFINED CMAKE_CONFIGURATION_TYPES)
+	set(CMAKE_CONFIGURATION_TYPES Debug Release CACHE STRING "Available configurations" FORCE)
+ENDIF(DEFINED CMAKE_CONFIGURATION_TYPES)
 
 PROJECT(FS2_Open)
 
@@ -56,10 +55,6 @@ IF(RESET_INSTALL_PREFIX)
 	ENDIF(NOT $ENV{FS2PATH} STREQUAL "")
 ENDIF(RESET_INSTALL_PREFIX)
 
-IF(DEFINED CMAKE_CONFIGURATION_TYPES)
-	set(CMAKE_CONFIGURATION_TYPES Debug Release CACHE STRING "Available configurations" FORCE)
-ENDIF(DEFINED CMAKE_CONFIGURATION_TYPES)
-
 ### Define options and editable variables in the section below:
 # This is only needed for single configuration generators so don't annoy others
 if(NOT CMAKE_BUILD_TYPE AND NOT DEFINED CMAKE_CONFIGURATION_TYPES)
@@ -81,12 +76,12 @@ OPTION(FSO_DEVELOPMENT_MODE "Generate binaries in development mode, only use if 
 
 OPTION(FSO_BUILD_WXFRED2 "Build wxFRED2 binary" OFF)
 
-IF(WIN32)
-	# On windows the default should be to always build the included libraries
+IF(WIN32 OR APPLE)
+	# On windows and mac the default should be to always build the included libraries
 	SET(FSO_BUILD_INCLUDED_LIBS_DEFAULT ON)
-ELSE(WIN32)
+ELSE()
 	SET(FSO_BUILD_INCLUDED_LIBS_DEFAULT OFF)
-ENDIF(WIN32)
+ENDIF()
 
 OPTION(FSO_BUILD_INCLUDED_LIBS "Build and use the included libraries istead of using the system headers and libraries" ${FSO_BUILD_INCLUDED_LIBS_DEFAULT})
 
@@ -126,6 +121,7 @@ IF(COTIRE_ENABLE)
 	include(cotire)
 ENDIF(COTIRE_ENABLE)
 
+include(version)
 INCLUDE(globals)
 INCLUDE(toolchain)
 INCLUDE(platforms)
@@ -133,6 +129,8 @@ INCLUDE(platforms)
 INCLUDE(headers)
 
 SET(GENERATED_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated_source)
+
+include(generateHeaders)
 
 # This includes source code for some tools, either used in the build or also for something else
 ADD_SUBDIRECTORY(tools)

@@ -29,14 +29,13 @@
 #include "graphics/2d.h"
 #include "cmdline/cmdline.h"
 
-#ifdef __linux__
-#include <execinfo.h>
-#endif
 
 #define THREADED	// to use the proper set of macros
 #include "osapi/osapi.h"
 
 #include "SDL_syswm.h"
+
+#include <SDL_assert.h>
 
 
 // used to be a THREADED define but only use multiple process threads if this is defined
@@ -72,8 +71,9 @@ void os_set_window_from_hwnd(HWND handle)
 }
 
 // go through all windows and try and find the one that matches the search string
-BOOL __stdcall os_enum_windows( HWND hwnd, char * search_string )
+BOOL __stdcall os_enum_windows( HWND hwnd, LPARAM param )
 {
+	const char* search_string = reinterpret_cast<const char*>(param);
 	char tmp[128];
 	int len;
 
@@ -121,13 +121,13 @@ void os_check_debugger()
 	sprintf( search_string, "[run] - %s -", p );
 
 	// ... and then search for it.
-	EnumWindows( (int (__stdcall *)(struct HWND__ *,long))os_enum_windows, (long)&search_string );
+	EnumWindows(os_enum_windows, reinterpret_cast<LPARAM>(&search_string));
 }
 
 void os_set_process_affinity()
 {
 	HANDLE pHandle = GetCurrentProcess();
-	DWORD pMaskProcess = 0, pMaskSystem = 0;
+	DWORD_PTR pMaskProcess = 0, pMaskSystem = 0;
 
 	if ( GetProcessAffinityMask(pHandle, &pMaskProcess, &pMaskSystem) ) {
 		// only do this if we have at least 2 procs
@@ -437,38 +437,10 @@ void debug_int3(char *file, int line)
 
 	gr_activate(0);
 
-	
+	mprintf(("%s\n", dump_stacktrace().c_str()));
+
 #ifndef NDEBUG
-	// Try to get a backtrace on linux
-
-#	ifdef WIN32
-#		if defined(_MSC_VER) && _MSC_VER >= 1400
-	__debugbreak( );
-#		elif defined(_MSC_VER)
-	_asm int 3;
-#		elif defined __GNUC__
-	asm("int $3");
-#		else
-#			error debug_int3: unknown compiler
-#		endif
-#	elif defined(__linux__)
-#	define SIZE 1024
-	char **symbols;
-	int i, numstrings;
-	void *buffer[SIZE];
-
-	numstrings = backtrace(buffer, SIZE);
-	symbols = backtrace_symbols(buffer, numstrings);
-
-	if(symbols != NULL)
-	{
-		for(i = 0; i < numstrings; i++)
-		{
-			mprintf(("%s\n", symbols[i]));
-		}
-	}
-	free(symbols);
-#	endif
+	SDL_TriggerBreakpoint();
 #endif
 
 	gr_activate(1);

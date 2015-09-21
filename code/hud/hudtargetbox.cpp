@@ -9,32 +9,30 @@
 
 
 
-#include "hud/hudtargetbox.h"
-#include "object/object.h"
-#include "hud/hud.h"
-#include "hud/hudbrackets.h"
-#include "model/model.h"
-#include "mission/missionparse.h"
-#include "debris/debris.h"
-#include "playerman/player.h"
-#include "gamesnd/gamesnd.h"
-#include "freespace.h"
-#include "io/timer.h"
-#include "ship/subsysdamage.h"
-#include "graphics/font.h"
 #include "asteroid/asteroid.h"
-#include "jumpnode/jumpnode.h"
-#include "weapon/emp.h"
-#include "localization/localize.h"
 #include "cmdline/cmdline.h"
-#include "ship/ship.h"
-#include "weapon/weapon.h"
-#include "parse/parselo.h"
-#include "object/objectdock.h"
-#include "species_defs/species_defs.h"
-#include "iff_defs/iff_defs.h"
-#include "network/multi.h"
+#include "debris/debris.h"
+#include "freespace.h"
+#include "gamesnd/gamesnd.h"
 #include "graphics/gropenglshader.h"
+#include "hud/hudbrackets.h"
+#include "hud/hudtargetbox.h"
+#include "iff_defs/iff_defs.h"
+#include "io/timer.h"
+#include "jumpnode/jumpnode.h"
+#include "localization/localize.h"
+#include "mission/missionparse.h"
+#include "model/model.h"
+#include "network/multi.h"
+#include "object/object.h"
+#include "object/objectdock.h"
+#include "parse/parselo.h"
+#include "playerman/player.h"
+#include "ship/ship.h"
+#include "ship/subsysdamage.h"
+#include "species_defs/species_defs.h"
+#include "weapon/emp.h"
+#include "weapon/weapon.h"
 
 #ifndef NDEBUG
 #include "hud/hudets.h"
@@ -2005,9 +2003,9 @@ void HudGaugeTargetBox::showTargetData(float frametime)
 	char outstr2[256];	
 	if ( Show_target_debug_info && (is_ship == 1) ) {
 		int sx, sy, dy;
-		sx = 5;
+		sx = gr_screen.center_offset_x + 5;
 		dy = gr_get_font_height() + 1;
-		sy = 300 - 7*dy;
+		sy = gr_screen.center_offset_y + 300 - 7*dy;
 
 		gr_set_color_fast(&HUD_color_debug);
 
@@ -2033,10 +2031,10 @@ void HudGaugeTargetBox::showTargetData(float frametime)
 				break;
 			}
 
-			gr_printf(sx, sy, outstr);
+			gr_printf_no_resize(sx, sy, outstr);
 			sy += dy;
 
-			gr_printf(sx, sy, "Max speed = %d, (%d%%)", (int) shipp->current_max_speed, (int) (100.0f * vm_vec_mag(&target_objp->phys_info.vel)/shipp->current_max_speed));
+			gr_printf_no_resize(sx, sy, "Max speed = %d, (%d%%)", (int) shipp->current_max_speed, (int) (100.0f * vm_vec_mag(&target_objp->phys_info.vel)/shipp->current_max_speed));
 			sy += dy;
 			
 			// data can be found in target montior
@@ -2050,7 +2048,7 @@ void HudGaugeTargetBox::showTargetData(float frametime)
 				else
 					sprintf(target_str, "%s", Ships[Objects[aip->target_objnum].instance].ship_name);
 
-				gr_printf(sx, sy, "Targ: %s", target_str);
+				gr_printf_no_resize(sx, sy, "Targ: %s", target_str);
 				sy += dy;
 
 				dist = vm_vec_dist_quick(&Objects[Player_ai->target_objnum].pos, &Objects[aip->target_objnum].pos);
@@ -2059,27 +2057,27 @@ void HudGaugeTargetBox::showTargetData(float frametime)
 				dot = vm_vec_dot(&v2t, &Objects[Player_ai->target_objnum].orient.vec.fvec);
 
 				// data can be found in target monitor
-				gr_printf(sx, sy, "Targ dot: %3.2f", dot);
+				gr_printf_no_resize(sx, sy, "Targ dot: %3.2f", dot);
 				sy += dy;
-				gr_printf(sx, sy, "Targ dst: %3.2f", dist);
+				gr_printf_no_resize(sx, sy, "Targ dst: %3.2f", dist);
 				sy += dy;
 
 				if ( aip->targeted_subsys != NULL ) {
 					sprintf(outstr, "Subsys: %s", aip->targeted_subsys->system_info->subobj_name);
-					gr_printf(sx, sy, outstr);
+					gr_printf_no_resize(sx, sy, outstr);
 				}
 				sy += dy;
 			}
 
 			// print out energy transfer information on the ship
-			sy = 70;
+			sy = gr_screen.center_offset_y + 70;
 
 			sprintf(outstr,"MAX G/E: %.0f/%.0f",shipp->weapon_energy,shipp->current_max_speed);
-			gr_printf(sx, sy, outstr);
+			gr_printf_no_resize(sx, sy, outstr);
 			sy += dy;
 			 
 			sprintf(outstr,"G/S/E: %.2f/%.2f/%.2f",Energy_levels[shipp->weapon_recharge_index],Energy_levels[shipp->shield_recharge_index],Energy_levels[shipp->engine_recharge_index]);
-			gr_printf(sx, sy, outstr);
+			gr_printf_no_resize(sx, sy, outstr);
 			sy += dy;
 
 			//	Show information about attacker.
@@ -2103,11 +2101,11 @@ void HudGaugeTargetBox::showTargetData(float frametime)
 
 							dot = vm_vec_dot(&v2t, &Enemy_attacker->orient.vec.fvec);
 
-							gr_printf(sx, sy, "#%i: %s", Enemy_attacker-Objects, Ships[Enemy_attacker->instance].ship_name);
+							gr_printf_no_resize(sx, sy, "#%i: %s", Enemy_attacker-Objects, Ships[Enemy_attacker->instance].ship_name);
 							sy += dy;
-							gr_printf(sx, sy, "Targ dist: %5.1f", dist);
+							gr_printf_no_resize(sx, sy, "Targ dist: %5.1f", dist);
 							sy += dy;
-							gr_printf(sx, sy, "Targ dot: %3.2f", dot);
+							gr_printf_no_resize(sx, sy, "Targ dot: %3.2f", dot);
 							sy += dy;
 						}
 					}
@@ -2137,14 +2135,14 @@ void HudGaugeTargetBox::showTargetData(float frametime)
 
 			// Show target size
 			// hud_target_w
-			gr_printf(sx, sy, "Targ size: %dx%d", Hud_target_w, Hud_target_h );
+			gr_printf_no_resize(sx, sy, "Targ size: %dx%d", Hud_target_w, Hud_target_h );
 			sy += dy;
 
 			polymodel *pm = model_get(sip->model_num);
-			gr_printf(sx, sy, "POF:%s", pm->filename );
+			gr_printf_no_resize(sx, sy, "POF:%s", pm->filename );
 			sy += dy;
 
-			gr_printf(sx, sy, "Mass: %.2f\n", pm->mass);
+			gr_printf_no_resize(sx, sy, "Mass: %.2f\n", pm->mass);
 			sy += dy;
 		}
 	}
@@ -2155,26 +2153,26 @@ void HudGaugeTargetBox::showTargetData(float frametime)
 		ship_weapon *swp;
 
 		swp = &shipp->weapons;
-		sx = 400;
-		sy = 100;
+		sx = gr_screen.center_offset_x + 400;
+		sy = gr_screen.center_offset_y + 100;
 		dy = gr_get_font_height();
 
 		sprintf(outstr,"Num primaries: %d", swp->num_primary_banks);
-		gr_printf(sx,sy,outstr);
+		gr_printf_no_resize(sx,sy,outstr);
 		sy += dy;
 		for ( i = 0; i < swp->num_primary_banks; i++ ) {
 			sprintf(outstr,"%d. %s", i+1, Weapon_info[swp->primary_bank_weapons[i]].name);
-			gr_printf(sx,sy,outstr);
+			gr_printf_no_resize(sx,sy,outstr);
 			sy += dy;
 		}
 
 		sy += dy;
 		sprintf(outstr,"Num secondaries: %d", swp->num_secondary_banks);
-		gr_printf(sx,sy,outstr);
+		gr_printf_no_resize(sx,sy,outstr);
 		sy += dy;
 		for ( i = 0; i < swp->num_secondary_banks; i++ ) {
 			sprintf(outstr,"%d. %s", i+1, Weapon_info[swp->secondary_bank_weapons[i]].name);
-			gr_printf(sx,sy,outstr);
+			gr_printf_no_resize(sx,sy,outstr);
 			sy += dy;
 		}
 	}
