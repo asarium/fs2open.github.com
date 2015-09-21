@@ -19,7 +19,7 @@ namespace api
             explicit vector(const vec3d& vec);
             vector(float x, float y, float z);
 
-            matrix getOrientation() const;
+            types::matrix getOrientation() const;
 
             float getMagnitude() const;
 

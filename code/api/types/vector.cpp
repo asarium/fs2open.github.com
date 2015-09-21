@@ -102,7 +102,7 @@ namespace api
             return vector(res);
         }
 
-        matrix vector::getOrientation() const
+        types::matrix vector::getOrientation() const
         {
             ::matrix mt = vmd_identity_matrix;
             vec3d v3 = content;
