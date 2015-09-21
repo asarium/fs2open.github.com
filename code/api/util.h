@@ -1,7 +1,7 @@
 
 #pragma once
 
-#ifdef DOXYGEN_PARSER
+#ifdef DOXYGEN
 #define SCRIPT_PROPERTY(content) content ;
 #else
 #define SCRIPT_PROPERTY(content)

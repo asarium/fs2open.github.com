@@ -14,6 +14,8 @@ namespace api
     {
         /**
          * Enumeration object
+         *
+         * @ingroup GRP_SCRIPTING_API_TYPES
          */
         class luaenum
         {

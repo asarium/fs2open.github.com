@@ -14,7 +14,9 @@ namespace api
         using namespace types;
 
         /**
-         * Base FreeSpace 2 functions
+         * @brief Base FreeSpace 2 functions. Available as "ba" in the global lua scope.
+         *
+         * @ingroup GRP_SCRIPTING_API_LIBS
          */
         class base : public library
         {

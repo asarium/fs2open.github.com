@@ -12,6 +12,8 @@ namespace api
     {
 		/**
 		 * Game event
+         *
+         * @ingroup GRP_SCRIPTING_API_TYPES
 		 */
         class gameevent
         {
