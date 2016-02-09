@@ -1062,6 +1062,9 @@
     <ClCompile Include="..\..\code\model\modelrender.cpp">
       <Filter>Model</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\code\network\WinXPSP2FireWall.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\code\ai\ai.h">
@@ -1864,6 +1867,9 @@
     </ClInclude>
     <ClInclude Include="..\..\code\model\modelrender.h">
       <Filter>Model</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\network\WinXPSP2FireWall.h">
+      <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

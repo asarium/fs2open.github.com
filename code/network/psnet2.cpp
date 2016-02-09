@@ -492,6 +492,55 @@ void PSNET_TOP_LAYER_PROCESS()
 // PSNET 2 FUNCTIONS
 //
 
+#ifdef WIN32
+#include "WinXPSP2FireWall.h"
+#endif
+
+/**
+ * @brief Adds an exception to the firewall for letting FSO through
+ */
+static void psnet_add_firewall_exception()
+{
+#ifdef WIN32
+	WinXPSP2FireWall fw;
+	if (fw.Initialize() != FW_NOERROR)
+	{
+		mprintf(("PSNET: Failed to initialize firewall control!\n"));
+		return;
+	}
+
+	BOOL fw_enabled;
+	if (fw.IsWindowsFirewallOn(fw_enabled) != FW_NOERROR)
+	{
+		mprintf(("PSNET: Failed to determine if firewall is enabled!\n"));
+		return;
+	}
+
+	if (!fw_enabled)
+	{
+		// Not enabled, nothing to do here...
+		return;
+	}
+
+	wchar_t exe_path[MAX_PATH];
+	if (GetModuleFileNameW(nullptr, exe_path, MAX_PATH) == 0)
+	{
+		mprintf(("PSNET: Failed to get path of executable!\n"));
+		return;
+	}
+
+	if (fw.AddApplication(exe_path, L"FreeSpace 2 Open") != FW_NOERROR)
+	{
+		mprintf(("PSNET: Failed to add exception for FreeSpace Open!\n"));
+		return;
+	}
+
+	mprintf(("PSNET: Windows Firewall exception added for FreeSpace Open.\n"));
+#else
+	// Other platforms don't need this/haven't been implemented yet
+#endif
+}
+
 /**
  * Initialize psnet to use the specified port
  */
@@ -543,6 +592,9 @@ void psnet_init( int protocol, int port_num )
 	if ( (port_num > 1023) && (port_num < USHRT_MAX) ) {
 		Psnet_default_port = (ushort)port_num;
 	}
+
+	// If relevant for this platform, add an exception for the firewall
+	psnet_add_firewall_exception();
 
 	// initialize TCP now	
 	Tcp_active = 1;
