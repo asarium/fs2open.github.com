@@ -760,7 +760,7 @@ public:
 	int ab_count;
 
 	// glow points
-	std::deque<bool> glow_point_bank_active;
+	SCP_deque<bool> glow_point_bank_active;
 
 	//Animated Shader effects
 	int shader_effect_num;

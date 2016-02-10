@@ -163,7 +163,7 @@ void pilotfile_convert::csg_import_ships_weapons()
 
 		if (ilist.index < 0) {
 			std::ostringstream error_msg;
-			error_msg << "Data mismatch (ship lookup: " << ilist.name << ")!";
+			error_msg << "Data mismatch (ship lookup: " << ilist.name.c_str() << ")!";
 			throw std::runtime_error(error_msg.str().c_str());
 		}
 
@@ -181,7 +181,7 @@ void pilotfile_convert::csg_import_ships_weapons()
 
 		if (ilist.index < 0) {
 			std::ostringstream error_msg;
-			error_msg << "Data mismatch (weapon lookup: " << ilist.name << ")!";
+			error_msg << "Data mismatch (weapon lookup: " << ilist.name.c_str() << ")!";
 			throw std::runtime_error(error_msg.str().c_str());
 		}
 

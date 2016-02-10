@@ -3,39 +3,53 @@
 
 /* SCP_vm_allocator - maintained by portej05 (i.e. please don't patch this one yourself!) */
 
-#include <vector>
-#include <list>
-#include <map>
-#include <string>
-#include <queue>
-#include <deque>
-#include <unordered_map>
+#include "globalincs/fsmemory.h"
+
+#include <EASTL/vector.h>
+#include <EASTL/list.h>
+#include <EASTL/map.h>
+#include <EASTL/string.h>
+#include <EASTL/queue.h>
+#include <EASTL/deque.h>
+#include <EASTL/hash_map.h>
 #include <sstream>
 
 template< typename T >
-class SCP_vector : public std::vector< T, std::allocator< T > > { };
+using SCP_vector = eastl::vector<T>;
 
 template< typename T >
-class SCP_list : public std::list< T, std::allocator< T > > { };
+using SCP_list = eastl::list<T>;
 
-typedef std::basic_string<char, std::char_traits<char>, std::allocator<char> > SCP_string;
-
-typedef std::basic_stringstream<char, std::char_traits<char>, std::allocator<char> > SCP_stringstream;
+typedef eastl::string SCP_string;
 
 template< typename T, typename U >
-class SCP_map : public std::map<T, U, std::less<T>, std::allocator<std::pair<const T, U> > > { };
+using SCP_map = eastl::map<T, U>;
 
 template< typename T, typename U >
-class SCP_multimap : public std::multimap<T, U, std::less<T>, std::allocator<std::pair<const T, U> > > { };
+using SCP_multimap = eastl::multimap<T, U>;
 
 template< typename T >
-class SCP_queue : public std::queue< T, std::deque< T, std::allocator< T > > > { };
+using SCP_queue = eastl::queue<T>;
 
 template< typename T >
-class SCP_deque : public std::deque< T, std::allocator< T > > { };
+using SCP_deque = eastl::deque<T>;
 
-template< typename Key, typename T, typename Hash = std::hash<Key>, typename KeyEqual = std::equal_to<Key> >
-class SCP_unordered_map : public std::unordered_map< Key, T, Hash, KeyEqual, std::allocator< std::pair<const Key, T> > > { };
+template< typename Key, typename T, typename Hash = eastl::hash<Key>, typename KeyEqual = eastl::equal_to<Key> >
+using SCP_unordered_map = eastl::hash_map<Key, T, Hash, KeyEqual>;
 
+class SCP_stringstream : public std::basic_stringstream<char, std::char_traits<char>, std::allocator<char> >
+{
+public:
+	SCP_string str() { return SCP_string(std::basic_stringstream<char, std::char_traits<char>, std::allocator<char> >::str().c_str()); }
+};
+
+template<typename A, typename B>
+using SCP_pair = eastl::pair<A, B>;
+
+template<typename A, typename B>
+SCP_pair<A, B> scp_make_pair(A a, B b)
+{
+	return SCP_pair<A, B>(a, b);
+}
 
 #endif // _VMALLOCATOR_H_INCLUDED_

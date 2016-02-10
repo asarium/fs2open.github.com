@@ -1189,7 +1189,7 @@ void main_hall_stop_music(bool fade)
  */
 void main_hall_render_misc_anims(float frametime, bool over_doors)
 {
-	std::deque<bool> group_anims_weve_checked;
+	SCP_deque<bool> group_anims_weve_checked;
 	int idx, s_idx, jdx;
 
 	// render all misc animations

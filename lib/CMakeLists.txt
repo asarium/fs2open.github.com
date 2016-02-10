@@ -25,3 +25,5 @@ IF(UNIX)
 
 	ADD_SUBDIRECTORY(mongoose)
 ENDIF(UNIX)
+
+add_subdirectory(ea)

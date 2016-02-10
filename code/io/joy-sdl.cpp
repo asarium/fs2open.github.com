@@ -66,7 +66,7 @@ namespace
 		joystickGUID.resize(GUID_STR_SIZE - 1);
 
 		// Make sure the GUID is upper case
-		transform(begin(joystickGUID), end(joystickGUID), begin(joystickGUID), toupper);
+		std::transform(begin(joystickGUID), end(joystickGUID), begin(joystickGUID), toupper);
 
 		return joystickGUID;
 	}
@@ -76,7 +76,7 @@ namespace
 		SCP_string guidStr(os_config_read_string(nullptr, "CurrentJoystickGUID", ""));
 
 		// Make sure we get upper case strings
-		transform(begin(guidStr), end(guidStr), begin(guidStr), toupper);
+		std::transform(begin(guidStr), end(guidStr), begin(guidStr), toupper);
 
 		return guidStr;
 	}

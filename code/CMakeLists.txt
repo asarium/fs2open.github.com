@@ -31,6 +31,8 @@ TARGET_LINK_LIBRARIES(code PUBLIC oggvorbis)
 
 TARGET_LINK_LIBRARIES(code PUBLIC ${SDL_LIBS})
 
+target_link_libraries(code PUBLIC EASTL)
+
 TARGET_LINK_LIBRARIES(code PUBLIC platform)
 TARGET_LINK_LIBRARIES(code PUBLIC compiler)
 

@@ -1854,7 +1854,7 @@ void parse_ship_sound(char *name, GameSoundsIndex id, ship_info *sip)
 	parse_sound(name, &temp_index, sip->name);
 
 	if (temp_index >= 0)
-		sip->ship_sounds.insert(std::pair<GameSoundsIndex, int>(id, temp_index));
+		sip->ship_sounds.insert(SCP_pair<GameSoundsIndex, int>(id, temp_index));
 }
 
 void parse_ship_sounds(ship_info *sip)

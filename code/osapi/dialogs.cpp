@@ -44,7 +44,7 @@ namespace
 		SCP_stringstream outStream;
 		s.seekp(0, std::ios::beg);
 
-		for (SCP_string line; std::getline(s, line);)
+		for (std::string line; std::getline(s, line);)
 		{
 			outStream << line << "\n";
 
@@ -117,7 +117,7 @@ namespace os
 				vsprintf(buffer, format, args);
 				va_end(args);
 
-				msgStream << buffer << "\n";
+				msgStream << buffer.c_str() << "\n";
 				mprintf(("ASSERTION: \"%s\" at %s:%d\n %s\n", text, filename, linenum, buffer.c_str()));
 			}
 			else
@@ -133,7 +133,7 @@ namespace os
 #endif
 
 			msgStream << "\n";
-			msgStream << dump_stacktrace();
+			msgStream << dump_stacktrace().c_str();
 
 			SCP_string messageText = msgStream.str();
 			set_clipboard_text(messageText.c_str());
@@ -165,7 +165,7 @@ namespace os
 				vsprintf(formatText, format, args);
 				va_end(args);
 
-				msgStream << formatText;
+				msgStream << formatText.c_str();
 			}
 
 			msgStream << "\n";
@@ -217,7 +217,7 @@ namespace os
 			auto truncatedText = truncateLines(msgStream, Messagebox_lines);
 
 			SCP_stringstream boxTextStream;
-			boxTextStream << truncatedText << "\n";
+			boxTextStream << truncatedText.c_str() << "\n";
 
 			boxTextStream << "\n[ This info is in the clipboard so you can paste it somewhere now ]\n";
 
@@ -275,7 +275,7 @@ namespace os
 			va_end(args);
 
 			SCP_stringstream messageStream;
-			messageStream << "Error: " << formatText << "\n";
+			messageStream << "Error: " << formatText.c_str() << "\n";
 			messageStream << "File: " << filename << "\n";
 			messageStream << "Line: " << line << "\n";
 
@@ -283,7 +283,7 @@ namespace os
 			mprintf(("%s\n", fullText.c_str()));
 
 			messageStream << "\n";
-			messageStream << dump_stacktrace();
+			messageStream << dump_stacktrace().c_str();
 			
 			fullText = messageStream.str();
 			set_clipboard_text(fullText.c_str());
@@ -363,12 +363,12 @@ namespace os
 #endif
 
 			SCP_stringstream boxMsgStream;
-			boxMsgStream << "Warning: " << formatMessage << "\n";
+			boxMsgStream << "Warning: " << formatMessage.c_str() << "\n";
 			boxMsgStream << "File: " << filename << "\n";
 			boxMsgStream << "Line: " << line << "\n";
 
 			boxMsgStream << "\n";
-			boxMsgStream << dump_stacktrace();
+			boxMsgStream << dump_stacktrace().c_str();
 
 			set_clipboard_text(boxMsgStream.str().c_str());
 

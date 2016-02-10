@@ -1543,7 +1543,7 @@ void asteroid_maybe_break_up(object *pasteroid_obj)
 								roids_to_create.push_back(split->asteroid_type);
 					}
 
-					random_shuffle(roids_to_create.begin(), roids_to_create.end());
+					std::random_shuffle(roids_to_create.begin(), roids_to_create.end());
 
 					int total_roids = roids_to_create.size();
 					for (int i = 0; i < total_roids; i++) {
