@@ -10,35 +10,89 @@
 
 
 
-
 #include "fs2netd/tcp_socket.h"
 #include "globalincs/pstypes.h"
 #include "network/multi_log.h"
 
+#include <functional>
+using namespace std::placeholders;
 
-#ifdef SCP_UNIX
-#include <sys/time.h>	// The OS X 10.3 SDK appears to need this for some reason (for timeval struct)
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <cerrno>
-#include <sys/ioctl.h>
-#ifdef SCP_SOLARIS
-#include <sys/filio.h>
-#endif
-#include <ctype.h>
+void TCPSocket::runIo()
+{
+	_io_service.poll();
+}
 
-#define WSAGetLastError()  (errno)
-#else
-#include <windows.h>
-#include <process.h>
-typedef int socklen_t;
-#endif
+void TCPSocket::resolve_callback(const std::error_code& errorCode, const ip::tcp::resolver::iterator& it)
+{
+	if (errorCode)
+	{
+		_error = errorCode;
+		_connecting = false;
+	}
+	else
+	{
+		async_connect(*_socket, it, ip::tcp::resolver::iterator(), std::bind(&TCPSocket::connect_callback, this, _1, _2));
+	}
+}
 
+
+void TCPSocket::connect_callback(const std::error_code& errorCode, const ip::tcp::resolver::iterator& it)
+{
+	if (errorCode)
+	{
+		_error = errorCode;
+		_connecting = false;
+	} else if (it == ip::tcp::resolver::iterator())
+	{
+		_error = std::error_code(ECONNRESET, std::generic_category());
+		_connecting = false;
+	} else
+	{
+		_connected = true;
+		_connecting = false;
+	}
+}
+
+TCPSocket::TCPSocket(const SCP_string& address, SCP_string port) : _address(address), _port(port), _connected(false), _connecting(false)
+{
+}
+
+TCPSocket::~TCPSocket()
+{
+}
+
+bool TCPSocket::connect()
+{
+	if (_error)
+	{
+		throw std::runtime_error(_error.message());
+	}
+
+	if (_connecting)
+	{
+		runIo();
+	}
+
+	if (_connected)
+	{
+		return true;
+	}
+	
+	if (_connecting)
+	{
+		return false;
+	}
+
+	// Set up connection
+	_socket.reset(new ip::tcp::socket(_io_service));
+	_resolver.reset(new ip::tcp::resolver(_io_service));
+
+	ip::tcp::resolver::query query(_address, _port);
+	_resolver->async_resolve(query, std::bind(&TCPSocket::resolve_callback, this, _1, _2));
+
+	_connecting = true;
+	return false; // Not connected yet
+}
 
 static bool Connecting = false;
 static bool Connected = false;

@@ -9,12 +9,12 @@
 
 
 
+#include "fs2netd/tcp_client.h"
 #include "bmpman/bmpman.h"
 #include "cfile/cfile.h"
 #include "cfile/cfilesystem.h"
 #include "cmdline/cmdline.h"
 #include "fs2netd/fs2netd_client.h"
-#include "fs2netd/tcp_client.h"
 #include "gamesnd/gamesnd.h"
 #include "globalincs/alphacolors.h"
 #include "globalincs/pstypes.h"
@@ -213,8 +213,31 @@ void fs2netd_disconnect()
 	Sleep(500);
 }
 
+static TCPSocket* tcp_socket;
 static int fs2netd_connect_do()
 {
+	if (!tcp_socket)
+	{
+		tcp_socket = new TCPSocket(Multi_options_g.game_tracker_ip, Multi_options_g.tracker_port);
+	}
+
+	try
+	{
+		if (tcp_socket->connect())
+		{
+			Is_connected = true;
+			return 1;
+		}
+		else
+		{
+			return 0;
+		}
+	} catch(const std::exception& e)
+	{
+		Is_connected = false;
+		return 2;
+	}
+
 	int retval = FS2NetD_ConnectToServer(Multi_options_g.game_tracker_ip, Multi_options_g.tracker_port);
 
 	Sleep(5);
