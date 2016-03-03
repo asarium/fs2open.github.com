@@ -4418,17 +4418,21 @@ void game_frame(bool paused)
 			return;
 		}
 		
-		const auto maxStep = 1.f / 30.f; // The simulation engine needs to be stepped at least at 30 FPD
+		const auto maxStep = 1.f / 60.f; // The simulation engine needs to be stepped at least at 30 FPD
 		auto origTime = flFrametime;
+		auto origRealTime = flRealframetime;
+
 		auto remainingFrameTime = flFrametime;
 
 		// The math here needs to be cleaned up a bit. I'm sure there's a better way to do it.
 		while (remainingFrameTime > 0.f) {
 			if (remainingFrameTime > maxStep) {
 				flFrametime = maxStep;
+				flRealframetime = maxStep;
 			}
 			else {
 				flFrametime = remainingFrameTime;
+				flRealframetime = remainingFrameTime;
 			}
 
 			PROFILE("Simulation", game_simulation_frame());
@@ -4437,6 +4441,7 @@ void game_frame(bool paused)
 		}
 
 		flFrametime = origTime;
+		flRealframetime = origRealTime;
 
 		// if not actually in a game play state, then return.  This condition could only be true in 
 		// a multiplayer game.
