@@ -19,9 +19,9 @@ ADD_SUBDIRECTORY(openal)
 
 ADD_SUBDIRECTORY(libsdl)
 
+ADD_SUBDIRECTORY(jansson)
+
 # These are only required for the web-ui which is non-Windows
 IF(UNIX)
-	ADD_SUBDIRECTORY(jansson)
-
 	ADD_SUBDIRECTORY(mongoose)
 ENDIF(UNIX)

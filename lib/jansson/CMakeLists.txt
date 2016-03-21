@@ -49,7 +49,7 @@
 # the source directory.
 # The rest is down to the usual make process.
 
-IF(NOT ${FSO_BUILD_INCLUDED_LIBS} AND ${UNIX})
+IF(NOT FSO_BUILD_INCLUDED_LIBS AND UNIX)
 	find_package(PkgConfig)
 
 	if (PKG_CONFIG_FOUND)
