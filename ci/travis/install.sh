@@ -26,6 +26,7 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
     
     brew update
     brew outdated cmake || brew upgrade cmake
+    brew install ffmpeg
 fi
 
 cmake --version

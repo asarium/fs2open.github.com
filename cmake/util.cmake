@@ -127,14 +127,14 @@ macro(configure_cotire target)
 
 		# add ignored paths for the precompiled header here
 		set_target_properties(code PROPERTIES COTIRE_PREFIX_HEADER_IGNORE_PATH
-			"${CMAKE_SOURCE_DIR};${CMAKE_BINARY_DIR}")
+			"${CMAKE_SOURCE_DIR};${CMAKE_BINARY_DIR};${FFMPEG_ROOT_DIR}")
 		cotire(${target})
 	ENDIF(COTIRE_ENABLE)
 endmacro(configure_cotire)
 
 macro(add_target_copy_files)
 	INSTALL(FILES ${ARGN}
-			DESTINATION ${BINARY_DESTINATION}
+			DESTINATION ${LIBRAY_DESTINATION}
 	)
 
 	SET(TARGET_COPY_FILES ${TARGET_COPY_FILES} ${ARGN} CACHE INTERNAL "" FORCE)
