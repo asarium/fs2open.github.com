@@ -52,19 +52,18 @@ elseif(APPLE)
         COMMENT "Copying resources into bundle..."
     )
 
-    #configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${subpath}/fixup_bundle.cmake.in"
-    #    "${CMAKE_CURRENT_BINARY_DIR}/fixup_bundle.cmake"
-    #   @ONLY)
-
-    #file(GENERATE
-    #    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/fixup_bundle-$<CONFIG>.cmake"
-    #    INPUT "${CMAKE_CURRENT_BINARY_DIR}/fixup_bundle.cmake")
+    # Configure the properties so that it includes the current version
+    configure_file("${CMAKE_CURRENT_SOURCE_DIR}/${subpath}/InfoPlist.strings.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/InfoPlist.strings" @ONLY)
+    add_custom_command(TARGET Freespace2 POST_BUILD
+            COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CMAKE_CURRENT_BINARY_DIR}/InfoPlist.strings" "$<TARGET_FILE_DIR:Freespace2>/../Resources/English.lproj"
+            COMMENT "Copying string resources into bundle..."
+            )
 
     add_custom_command(TARGET Freespace2 POST_BUILD
-		COMMAND "${CMAKE_COMMAND}" -E copy_directory "${FSO_MAC_FRAMEWORKS}" "$<TARGET_FILE_DIR:Freespace2>/../Frameworks"
-        #COMMAND "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/fixup_bundle-$<CONFIG>.cmake"
-        COMMENT "Copying frameworks into bundle..."
-    )
+            COMMAND "${CMAKE_COMMAND}" -E copy_directory "${FSO_MAC_FRAMEWORKS}" "$<TARGET_FILE_DIR:Freespace2>/../Frameworks"
+            COMMENT "Copying frameworks into bundle..."
+            )
 else()
     # No special resource handling required, add rules for new platforms here
 endif()
