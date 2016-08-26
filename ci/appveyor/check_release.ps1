@@ -6,6 +6,14 @@ Set-AppveyorBuildVariable 'DeployBuild' 'false'
 Set-AppveyorBuildVariable 'PackagePrefix' ''
 Set-AppveyorBuildVariable 'VersionName' ''
 
+Write-Host "$Env:APPVEYOR_BUILD_ID"
+Write-Host "$Env:APPVEYOR_BUILD_NUMBER"
+Write-Host "$Env:APPVEYOR_BUILD_VERSION"
+Write-Host "$Env:APPVEYOR_JOB_ID"
+Write-Host "$Env:APPVEYOR_JOB_NAME"
+
+exit 1
+
 if ([System.Convert]::ToBoolean($env:APPVEYOR_REPO_TAG) -And ("$env:APPVEYOR_REPO_TAG_NAME" -match "^release_(.*)")) {
     # Tag matches
     Set-AppveyorBuildVariable 'ReleaseBuild' 'true'
