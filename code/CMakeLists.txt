@@ -28,6 +28,8 @@ TARGET_LINK_LIBRARIES(code PUBLIC ${JPEG_LIBS})
 
 TARGET_LINK_LIBRARIES(code PUBLIC oggvorbis)
 
+target_link_libraries(code PUBLIC boost)
+
 TARGET_LINK_LIBRARIES(code PUBLIC ${SDL_LIBS})
 
 TARGET_LINK_LIBRARIES(code PUBLIC platform)
