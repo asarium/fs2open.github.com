@@ -11,3 +11,6 @@ endif()
 target_link_libraries(platform INTERFACE ${COCOA_LIBRARY})
 
 set(PLATFORM_MAC TRUE)
+
+SET(CMAKE_INSTALL_NAME_DIR @executable_path)
+SET(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
