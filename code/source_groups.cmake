@@ -601,6 +601,8 @@ set (file_root_mod_table
 
 # Model files
 set (file_root_model
+	model/draw_list.cpp
+	model/draw_list.h
 	model/model.h
 	model/modelanim.cpp
 	model/modelanim.h

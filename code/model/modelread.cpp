@@ -26,6 +26,7 @@
 #include "freespace.h"		// For flFrameTime
 #include "gamesnd/gamesnd.h"
 #include "globalincs/linklist.h"
+#include "graphics/opengl/gropengl.h"
 #include "io/key.h"
 #include "io/timer.h"
 #include "math/fvi.h"

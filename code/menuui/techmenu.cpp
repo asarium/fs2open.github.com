@@ -16,7 +16,7 @@
 #include "gamesequence/gamesequence.h"
 #include "gamesnd/gamesnd.h"
 #include "globalincs/alphacolors.h"
-#include "graphics/font.h"
+#include "graphics/shadows.h"
 #include "io/key.h"
 #include "io/mouse.h"
 #include "lighting/lighting.h"
