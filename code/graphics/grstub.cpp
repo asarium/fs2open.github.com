@@ -23,12 +23,7 @@ uint gr_stub_lock()
 	return 1;
 }
 
-int gr_stub_create_vertex_buffer(bool static_buffer)
-{
-	return -1;
-}
-
-int gr_stub_create_index_buffer(bool static_buffer)
+int gr_stub_create_buffer(BufferType type, BufferUsage usage)
 {
 	return -1;
 }
@@ -602,8 +597,7 @@ bool gr_stub_init()
 	gr_screen.gf_set_fill_mode			= gr_set_fill_mode_stub;
 	gr_screen.gf_set_texture_panning	= gr_stub_set_texture_panning;
 
-	gr_screen.gf_create_vertex_buffer	= gr_stub_create_vertex_buffer;
-	gr_screen.gf_create_index_buffer	= gr_stub_create_index_buffer;
+	gr_screen.gf_create_buffer	= gr_stub_create_buffer;
 	gr_screen.gf_delete_buffer		= gr_stub_delete_buffer;
 
 	gr_screen.gf_update_transform_buffer	= gr_stub_update_transform_buffer;

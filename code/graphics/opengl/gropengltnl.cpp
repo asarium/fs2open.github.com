@@ -214,14 +214,41 @@ void gr_opengl_delete_buffer(int handle)
 	glDeleteBuffers(1, &buffer_obj.buffer_id);
 }
 
-int gr_opengl_create_vertex_buffer(bool static_buffer)
+int gr_opengl_create_buffer(BufferType type, BufferUsage usage)
 {
-	return opengl_create_buffer_object(GL_ARRAY_BUFFER, static_buffer ? GL_STATIC_DRAW : GL_STREAM_DRAW);
-}
+	GLenum gl_type;
+	switch(type) {
+		case BufferType::Vertex:
+			gl_type = GL_ARRAY_BUFFER;
+			break;
+		case BufferType::Index:
+			gl_type = GL_ELEMENT_ARRAY_BUFFER;
+			break;
+		case BufferType::Uniform:
+			gl_type = GL_UNIFORM_BUFFER;
+			break;
+		default:
+			Assertion(false, "Unhandled buffer type!");
+			return -1;
+	}
 
-int gr_opengl_create_index_buffer(bool static_buffer)
-{
-	return opengl_create_buffer_object(GL_ELEMENT_ARRAY_BUFFER, static_buffer ? GL_STATIC_DRAW : GL_STREAM_DRAW);
+	GLenum gl_usage;
+	switch (usage) {
+		case BufferUsage::Static:
+			gl_usage = GL_STATIC_DRAW;
+			break;
+		case BufferUsage::Dynamic:
+			gl_usage = GL_DYNAMIC_DRAW;
+			break;
+		case BufferUsage::Streaming:
+			gl_usage = GL_STREAM_DRAW;
+			break;
+		default:
+			Assertion(false, "Unhandled buffer usage value!");
+			return -1;
+	}
+
+	return opengl_create_buffer_object(gl_type, gl_usage);
 }
 
 uint opengl_add_to_immediate_buffer(uint size, void *data)

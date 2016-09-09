@@ -2011,8 +2011,7 @@ void model_interp_submit_buffers(indexed_vertex_source *vert_src)
 		return;
 	}
 
-	bool static_buffer = true;
-	vert_src->Vbuffer_handle = gr_create_vertex_buffer(static_buffer);
+	vert_src->Vbuffer_handle = gr_create_buffer(BufferType::Vertex, BufferUsage::Static);
 
 	if ( vert_src->Vbuffer_handle > -1 && vert_src->Vertex_list != NULL ) {
 		gr_update_buffer_data(vert_src->Vbuffer_handle, vert_src->Vertex_list_size, vert_src->Vertex_list);
@@ -2021,7 +2020,7 @@ void model_interp_submit_buffers(indexed_vertex_source *vert_src)
 		vert_src->Vertex_list = NULL;
 	}
 
-	vert_src->Ibuffer_handle = gr_create_index_buffer(static_buffer);
+	vert_src->Ibuffer_handle = gr_create_buffer(BufferType::Index, BufferUsage::Static);
 
 	if ( vert_src->Ibuffer_handle > -1 && vert_src->Index_list != NULL ) {
 		gr_update_buffer_data(vert_src->Ibuffer_handle, vert_src->Index_list_size, vert_src->Index_list);
@@ -2690,7 +2689,7 @@ void model_interp_process_shield_mesh(polymodel * pm)
 	}
 	
 	if ( buffer.size() > 0 ) {
-		pm->shield.buffer_id = gr_create_vertex_buffer(true);
+		pm->shield.buffer_id = gr_create_buffer(BufferType::Vertex, BufferUsage::Static);
 		pm->shield.buffer_n_verts = n_verts;
 		gr_update_buffer_data(pm->shield.buffer_id, buffer.size() * sizeof(vec3d), &buffer[0]);
 

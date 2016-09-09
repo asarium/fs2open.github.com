@@ -282,7 +282,7 @@ static void OGG_video_init(theora_info *tinfo)
 	if (gr_screen.mode == GR_OPENGL) {
 		opengl_set_texture_target(GL_TEXTURE_2D);
 
-		buffer_handle = gr_create_vertex_buffer(true);
+		buffer_handle = gr_create_buffer(BufferType::Vertex, BufferUsage::Static);
 
 		glGenTextures(1, &ytex);
 		glGenTextures(1, &utex);

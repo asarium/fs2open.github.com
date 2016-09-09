@@ -395,7 +395,7 @@ int mve_video_createbuf(ubyte minor, ubyte *data)
 			scale_by = (float)gr_screen.center_w / (float)g_width;
 		}
 
-		buffer_handle = gr_create_vertex_buffer(true);
+		buffer_handle = gr_create_buffer(BufferType::Vertex, BufferUsage::Static);
 
 		// don't bother setting anything if we aren't going to need it
 		if (!Cmdline_noscalevid && (scale_by != 1.0f)) {

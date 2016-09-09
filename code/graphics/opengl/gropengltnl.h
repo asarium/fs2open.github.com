@@ -59,8 +59,7 @@ void opengl_create_view_matrix(matrix4 *out, const vec3d *pos, const matrix *ori
 void gr_opengl_start_clip_plane();
 void gr_opengl_end_clip_plane();
 
-int gr_opengl_create_vertex_buffer(bool static_buffer);
-int gr_opengl_create_index_buffer(bool static_buffer);
+int gr_opengl_create_buffer(BufferType type, BufferUsage usage);
 
 void opengl_bind_buffer_object(int handle);
 void gr_opengl_update_buffer_data(int handle, size_t size, void* data);

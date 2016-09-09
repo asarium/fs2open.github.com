@@ -599,6 +599,18 @@ enum class UniformBlock {
 	NUM_VALUES
 };
 
+enum class BufferType {
+	Vertex,
+	Index,
+	Uniform
+};
+
+enum class BufferUsage {
+	Static,
+	Dynamic,
+	Streaming
+};
+
 typedef struct screen {
 	uint	signature;			// changes when mode or palette or width or height changes
 	int	max_w, max_h;		// Width and height
@@ -768,8 +780,7 @@ typedef struct screen {
 
 	void (*gf_set_texture_addressing)(int);
 
-	int (*gf_create_vertex_buffer)(bool static_buffer);
-	int (*gf_create_index_buffer)(bool static_buffer);
+	int (*gf_create_buffer)(BufferType type, BufferUsage usage);
 	void (*gf_delete_buffer)(int handle);
 
 	void (*gf_update_buffer_data)(int handle, size_t size, void* data);
@@ -1078,14 +1089,9 @@ __inline int gr_bm_set_render_target(int n, int face = -1)
 
 #define gr_set_texture_addressing					 GR_CALL(*gr_screen.gf_set_texture_addressing)            
 
-__inline int gr_create_vertex_buffer(bool static_buffer = false)
+inline int gr_create_buffer(BufferType type, BufferUsage usage)
 {
-	return (*gr_screen.gf_create_vertex_buffer)(static_buffer);
-}
-
-__inline int gr_create_index_buffer(bool static_buffer = false)
-{
-	return (*gr_screen.gf_create_index_buffer)(static_buffer);
+	return (*gr_screen.gf_create_buffer)(type, usage);
 }
 
 #define gr_delete_buffer				GR_CALL(*gr_screen.gf_delete_buffer)

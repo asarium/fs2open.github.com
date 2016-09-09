@@ -74,7 +74,7 @@ void batching_init_buffer(primitive_batch_buffer *buffer, primitive_type prim_ty
 {
 	batching_setup_vertex_layout(&buffer->layout, vertex_mask);
 
-	buffer->buffer_num = gr_create_vertex_buffer();
+	buffer->buffer_num = gr_create_buffer(BufferType::Vertex, BufferUsage::Streaming);
 	buffer->buffer_ptr = NULL;
 	buffer->buffer_size = 0;
 	buffer->prim_type = prim_type;
