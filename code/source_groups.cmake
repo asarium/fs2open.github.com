@@ -291,6 +291,7 @@ set (file_root_graphics
 	graphics/shadows.h
 	graphics/material.cpp
 	graphics/material.h
+	graphics/uniform_structs.h
 )
 
 # Graphics -> OpenGLGr files

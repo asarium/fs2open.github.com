@@ -98,6 +98,13 @@ struct opengl_vertex_attrib_unit
 	bool used_for_draw;
 };
 
+struct opengl_buffer_range_binding
+{
+	GLuint buffer;
+	GLintptr offset;
+	GLsizei size;
+};
+
 class opengl_array_state
 {
 	private:
@@ -139,14 +146,11 @@ class opengl_array_state
 		GLuint texture_array_buffer;
 		GLuint uniform_buffer;
 
-		GLuint uniform_buffer_index_bindings[MAX_UNIFORM_BUFFERS];
+		SCP_vector<opengl_buffer_range_binding> uniform_buffer_index_bindings;
 
 		GLuint vertex_array_object;
 	public:
 		opengl_array_state(): active_client_texture_unit(0), client_texture_units(NULL) {
-			for ( int i = 0; i < MAX_UNIFORM_BUFFERS; ++i ) {
-				uniform_buffer_index_bindings[i] = 0;
-			}
 		}
 		~opengl_array_state();
 
@@ -181,7 +185,8 @@ class opengl_array_state
 		void BindElementBuffer(GLuint id);
 		void BindTextureBuffer(GLuint id);
 		void BindUniformBuffer(GLuint id);
-		void BindUniformBufferBindingIndex(GLuint id, GLuint index);
+
+		void BindUniformBufferRange(GLuint id, GLuint index, GLintptr offset, GLsizei size);
 };
 
 class opengl_light_state

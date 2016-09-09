@@ -84,4 +84,10 @@ void opengl_tnl_set_material_particle(particle_material * material_info);
 
 void opengl_tnl_set_model_material(model_material *material_info);
 
+void gr_opengl_bind_uniform_buffer(UniformBlock block, int buffer, size_t offset, size_t size);
+
+GLuint opengl_get_uniform_block_index(UniformBlock block);
+const char* opengl_get_uniform_block_name(UniformBlock block);
+
+
 #endif //_GROPENGLTNL_H

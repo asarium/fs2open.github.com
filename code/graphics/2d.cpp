@@ -25,6 +25,7 @@
 #include "graphics/font.h"
 #include "graphics/grbatch.h"
 #include "graphics/grinternal.h"
+#include "graphics/uniform_structs.h"
 #include "graphics/opengl/gropengl.h"
 #include "graphics/opengl/gropengldraw.h"
 #include "graphics/grstub.h"

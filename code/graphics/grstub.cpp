@@ -497,6 +497,9 @@ void gr_stub_push_debug_group(const char*){
 void gr_stub_pop_debug_group(){
 }
 
+void gr_stub_bind_uniform_buffer(UniformBlock block, int buffer, size_t offset, size_t size) {
+}
+
 bool gr_stub_init() 
 {
 	if (gr_screen.res != GR_640) {
@@ -674,6 +677,8 @@ bool gr_stub_init()
 
 	gr_screen.gf_push_debug_group = gr_stub_push_debug_group;
 	gr_screen.gf_pop_debug_group = gr_stub_pop_debug_group;
+
+	gr_screen.gf_bind_uniform_buffer = gr_stub_bind_uniform_buffer;
 
 	return true;
 }

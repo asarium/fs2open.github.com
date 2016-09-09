@@ -1305,3 +1305,37 @@ void opengl_tnl_set_material_distortion(distortion_material* material_info)
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_depth_texture);
 }
+
+void gr_opengl_bind_uniform_buffer(UniformBlock block, int buffer, size_t offset, size_t size) {
+	GR_DEBUG_SCOPE("Binding uniform range");
+
+	Assert(buffer >= 0);
+	Assert((size_t)buffer < GL_buffer_objects.size());
+
+	auto& buffer_obj = GL_buffer_objects[buffer];
+
+	Assertion(buffer_obj.type == GL_UNIFORM_BUFFER, "Buffer handle must be a uniform buffer!");
+
+	// Bind the buffer range
+	GL_state.Array.BindUniformBufferRange(buffer_obj.buffer_id, opengl_get_uniform_block_index(block), offset,
+										  (GLsizei) size);
+}
+
+GLuint opengl_get_uniform_block_index(UniformBlock block) {
+	switch(block) {
+		case UniformBlock::ViewMatrices:
+			return 0;
+		default:
+			Assertion(false, "Unhandled enum value!");
+			return 0;
+	}
+}
+const char* opengl_get_uniform_block_name(UniformBlock block) {
+	switch(block) {
+		case UniformBlock::ViewMatrices:
+			return "ViewMatrices";
+		default:
+			Assertion(false, "Unhandled enum value!");
+			return nullptr;
+	}
+}

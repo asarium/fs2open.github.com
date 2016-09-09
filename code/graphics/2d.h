@@ -593,6 +593,12 @@ struct light;
 #define GR_FOGMODE_NONE				0		// set this to turn off fog
 #define GR_FOGMODE_FOG				1		// linear fog
 
+enum class UniformBlock {
+	ViewMatrices = 0,
+
+	NUM_VALUES
+};
+
 typedef struct screen {
 	uint	signature;			// changes when mode or palette or width or height changes
 	int	max_w, max_h;		// Width and height
@@ -844,6 +850,8 @@ typedef struct screen {
 
 	void (*gf_push_debug_group)(const char* name);
 	void (*gf_pop_debug_group)();
+
+	void (*gf_bind_uniform_buffer)(UniformBlock block, int buffer, size_t offset, size_t size);
 } screen;
 
 // handy macro
@@ -1186,6 +1194,11 @@ inline void gr_push_debug_group(const char* name)
 inline void gr_pop_debug_group()
 {
 	(*gr_screen.gf_pop_debug_group)();
+}
+
+inline void gr_bind_uniform_buffer(UniformBlock block, int buffer, size_t offset, size_t size)
+{
+	(*gr_screen.gf_bind_uniform_buffer)(block, buffer, offset, size);
 }
 
 // color functions

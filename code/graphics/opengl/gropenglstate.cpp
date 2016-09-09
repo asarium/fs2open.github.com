@@ -566,6 +566,15 @@ void opengl_array_state::init(GLuint n_units)
 	element_array_buffer = 0;
 	texture_array_buffer = 0;
 	uniform_buffer = 0;
+
+	GLint max_uniform_bindings;
+	glGetIntegerv(GL_MAX_UNIFORM_BUFFER_BINDINGS, &max_uniform_bindings);
+
+	opengl_buffer_range_binding def_val;
+	def_val.offset = -1;
+	def_val.size = 0;
+	def_val.buffer = 0;
+	uniform_buffer_index_bindings.resize((size_t) max_uniform_bindings, def_val);
 }
 
 void opengl_array_state::SetActiveClientUnit(GLuint id)
@@ -899,15 +908,21 @@ void opengl_array_state::BindTextureBuffer(GLuint id)
 	texture_array_buffer = id;
 }
 
-void opengl_array_state::BindUniformBufferBindingIndex(GLuint id, GLuint index)
+void opengl_array_state::BindUniformBufferRange(GLuint id, GLuint index, GLintptr offset, GLsizei size)
 {
-	if ( uniform_buffer_index_bindings[index] == id ) {
+	Assertion(index < uniform_buffer_index_bindings.size(), "Uniform buffer index is out of range!");
+
+	if (uniform_buffer_index_bindings[index].buffer == id &&
+		uniform_buffer_index_bindings[index].offset == offset &&
+		uniform_buffer_index_bindings[index].size == size) {
 		return;
 	}
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, index, id);
+	glBindBufferRange(GL_UNIFORM_BUFFER, index, id, offset, size);
 
-	uniform_buffer_index_bindings[index] = id;
+	uniform_buffer_index_bindings[index].buffer = id;
+	uniform_buffer_index_bindings[index].offset = offset;
+	uniform_buffer_index_bindings[index].size = size;
 }
 
 void opengl_array_state::BindUniformBuffer(GLuint id)
