@@ -309,35 +309,14 @@ void model_batch_buffer::set_num_models(int n_models)
 	}
 }
 
-void model_batch_buffer::set_model_transform(matrix4 &transform, int model_id)
+void model_batch_buffer::set_model_transform(const matrix4 &transform, int model_id)
 {
 	Submodel_matrices[Current_offset + model_id] = transform;
-}
-
-void model_batch_buffer::add_matrix(matrix4 &mat)
-{
-	Submodel_matrices.push_back(mat);
 }
 
 size_t model_batch_buffer::get_buffer_offset()
 {
 	return Current_offset;
-}
-
-void model_batch_buffer::allocate_memory()
-{
-	auto size = Submodel_matrices.size() * sizeof(matrix4);
-
-	if ( Mem_alloc == NULL || Mem_alloc_size < size ) {
-		if ( Mem_alloc != NULL ) {
-			vm_free(Mem_alloc);
-		}
-
-		Mem_alloc = vm_malloc(size);
-	}
-
-	Mem_alloc_size = size;
-	memcpy(Mem_alloc, &Submodel_matrices[0], size);
 }
 
 void model_batch_buffer::submit_buffer_data()
@@ -346,9 +325,7 @@ void model_batch_buffer::submit_buffer_data()
 		return;
 	}
 
-	allocate_memory();
-
-	gr_update_transform_buffer(Mem_alloc, Mem_alloc_size);
+	gr_update_transform_buffer(Submodel_matrices.data(), Submodel_matrices.size() * sizeof(matrix4));
 }
 
 draw_list::draw_list()

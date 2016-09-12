@@ -1251,6 +1251,8 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_push_debug_group = gr_opengl_push_debug_group;
 	gr_screen.gf_pop_debug_group = gr_opengl_pop_debug_group;
 
+	gr_screen.gf_bind_uniform_buffer = gr_opengl_bind_uniform_buffer;
+
 	// NOTE: All function pointers here should have a Cmdline_nohtl check at the top
 	//       if they shouldn't be run in non-HTL mode, Don't keep separate entries.
 	// *****************************************************************************

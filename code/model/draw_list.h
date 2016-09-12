@@ -161,24 +161,18 @@ struct outline_draw
 class model_batch_buffer
 {
 	SCP_vector<matrix4> Submodel_matrices;
-	void* Mem_alloc;
-	size_t Mem_alloc_size;
 
 	size_t Current_offset;
-
-	void allocate_memory();
  public:
-	model_batch_buffer() : Mem_alloc(NULL), Mem_alloc_size(0), Current_offset(0) {};
+	model_batch_buffer() : Current_offset(0) {};
 
 	void reset();
 
 	size_t get_buffer_offset();
 	void set_num_models(int n_models);
-	void set_model_transform(matrix4 &transform, int model_id);
+	void set_model_transform(const matrix4 &transform, int model_id);
 
 	void submit_buffer_data();
-
-	void add_matrix(matrix4 &mat);
 };
 
 class draw_list
