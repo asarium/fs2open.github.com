@@ -75,6 +75,7 @@ typedef struct vec4 {
 		float a1d[4];
 	};
 } vec4;
+static_assert(sizeof(vec4) == 4 * sizeof(float), "Size of vec4 must be four times the size of a float!");
 
 // sometimes, you just need some integers
 typedef struct ivec3 {
@@ -92,6 +93,7 @@ typedef struct vec3d {
 		float a1d[3];
 	};
 } vec3d;
+static_assert(sizeof(vec3d) == 3 * sizeof(float), "Size of vec3d must be three times the size of a float!");
 
 /** Compares two vec3ds */
 inline bool operator==(const vec3d &self, const vec3d &other)
@@ -119,6 +121,7 @@ typedef struct matrix {
 		float a1d[9];
 	};
 } matrix;
+static_assert(sizeof(matrix) == 3 * 3 * sizeof(float), "Size of matrix must be 3*3 times the size of a float!");
 
 typedef struct matrix4 {
 	union {
@@ -129,6 +132,7 @@ typedef struct matrix4 {
 		float a1d[16];
 	};
 } matrix4;
+static_assert(sizeof(matrix4) == 4 * 4 * sizeof(float), "Size of matrix must be 4*4 times the size of a float!");
 
 typedef struct uv_pair {
 	float u,v;
