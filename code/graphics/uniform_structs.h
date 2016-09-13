@@ -18,6 +18,26 @@ struct ViewMatrices {
 	matrix4 textureMatrix;
 };
 
+struct UniformLight {
+	vec4 lightPosition;
+	vec3d lightDirection;
+	int lightType;
+	vec3d lightDiffuseColor;
+	float lightAttenuation;
+	vec3d lightSpecColor;
+	float padding;
+};
+
+struct UniformLightData {
+	UniformLight lights[MAX_LIGHTS];
+	vec3d ambientFactor;
+	int n_lights;
+	vec3d diffuseFactor;
+	float defaultGloss;
+	vec3d emissionFactor;
+	float padding;
+};
+
 }
 
 #endif //_UNIFORM_STRUCTS_H
