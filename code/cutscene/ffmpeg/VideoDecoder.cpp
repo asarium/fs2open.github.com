@@ -87,7 +87,7 @@ void VideoDecoder::convertAndPushPicture(const AVFrame* frame) {
 	}
 
 	videoFramePtr->id = ++m_frameId;
-	videoFramePtr->frameTime = getFrameTime(frame->pkt_pts, m_status->videoStream->time_base);
+	videoFramePtr->frameTime = getFrameTime(av_frame_get_best_effort_timestamp(frame), m_status->videoStream->time_base);
 	videoFramePtr->frame = yuvFrame;
 
 	videoFramePtr->ySize.height = static_cast<size_t>(m_status->videoCodecPars.height);
