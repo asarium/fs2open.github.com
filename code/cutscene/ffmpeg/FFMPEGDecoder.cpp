@@ -22,8 +22,20 @@ const char* CHECKED_EXTENSIONS[] = {
 	"ogg"
 };
 
-double getFrameRate(AVCodecContext* codecCtx) {
-	return 1.0 / av_q2d(codecCtx->time_base) / FFMAX(codecCtx->ticks_per_frame, 1);
+double getFrameRate(AVStream* stream, AVCodecContext* codecCtx) {
+	auto fps = av_q2d(av_stream_get_r_frame_rate(stream));
+
+	if (fps < 0.000001)
+	{
+		fps = av_q2d(stream->avg_frame_rate);
+	}
+
+	if (fps < 0.000001)
+	{
+		fps = 1.0 / av_q2d(codecCtx->time_base);
+	}
+
+	return fps;
 }
 
 CodecContextParameters getCodecParameters(AVStream* stream) {
@@ -231,7 +243,7 @@ bool FFMPEGDecoder::initialize(const SCP_string& fileName) {
 	}
 
 	// Buffer ~ 2 seconds of video and audio
-	initializeQueues(static_cast<size_t>(ceil(getFrameRate(status->videoCodecCtx))) * 2);
+	initializeQueues(static_cast<size_t>(ceil(getFrameRate(status->videoStream, status->videoCodecCtx))) * 2);
 
 	// We're done, now just put the pointer into this
 	std::swap(m_input, input);
@@ -244,7 +256,7 @@ MovieProperties FFMPEGDecoder::getProperties() {
 	props.size.width = static_cast<size_t>(m_status->videoCodecPars.width);
 	props.size.height = static_cast<size_t>(m_status->videoCodecPars.height);
 
-	props.fps = static_cast<float>(getFrameRate(m_status->videoCodecCtx));
+	props.fps = static_cast<float>(getFrameRate(m_status->videoStream, m_status->videoCodecCtx));
 
 	return props;
 }
