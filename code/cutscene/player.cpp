@@ -393,6 +393,8 @@ void Player::decoderThread() {
 }
 
 std::unique_ptr<Player> Player::newPlayer(const SCP_string& name) {
+	mprintf(("Creating player for movie '%s'.\n", name.c_str()));
+
 	auto decoder = findDecoder(name);
 
 	if (decoder == nullptr) {

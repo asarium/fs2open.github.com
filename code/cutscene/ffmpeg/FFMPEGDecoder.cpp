@@ -155,6 +155,9 @@ std::unique_ptr<DecoderStatus> initializeStatus(std::unique_ptr<InputStream>& st
 		return nullptr;
 	}
 
+	mprintf(("FFmpeg: Using video codec %s (%s).\n", status->videoCodec->long_name ? status->videoCodec->long_name : "<Unknown>",
+		status->videoCodec->name ? status->videoCodec->name : "<Unknown>"));
+
 	// Now initialize audio, if this fails it's not a fatal error
 	if (audioStream >= 0) {
 		status->audioCodecPars = getCodecParameters(status->audioStream);
@@ -179,6 +182,9 @@ std::unique_ptr<DecoderStatus> initializeStatus(std::unique_ptr<InputStream>& st
 			av_strerror(err, errorStr, sizeof(errorStr));
 			mprintf(("FFMPEG: Failed to open audio codec! Error: %s\n", errorStr));
 		}
+
+		mprintf(("FFmpeg: Using audio codec %s (%s).\n", status->audioCodec->long_name ? status->audioCodec->long_name : "<Unknown>",
+			status->audioCodec->name ? status->audioCodec->name : "<Unknown>"));
 	}
 
 	return status;
