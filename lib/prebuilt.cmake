@@ -46,11 +46,14 @@ function(get_prebuilt_path OUT_VAR)
         return()
     endif()
     
-    # Remove previous files
-    file(REMOVE_RECURSE "${PREBUILT_LIB_DIR}")
+    if (IS_DIRECTORY "${PREBUILT_LIB_DIR}")
+        # Remove previous files
+        file(REMOVE_RECURSE "${PREBUILT_LIB_DIR}")
+    else()
+        # Make sure the directory exists
+        file(MAKE_DIRECTORY "${PREBUILT_LIB_DIR}")
+    endif()
     
-    # Make sure the directory exists
-    file(MAKE_DIRECTORY "${PREBUILT_LIB_DIR}")
     
     # Extract the downloaded file
     message(STATUS "Extracting library package...")
