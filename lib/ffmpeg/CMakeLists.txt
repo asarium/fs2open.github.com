@@ -68,7 +68,7 @@ ELSE(WIN32)
             set(USING_PREBUILT_LIBS TRUE)
         endif()
     endif()
-    message("${PREBUILT_PATH}")
+    
     if (USING_PREBUILT_LIBS)
         message(STATUS "Using pre-built LGPL FFmpeg libraries.")
     else()
@@ -93,14 +93,10 @@ ELSE(WIN32)
                 NO_DEFAULT_PATH)
                 
             file(GLOB ${name}_LIBS "${FFMPEG_PATH}/lib/lib${name}*")
-            message("${${name}_LIBS}")
                 
             get_filename_component(FULL_LIB_PATH "${${name}_LOCATION}" REALPATH)
             
             ADD_IMPORTED_LIB("${name}" "${FFMPEG_PATH}/include" "${FULL_LIB_PATH}")
-            
-            message("${FFMPEG_PATH}/include")
-            message("${${name}_LOCATION} <> ${FULL_LIB_PATH}")
 
             add_target_copy_files("${${name}_LIBS}")
         endif()
