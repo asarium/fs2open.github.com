@@ -70,7 +70,7 @@ MACRO(COPY_FILES_TO_TARGET _target)
 	FOREACH(file IN LISTS TARGET_COPY_FILES)
 		ADD_CUSTOM_COMMAND(
 			TARGET ${_target} POST_BUILD
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${file}"  "$<TARGET_FILE_DIR:${_target}>"
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${file}"  "$<TARGET_FILE_DIR:${_target}>/${LIBRAY_DESTINATION}"
 			COMMENT "copying '${file}'..."
 		)
 	ENDFOREACH(file)

@@ -16,4 +16,7 @@ SET(CMAKE_SKIP_RPATH FALSE)
 SET(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
 SET(CMAKE_INSTALL_RPATH @loader_path/../Frameworks/)
 
+# Set the path where library dependencies are copied to
+SET(LIBRAY_DESTINATION "../Frameworks")
+
 set(PLATFORM_MAC TRUE CACHE INTERNAL "" FORCE)
