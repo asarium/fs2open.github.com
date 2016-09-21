@@ -68,7 +68,7 @@ ELSE(WIN32)
             set(USING_PREBUILT_LIBS TRUE)
         endif()
     endif()
-    
+    message("${PREBUILT_PATH}")
     if (USING_PREBUILT_LIBS)
         message(STATUS "Using pre-built LGPL FFmpeg libraries.")
     else()
@@ -79,7 +79,7 @@ ELSE(WIN32)
     # so we can distribute that in releases
     # The ffmpeg libs specify a SONAME that is different from the name of the file
     # so we also need to copy and install that symlink in addition to the actual library
-    macro(add_av_lib name libname)
+    macro(add_av_lib name)
         if (NOT USING_PREBUILT_LIBS)
             PKG_SEARCH_MODULE(${name} REQUIRED "lib${name}")
 
@@ -88,19 +88,29 @@ ELSE(WIN32)
             ADD_IMPORTED_LIB("${name}" "${${name}_INCLUDE_DIRS}" "${${name}_LIB}" SHARED)
         else()
             # Use our libraries
-            ADD_IMPORTED_LIB("${name}" "${FFMPEG_PATH}/include" "${FFMPEG_PATH}/lib/${libname}")
+            find_library(${name}_LOCATION ${name}
+                PATHS "${FFMPEG_PATH}/lib"
+                NO_DEFAULT_PATH)
+                
+            file(GLOB ${name}_LIBS "${FFMPEG_PATH}/lib/lib${name}*")
+            message("${${name}_LIBS}")
+                
+            get_filename_component(FULL_LIB_PATH "${${name}_LOCATION}" REALPATH)
             
-            get_filename_component(FULL_LIB_PATH "${FFMPEG_PATH}/lib/${libname}" REALPATH)
+            ADD_IMPORTED_LIB("${name}" "${FFMPEG_PATH}/include" "${FULL_LIB_PATH}")
             
-            add_target_copy_files("${FFMPEG_PATH}/lib/${libname}" "${FULL_LIB_PATH}")
+            message("${FFMPEG_PATH}/include")
+            message("${${name}_LOCATION} <> ${FULL_LIB_PATH}")
+
+            add_target_copy_files("${${name}_LIBS}")
         endif()
     endmacro(add_av_lib)
 
-    add_av_lib(avcodec libavcodec.so.57)
-    add_av_lib(avformat libavformat.so.57)
-    add_av_lib(avutil libavutil.so.55)
-    add_av_lib(swresample libswresample.so.2)
-    add_av_lib(swscale libswscale.so.4)
+    add_av_lib(avcodec)
+    add_av_lib(avformat)
+    add_av_lib(avutil)
+    add_av_lib(swresample)
+    add_av_lib(swscale)
     
     add_library(ffmpeg INTERFACE)
     target_compile_definitions(ffmpeg INTERFACE __STDC_CONSTANT_MACROS)
