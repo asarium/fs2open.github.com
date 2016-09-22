@@ -1361,7 +1361,7 @@ void parse_menumusic()
 
 	// Goober5000 - check for existence of file
 	// taylor - check for all file types
-	// chief1983 - use type list defined in audiostr.h
+	// chief1983 - use type list defined in ffmpeg.h
 	if ( cf_exists_full_ext(Spooled_music[idx].filename, CF_TYPE_MUSIC, NUM_AUDIO_EXT, audio_ext_list) )
 		Spooled_music[idx].flags |= SMF_VALID;
 

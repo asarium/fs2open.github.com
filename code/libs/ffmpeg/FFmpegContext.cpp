@@ -100,7 +100,7 @@ std::unique_ptr<FFmpegContext> FFmpegContext::createContext(CFILE* mediaFile) {
 	if (probe_ret < 0) {
 		char errorStr[1024];
 		av_strerror(probe_ret, errorStr, 1024);
-		auto fmt = boost::format("Could not open movie file! Error: %s") % errorStr;
+		auto fmt = boost::format("Could not open media file! Error: %s") % errorStr;
 
 		throw FFmpegException(fmt.str());
 	}
@@ -111,7 +111,7 @@ std::unique_ptr<FFmpegContext> FFmpegContext::createContext(CFILE* mediaFile) {
 	if (ret < 0) {
 		char errorStr[1024];
 		av_strerror(ret, errorStr, 1024);
-		auto fmt = boost::format("Could not open movie file! Error: %s") % errorStr;
+		auto fmt = boost::format("Could not open media file! Error: %s") % errorStr;
 
 		throw FFmpegException(fmt.str());
 	}

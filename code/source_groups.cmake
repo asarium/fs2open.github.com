@@ -967,6 +967,14 @@ set (file_root_sound
 	sound/voicerec.h
 )
 
+# Sound -> ffmpeg files
+set (file_root_sound_ffmpeg
+	sound/ffmpeg/FFmpegAudioReader.cpp
+	sound/ffmpeg/FFmpegAudioReader.h
+	sound/ffmpeg/WaveFile.cpp
+	sound/ffmpeg/WaveFile.h
+)
+
 # Sound -> ogg files
 set (file_root_sound_ogg
 	sound/ogg/ogg.cpp
@@ -1145,6 +1153,7 @@ source_group("Radar"                              FILES ${file_root_radar})
 source_group("Render"                             FILES ${file_root_render})
 source_group("Ship"                               FILES ${file_root_ship})
 source_group("Sound"                              FILES ${file_root_sound})
+source_group("Sound\\FFmpeg"                      FILES ${file_root_sound_ffmpeg})
 source_group("Sound\\ogg"                         FILES ${file_root_sound_ogg})
 source_group("Species_Defs"                       FILES ${file_root_species_defs})
 source_group("Starfield"                          FILES ${file_root_starfield})
@@ -1235,6 +1244,7 @@ set (file_root
 	${file_root_render}
 	${file_root_ship}
 	${file_root_sound}
+	${file_root_sound_ffmpeg}
 	${file_root_sound_ogg}
 	${file_root_species_defs}
 	${file_root_starfield}
