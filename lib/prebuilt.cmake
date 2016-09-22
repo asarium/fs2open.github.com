@@ -49,6 +49,7 @@ function(get_prebuilt_path OUT_VAR)
     if (IS_DIRECTORY "${PREBUILT_LIB_DIR}")
         # Remove previous files
         file(REMOVE_RECURSE "${PREBUILT_LIB_DIR}")
+        file(MAKE_DIRECTORY "${PREBUILT_LIB_DIR}")
     else()
         # Make sure the directory exists
         file(MAKE_DIRECTORY "${PREBUILT_LIB_DIR}")
@@ -68,6 +69,8 @@ function(get_prebuilt_path OUT_VAR)
         message(FATAL_ERROR "Extracing prebuilt libraries failed! Error message: ${ERROR_TEXT}")
         return()
     endif()
+    
+    file(REMOVE "${DOWNLOAD_FILE}")
     
     # We are done now. Set the cache variables and return the result
     set(DOWNLOADED_PREBUILT_VERSION "${PREBUILT_VERSION_NAME}" CACHE INTERNAL "")
