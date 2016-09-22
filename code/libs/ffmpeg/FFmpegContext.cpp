@@ -46,6 +46,7 @@ int64_t cfileSeek(void* ptr, int64_t offset, int whence) {
 
 namespace libs {
 namespace ffmpeg {
+
 FFmpegContext::FFmpegContext(CFILE* inFile) : m_ctx(nullptr), m_file(inFile) {
 	Assertion(inFile != nullptr, "Invalid file pointer passed!");
 }
@@ -69,14 +70,10 @@ FFmpegContext::~FFmpegContext() {
 	}
 }
 
-std::unique_ptr<FFmpegContext> FFmpegContext::createContext(const SCP_string& path, int dir_type) {
-	CFILE* file = cfopen(path.c_str(), "rb", CFILE_NORMAL, dir_type);
+std::unique_ptr<FFmpegContext> FFmpegContext::createContext(CFILE* mediaFile) {
+	Assertion(mediaFile != nullptr, "File pointer must be valid!");
 
-	if (!file) {
-		throw FFmpegException("Failed to open file!");
-	}
-
-	std::unique_ptr<FFmpegContext> instance(new FFmpegContext(file));
+	std::unique_ptr<FFmpegContext> instance(new FFmpegContext(mediaFile));
 
 	instance->m_ctx = avformat_alloc_context();
 
@@ -130,5 +127,16 @@ std::unique_ptr<FFmpegContext> FFmpegContext::createContext(const SCP_string& pa
 
 	return instance;
 }
+
+std::unique_ptr<FFmpegContext> FFmpegContext::createContext(const SCP_string& path, int dir_type) {
+	CFILE* file = cfopen(path.c_str(), "rb", CFILE_NORMAL, dir_type);
+
+	if (!file) {
+		throw FFmpegException("Failed to open file!");
+	}
+
+	return createContext(file);
+}
+
 }
 }

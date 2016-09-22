@@ -31,6 +31,8 @@ class FFmpegContext {
 
 	inline AVFormatContext* ctx() { return m_ctx; }
 
+	static std::unique_ptr<FFmpegContext> createContext(CFILE* mediaFile);
+
 	static std::unique_ptr<FFmpegContext> createContext(const SCP_string& path, int dir_type);
 };
 
