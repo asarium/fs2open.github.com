@@ -32,14 +32,16 @@ void check_version(const char* libname, uint32_t current, uint32_t compiled)
 
 	if (current_major != compiled_major)
 	{
-		Error(LOCATION, "The major version of the used %s library is not the same as the one this executable was compiled with!\n"
-			"Current major version is %" PRIu32 " but this executable was compiled with major version %" PRIu32 "!", libname, current_major, compiled_major);
+		Error(LOCATION, "The major version of the %s library is not the same as the one this executable was compiled with!\n"
+			"Current major version is %" PRIu32 " but this executable was compiled with major version %" PRIu32 ".\n"
+			"This may be caused by using outdated DLLs, if you downloaded these builds then try reextracing the zip file.", libname, current_major, compiled_major);
 	}
 
-	if (current_minor != compiled_minor)
+	if (current_minor < compiled_minor)
 	{
-		Error(LOCATION, "The minor version of the used %s library is not the same as the one this executable was compiled with!\n"
-			"Current minor version is %" PRIu32 " but this executable was compiled with minor version %" PRIu32 "!", libname, current_minor, compiled_minor);
+		Error(LOCATION, "The minor version of the %s library is not the same as the one this executable was compiled with!\n"
+			"Current minor version is %" PRIu32 " but this executable was compiled with minor version %" PRIu32 ".\n"
+			"This may be caused by using outdated DLLs, if you downloaded these builds then try reextracing the zip file.", libname, current_minor, compiled_minor);
 	}
 }
 }
