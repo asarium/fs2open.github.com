@@ -10,8 +10,6 @@
 #include <mmsystem.h>
 #endif
 
-#define NEED_STRHDL		// for STRHTL struct in audiostr.h
-
 #include "cfile/cfile.h"
 #include "globalincs/pstypes.h"
 #include "io/timer.h"
