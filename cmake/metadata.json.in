@@ -1,0 +1,12 @@
+{
+    "version": 1,
+    "major": @FSO_VERSION_MAJOR@,
+    "minor": @FSO_VERSION_MINOR@,
+    "build": @FSO_VERSION_BUILD@,
+    "revision": @FSO_VERSION_REVISION@,
+    "revision_str": "@FSO_VERSION_REVISION_STR@",
+    "64-bit": @IS_64BIT_BOOL@,
+    "simd": "@FSO_INSTRUCTION_SET@",
+    "additional": "@FSO_BUILD_POSTFIX@",
+    "platform": "@FSO_PLATFORM@"
+}

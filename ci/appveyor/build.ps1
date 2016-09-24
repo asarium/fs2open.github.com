@@ -106,6 +106,11 @@ if ($DeployBuild) {
 			exit 1
     	}
 	}
+	
+	$command = "&`"$Env:PYTHON_ROOT\python.exe`" `"$env:APPVEYOR_BUILD_FOLDER/ci/file_metadata.py`" `"$env:APPVEYOR_BUILD_FOLDER/../install`" `"$env:APPVEYOR_BUILD_FOLDER/build/metadata.json`""
+	Write-Host $command
+	
+	Invoke-Expression $command
 
     7z a "$($PackageName)-builds-$($buildConfig.PackageType).zip" "$env:APPVEYOR_BUILD_FOLDER/../install/*"
     Push-AppveyorArtifact "$($PackageName)-builds-$($buildConfig.PackageType).zip"

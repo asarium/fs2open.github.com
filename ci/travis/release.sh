@@ -8,9 +8,12 @@ if [ "$TRAVIS_OS_NAME" = "linux" ]; then
     for config in $BUILD_CONFIGS
     do
         cd "$config"
+        BUILD_DIR="$(pwd)"
         ninja install appimage
         cd ..
     done
+
+    $TRAVIS_BUILD_DIR/ci/file_metadata.py /tmp/release "$BUILD_DIR/metadata.json"
 
     ls -al /tmp/release
     (cd /tmp/release && tar -cvzf /tmp/builds/$PACKAGE_NAME-builds-Linux.tar.gz *.AppImage)
@@ -28,6 +31,8 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
             exit $XCODE_RET
         fi
     done
+
+    $TRAVIS_BUILD_DIR/ci/file_metadata.py /tmp/release "$(pwd)/metadata.json"
 
     ls -al /tmp/release
     

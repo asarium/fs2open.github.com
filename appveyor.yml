@@ -4,6 +4,8 @@ configuration:
   - Release
 clone_depth: 10
 environment:
+  global:
+    PYTHON_ROOT: "C:\\Python35-x64"
   matrix:
     - BuildID: 0
       CMAKE_GENERATOR: Visual Studio 12 2013

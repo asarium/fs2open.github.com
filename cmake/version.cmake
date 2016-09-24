@@ -50,3 +50,27 @@ ENDIF()
 
 set(CONFIG_POSTFIX "$<$<CONFIG:Release>:>$<$<CONFIG:Debug>:-DEBUG>$<$<CONFIG:FastDebug>:-FASTDBG>")
 set(FSO_BINARY_SUFFIX "${FSO_BINARY_SUFFIX}${CONFIG_POSTFIX}")
+
+if (IS_64BIT)
+    set(IS_64BIT_BOOL true)
+else()
+    set(IS_64BIT_BOOL false)
+endif()
+
+if (PLATFORM_UNIX)
+    if (PLATFORM_LINUX)
+        set(FSO_PLATFORM "Linux")
+    elseif(PLATFORM_MAC)
+        set(FSO_PLATFORM "Mac")
+    else()
+        set(FSO_PLATFORM "Unix")
+    endif()
+elseif(PLATFORM_WINDOWS)
+    set(FSO_PLATFORM "Windows")
+else()
+    set(FSO_PLATFORM "Unknown")
+endif()
+
+configure_file("${CMAKE_CURRENT_LIST_DIR}/metadata.json.in" "${CMAKE_CURRENT_BINARY_DIR}/metadata.json" @ONLY)
+
+

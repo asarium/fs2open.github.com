@@ -25,6 +25,7 @@ elif [ "$TRAVIS_OS_NAME" = "osx" ]; then
     gem install xcpretty xcpretty-travis-formatter thefox-pastebin
     
     brew update
+    brew install python3
     brew outdated cmake || brew upgrade cmake
 fi
 

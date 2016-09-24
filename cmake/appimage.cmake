@@ -2,6 +2,9 @@
 SET(BINARY_DESTINATION "bin")
 SET(LIBRAY_DESTINATION "lib")
 
+set(APPIMAGE_ASSISTANT "" CACHE STRING "Path to the AppImage assistant")
+set(APPIMAGE_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}" CACHE STRING "Path to the directory where the app image should be generated")
+
 configure_file("${CMAKE_CURRENT_LIST_DIR}/AppRun.in" "${CMAKE_CURRENT_BINARY_DIR}/AppRun.gen" @ONLY)
 file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/AppRun-$<CONFIG>"
     INPUT "${CMAKE_CURRENT_BINARY_DIR}/AppRun.gen")
@@ -18,6 +21,6 @@ install(FILES "${CMAKE_CURRENT_BINARY_DIR}/AppImage-$<CONFIG>.desktop" DESTINATI
 install(FILES "${CMAKE_SOURCE_DIR}/freespace2/resources/app_icon.png" DESTINATION ".")
 
 add_custom_target(appimage
-COMMAND "${APPIMAGE_ASSISTANT}" "${CMAKE_INSTALL_PREFIX}" "${CMAKE_INSTALL_PREFIX}/fs2_open_${FSO_BINARY_SUFFIX}.AppImage")
+COMMAND "${APPIMAGE_ASSISTANT}" "${CMAKE_INSTALL_PREFIX}" "${APPIMAGE_INSTALL_DIR}/fs2_open_${FSO_BINARY_SUFFIX}.AppImage")
     
 add_dependencies(appimage install)
