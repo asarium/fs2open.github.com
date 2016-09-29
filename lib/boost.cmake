@@ -9,6 +9,8 @@ if (WIN32)
     else(MSVC_USE_RUNTIME_DLL)
         set(Boost_USE_STATIC_RUNTIME    ON)
     endif(MSVC_USE_RUNTIME_DLL)
+elseif(PLATFORM_MAC)
+    set(Boost_USE_STATIC_LIBS       ON)
 endif()
 
 find_package(Boost REQUIRED COMPONENTS thread system chrono date_time)

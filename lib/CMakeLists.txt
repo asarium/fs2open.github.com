@@ -31,4 +31,4 @@ ENDIF(UNIX)
 
 add_subdirectory(md5)
 
-add_subdirectory(ffmpeg)
+include(FFmpeg.cmake)

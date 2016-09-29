@@ -19,7 +19,8 @@ using namespace cutscene::ffmpeg;
 const char* CHECKED_EXTENSIONS[] = {
 	"webm",
 	"mp4",
-	"ogg"
+	"ogg",
+	"mve"
 };
 
 double getFrameRate(AVStream* stream, AVCodecContext* codecCtx) {
@@ -295,9 +296,17 @@ void FFMPEGDecoder::startDecoding() {
 	if (isDecoding()) {
 		// If we are still alive then read the last frames from the decoders
 		videoDecoder->finishDecoding();
+		VideoFramePtr video_ptr;
+		while ((video_ptr = videoDecoder->getFrame()) != nullptr) {
+			pushFrameData(std::move(video_ptr));
+		}
 
 		if (audioDecoder) {
 			audioDecoder->finishDecoding();
+			AudioFramePtr audio_frame;
+			while ((audio_frame = audioDecoder->getFrame()) != nullptr) {
+				pushAudioData(std::move(audio_frame));
+			}
 		}
 	}
 

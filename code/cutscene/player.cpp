@@ -295,7 +295,9 @@ bool shouldBeginPlayback(Decoder* decoder) {
 	// that we have enough frames at the beginning of playback and that
 	// we don't wait indefinitely if the cutscene has a weird amount of audio
 	// or video at the beginning
-	return audio || video;
+	// Also only wait while the decoder is still working. Otherwise we will wait indefinitely if the video
+	// is very short.
+	return (audio || video) || !decoder->isDecoding();
 }
 }
 
