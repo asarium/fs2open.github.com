@@ -166,6 +166,7 @@
 #include "stats/medals.h"
 #include "stats/stats.h"
 #include "tracing/tracing.h"
+#include "utils/filesystem.h"
 #include "weapon/beam.h"
 #include "decals/decals.h"
 #include "weapon/emp.h"
@@ -1676,7 +1677,6 @@ void game_init()
 {
 	int s1 __UNUSED, e1 __UNUSED;
 	const char *ptr;
-	char whee[MAX_PATH_LEN];
 
 	Game_current_mission_filename[0] = 0;
 
@@ -1717,17 +1717,15 @@ void game_init()
 	cmdline_debug_print_cmdline();
 #endif
 
-	memset(whee, 0, sizeof(whee));
+	auto working_dir = util::filesystem::current_path().string();
 
-	_getcwd(whee, MAX_PATH_LEN-1);
-
-	strcat_s(whee, DIR_SEPARATOR_STR);
-	strcat_s(whee, EXE_FNAME);
+	working_dir += DIR_SEPARATOR_STR;
+	working_dir += EXE_FNAME;
 
 	//Initialize the libraries
 	s1 = timer_get_milliseconds();
 
-	if ( cfile_init(whee, NULL) ) {			// initialize before calling any cfopen stuff!!!
+	if ( cfile_init(working_dir.c_str(), NULL) ) {			// initialize before calling any cfopen stuff!!!
 		exit(1);
 	}
 
@@ -7959,9 +7957,6 @@ int actual_main(int argc, char *argv[])
         SDL_free(path_name);
     }
 #endif
-
-	// create user's directory	
-	_mkdir(os_get_config_path().c_str());
 #endif
 
 #if defined(GAME_ERRORLOG_TXT) && defined(_MSC_VER)

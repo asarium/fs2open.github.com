@@ -15,13 +15,6 @@
 #include <cstring>
 #include <cstdio>
 
-#ifdef _WIN32
-#include <io.h>
-#include <direct.h>
-#include <windows.h>
-#include <winbase.h>		/* needed for memory mapping of file functions */
-#endif
-
 #include "cfile/cfile.h"
 #include "cfile/cfilearchive.h"
 #include "luaconf.h"

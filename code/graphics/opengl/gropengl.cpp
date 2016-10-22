@@ -35,6 +35,7 @@
 #include "popup/popup.h"
 #include "tracing/tracing.h"
 #include "pngutils/pngutils.h"
+#include "utils/filesystem.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -306,10 +307,9 @@ void gr_opengl_print_screen(const char *filename)
 	GLuint pbo = 0;
 
 	// save to a "screenshots" directory and tack on the filename
-	snprintf(tmp, MAX_PATH_LEN-1, "screenshots/%s.png", filename);
-
-    _mkdir(os_get_config_path("screenshots").c_str());
-
+	snprintf(tmp, MAX_PATH_LEN-1, "screenshots/%s.tga", filename);
+    
+    util::filesystem::create_directories_if_not_exists(os_get_config_path("screenshots"));
 //	glReadBuffer(GL_FRONT);
 
 	// now for the data

@@ -31,6 +31,7 @@
 #include "playerman/managepilot.h"
 #include "playerman/player.h"
 #include "popup/popup.h"
+#include "utils/filesystem.h"
 #include "ship/ship.h"
 #include "sound/audiostr.h"
 #include "sound/sound.h"
@@ -58,9 +59,9 @@ int delete_pilot_file(char *pilot_name)
 	char basename[MAX_FILENAME_LEN];
 
 	// get the player file.
-	_splitpath(pilot_name, NULL, NULL, basename, NULL);
+	auto base = util::filesystem::path(pilot_name).stem().string();
 
-	strcpy_s( filename, basename );
+	strcpy_s( filename, base.c_str() );
 	strcat_s( filename, NOX(".plr") );
 
 	delreturn = cf_delete(filename, CF_TYPE_PLAYERS);

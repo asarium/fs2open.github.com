@@ -28,6 +28,7 @@
 #include "globalincs/systemvars.h"
 #include "cfile/cfilesystem.h"
 #include "parse/parselo.h"
+#include "utils/filesystem.h"
 
 struct outwnd_filter_struct {
 	char name[NAME_LENGTH];
@@ -221,6 +222,9 @@ void outwnd_print(const char *id, const char *tmp)
 		if (Log_fp != NULL) {
 			fputs(tmp, Log_fp);	
 			fflush(Log_fp);
+		} else {
+			// If there is no log file yet write it to stdout
+			fputs(tmp, stdout);
 		}
 	}
 
@@ -248,7 +252,14 @@ void outwnd_init()
 		}
 
 		// create data file path if it does not exist
-		_mkdir(os_get_config_path(Pathtypes[CF_TYPE_DATA].path).c_str());
+		auto dataPath = util::filesystem::path(os_get_config_path(Pathtypes[CF_TYPE_DATA].path));
+
+		util::error_code err;
+		util::filesystem::create_directories_if_not_exists(dataPath, err);
+
+		if (err) {
+			mprintf(("Failed to create log directory: %s\n", err.message().c_str()));
+		}
 
 		memset( pathname, 0, sizeof(pathname) );
 		snprintf( pathname, MAX_PATH_LEN, "%s/%s", Pathtypes[CF_TYPE_DATA].path, FreeSpace_logfilename);
@@ -260,6 +271,8 @@ void outwnd_init()
 		if (Log_fp == NULL) {
 			fprintf(stderr, "Error opening %s\n", pathname);
 		} else {
+			outwnd_inited = true;
+
 			time_t timedate = time(NULL);
 			char datestr[50];
 

@@ -30,6 +30,8 @@
 #include <cstdio>
 #include <windows_stub/config.h>
 
+#include "utils/filesystem.h"
+
 #include "gtest/gtest.h"
 
 #ifdef main
@@ -41,7 +43,7 @@ GTEST_API_ int main(int argc, char **argv) {
 	testing::InitGoogleTest(&argc, argv);
 
 	// Always change to the test data directory
-	_chdir(TEST_DATA_PATH);
+	util::filesystem::current_path(util::filesystem::u8path(TEST_DATA_PATH));
 
 	return RUN_ALL_TESTS();
 }

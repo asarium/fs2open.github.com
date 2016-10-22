@@ -16,6 +16,13 @@
 #error This file should only be included internally in CFILE!!
 #endif
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+#include <stddef.h>
+#endif
+
 // The following Cfile_block data is private to cfile.cpp
 // DO NOT MOVE the Cfile_block* information to cfile.h / do not extern this data
 //

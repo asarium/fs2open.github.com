@@ -22,6 +22,7 @@
 #include "popup/popup.h"
 #include "stats/medals.h"
 #include "ui/ui.h"
+#include "utils/filesystem.h"
 
 #ifndef NDEBUG
 #include "cmdline/cmdline.h"
@@ -791,14 +792,14 @@ void init_medal_bitmaps()
 
 		if (Player_score->medal_counts[idx] > 0) {
 			int num_medals;
-			char filename[MAX_FILENAME_LEN], base[MAX_FILENAME_LEN];
+			char filename[MAX_FILENAME_LEN];
 
 			// possibly load a different filename that is specified by the bitmap filename
 			// for this medal.  if the player has > 1 of these types of medals, then determien
 			// which of the possible version to use based on the player's count of this medal
 			strcpy_s( filename, Medals[idx].bitmap );
 
-			_splitpath( filename, NULL, NULL, base, NULL );
+			auto base = util::filesystem::path(filename).stem().string();
 
 			num_medals = Player_score->medal_counts[idx];
 
@@ -809,14 +810,13 @@ void init_medal_bitmaps()
 			if ( num_medals > 1 ) {
 				// append the proper character onto the end of the medal filename.  Base version
 				// has no character. next version is a, then b, etc.
-				char temp[MAX_FILENAME_LEN];
-				strcpy_s(temp, base);
-				sprintf( base, "%s%c", temp, (num_medals-2)+'a');
+				auto temp = base;
+				sprintf( base, "%s%c", temp.c_str(), (num_medals-2)+'a');
 			}
 
 			// hi-res support
 			if (gr_screen.res == GR_1024) {
-				sprintf( filename, "2_%s", base );
+				sprintf( filename, "2_%s", base.c_str() );
 			}
 
 			// base now contains the actual medal bitmap filename needed to load

@@ -1234,6 +1234,8 @@ set (file_root_ui
 set(file_root_utils
 	utils/encoding.cpp
     utils/encoding.h
+	utils/filesystem.h
+	utils/filesystem.cpp
 	utils/HeapAllocator.cpp
 	utils/HeapAllocator.h
 	utils/id.h

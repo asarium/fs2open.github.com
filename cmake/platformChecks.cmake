@@ -28,6 +28,31 @@ set(CMAKE_EXTRA_INCLUDE_FILES)
 CHECK_TYPE_SIZE("char32_t" CHAR32_T LANGUAGE CXX)
 CHECK_TYPE_SIZE("U'b'" UNICODE_CHAR_LITERAL LANGUAGE CXX)
 
+
+CHECK_INCLUDE_FILE_CXX("filesystem" HAVE_FILESYSTEM)
+CHECK_CXX_SOURCE_COMPILES("
+#include <filesystem>
+int main() {
+	using namespace std::filesystem;
+	return 0;
+}
+" HAVE_FILESYSTEM_IN_FILESYSTEM)
+CHECK_CXX_SOURCE_COMPILES("
+#include <filesystem>
+int main() {
+	using namespace std::experimental::filesystem;
+	return 0;
+}
+" HAVE_FILESYSTEM_IN_EXPERIMENTAL)
+CHECK_CXX_SOURCE_COMPILES("
+#include <filesystem>
+int main() {
+	using namespace std::tr2::sys;
+	return 0;
+}
+" HAVE_FILESYSTEM_IN_TR2)
+CHECK_INCLUDE_FILE_CXX("experimental/filesystem" HAVE_EXPERIMENTAL_FILESYSTEM)
+
 set(CMAKE_REQUIRED_FLAGS)
 
 

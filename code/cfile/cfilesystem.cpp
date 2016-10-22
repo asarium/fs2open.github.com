@@ -23,16 +23,6 @@
 #include <winbase.h>		/* needed for memory mapping of file functions */
 #endif
 
-#ifdef SCP_UNIX
-#include <glob.h>
-#include <sys/types.h>
-#include <dirent.h>
-#include <fnmatch.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <libgen.h>
-#endif
-
 #include "cfile/cfile.h"
 #include "cfile/cfilesystem.h"
 #include "cmdline/cmdline.h"
@@ -41,6 +31,11 @@
 #include "localization/localize.h"
 #include "osapi/osapi.h"
 #include "parse/parselo.h"
+#include "utils/filesystem.h"
+
+#include <regex>
+
+namespace fs = util::filesystem;
 
 enum CfileRootType {
 	CF_ROOTTYPE_PATH = 0,
@@ -184,43 +179,24 @@ int cf_get_packfile_count(cf_root *root)
 			}
 		}
 
-#if defined _WIN32
-		filespec += "*.vp";
+        util::error_code error_code;
+		auto iter = util::filesystem::directory_iterator(filespec, error_code);
 
-		intptr_t find_handle;
-		_finddata_t find;
-		
-		find_handle = _findfirst( filespec.c_str( ), &find );
-
- 		if (find_handle != -1) {
-			do {
-				if (!(find.attrib & _A_SUBDIR)) {
-					packfile_count++;
-				}
-
-			} while (!_findnext(find_handle, &find));
-
-			_findclose( find_handle );
-		}	
-#elif defined SCP_UNIX
-		filespec += "*.[vV][pP]";
-
-		glob_t globinfo;
-		memset(&globinfo, 0, sizeof(globinfo));
-		int status = glob(filespec.c_str( ), 0, NULL, &globinfo);
-		if (status == 0) {
-			for (unsigned int j = 0;  j < globinfo.gl_pathc;  j++) {
-				// Determine if this is a regular file
-				struct stat statbuf;
-				memset(&statbuf, 0, sizeof(statbuf));
-				stat(globinfo.gl_pathv[j], &statbuf);
-				if (S_ISREG(statbuf.st_mode)) {
-					packfile_count++;
-				}
-			}
-			globfree(&globinfo);
+		if (error_code) {
+			// Something failed
+			continue;
 		}
-#endif
+
+		for (auto& p : iter) {
+			if (!util::filesystem::is_regular_file(p.status())) {
+				continue;
+			}
+
+			auto ext = p.path().extension();
+			if ( !stricmp(ext.string().c_str(), ".vp") ) {
+				packfile_count++;
+			}
+		}
 	}
 
 	return packfile_count;
@@ -272,72 +248,32 @@ void cf_build_pack_list( cf_root *root )
 				strcat_s( filespec, DIR_SEPARATOR_STR );
 		}
 
-#if defined _WIN32
-		strcat_s( filespec, "*.vp" );
+		util::error_code error_code;
+		auto iter = util::filesystem::directory_iterator(filespec, error_code);
 
-		intptr_t find_handle;
-		_finddata_t find;
-		
-		find_handle = _findfirst( filespec, &find );
+		if (error_code) {
+			// Something failed
+			continue;
+		}
 
- 		if (find_handle != -1) {
-			do {
-				// add the new item
-				if (!(find.attrib & _A_SUBDIR)) {					
-					Assert(root_index < temp_root_count);
-
-					// get a temp pointer
-					rptr_sort = &temp_roots_sort[root_index++];
-
-					// fill in all the proper info
-					strcpy_s(rptr_sort->path, root->path);
-					
-					if(strlen(Pathtypes[i].path)) {
-
-						strcat_s(rptr_sort->path, Pathtypes[i].path );
-						strcat_s(rptr_sort->path, DIR_SEPARATOR_STR);
-					}
-					
-					strcat_s(rptr_sort->path, find.name );
-					rptr_sort->roottype = CF_ROOTTYPE_PACK;
-					rptr_sort->cf_type = i;
-				}
-
-			} while (!_findnext(find_handle, &find));
-
-			_findclose( find_handle );
-		}	
-#elif defined SCP_UNIX
-		strcat_s( filespec, "*.[vV][pP]" );
-		glob_t globinfo;
-
-		memset(&globinfo, 0, sizeof(globinfo));
-
-		int status = glob(filespec, 0, NULL, &globinfo);
-
-		if (status == 0) {
-			for (uint j = 0;  j < globinfo.gl_pathc;  j++) {
-				// Determine if this is a regular file
-				struct stat statbuf;
-				memset(&statbuf, 0, sizeof(statbuf));
-				stat(globinfo.gl_pathv[j], &statbuf);
-
-				if ( S_ISREG(statbuf.st_mode) ) {
-					Assert(root_index < temp_root_count);
-
-					// get a temp pointer
-					rptr_sort = &temp_roots_sort[root_index++];
-
-					// fill in all the proper info
-					strcpy_s(rptr_sort->path, globinfo.gl_pathv[j] );
-					rptr_sort->roottype = CF_ROOTTYPE_PACK;
-					rptr_sort->cf_type = i;
-				}
+		for (auto& p : iter) {
+			if (!util::filesystem::is_regular_file(p.status())) {
+				continue;
 			}
 
-			globfree(&globinfo);
+			auto ext = p.path().extension();
+			if ( !stricmp(ext.string().c_str(), ".vp") ) {
+				Assert(root_index < temp_root_count);
+
+				// get a temp pointer
+				rptr_sort = &temp_roots_sort[root_index++];
+
+				// fill in all the proper info
+				strcpy_s(rptr_sort->path, p.path().string().c_str() );
+				rptr_sort->roottype = CF_ROOTTYPE_PACK;
+				rptr_sort->cf_type = i;
+			}
 		}
-#endif
 	}
 
 	// these should always be the same
@@ -472,17 +408,18 @@ void cf_build_root_list(const char *cdrom_dir)
 		// =========================================================================
 	}
 
-	char working_directory[CF_MAX_PATHNAME_LENGTH];
-	
-	if ( !_getcwd(working_directory, CF_MAX_PATHNAME_LENGTH ) ) {
-		Error(LOCATION, "Can't get current working directory -- %d", errno );
+	util::error_code cwd_err;
+	auto working_dir = util::filesystem::current_path(cwd_err);
+
+	if (cwd_err) {
+		Error(LOCATION, "Can't get current working directory -- %s", cwd_err.message().c_str() );
 	}
-	
-	cf_add_mod_roots(working_directory);
+
+	cf_add_mod_roots(working_dir.string().c_str());
 
 	root = cf_create_root();
 	
-	strcpy_s(root->path, working_directory);
+	strcpy_s(root->path, working_dir.string().c_str());
 
 	size_t path_len = strlen(root->path);
 
@@ -548,10 +485,8 @@ void cf_search_root_path(int root_index)
 	mprintf(( "Searching root '%s' ... ", root->path ));
 
 	char search_path[CF_MAX_PATHNAME_LENGTH];
-#ifdef SCP_UNIX
     // This map stores the mapping between a specific path type and the actual path that we use for it
-	SCP_unordered_map<int, SCP_string> pathTypeToRealPath;
-#endif
+	SCP_unordered_map<int, fs::path> pathTypeToRealPath;
 
 	for (i=CF_TYPE_ROOT; i<CF_MAX_PATH_TYPES; i++ )	{
 
@@ -564,162 +499,88 @@ void cf_search_root_path(int root_index)
 
 		if(strlen(Pathtypes[i].path)) {
 			strcat_s( search_path, Pathtypes[i].path );
-			if ( search_path[strlen(search_path)-1] != DIR_SEPARATOR_CHAR ) {
-				strcat_s( search_path, DIR_SEPARATOR_STR );
-			}
-		} 
-
-#if defined _WIN32
-		SCP_string search_directory = search_path;
-		strcat_s( search_path, "*.*" );
-
-		intptr_t find_handle;
-		_finddata_t find;
-		
-		find_handle = _findfirst( search_path, &find );
-
- 		if (find_handle != -1) {
-			do {
-				if (!(find.attrib & _A_SUBDIR)) {
-
-					char *ext = strrchr( find.name, '.' );
-					if ( ext )	{
-						if ( is_ext_in_list( Pathtypes[i].extensions, ext ) )	{
-							// Found a file!!!!
-							cf_file *file = cf_create_file();
-
-							strcpy_s( file->name_ext, find.name );
-							file->root_index = root_index;
-							file->pathtype_index = i;
-							file->write_time = find.time_write;
-							file->size = find.size;
-							file->pack_offset = 0;			// Mark as a non-packed file
-
-							SCP_string file_name;
-							sprintf(file_name, "%s%s%s", search_directory.c_str(), DIR_SEPARATOR_STR, find.name);
-
-							file->real_name = vm_strdup(file_name.c_str());
-
-							num_files++;
-							//mprintf(( "Found file '%s'\n", file->name_ext ));
-						}
-					}
-
-				}
-
-			} while (!_findnext(find_handle, &find));
-
-			_findclose( find_handle );
 		}
-#elif defined SCP_UNIX
-		DIR *dirp = nullptr;
-		SCP_string search_dir;
+
+		util::error_code error_code;
+		fs::path search_dir;
 		{
 			if (i == CF_TYPE_ROOT) {
 				// Don't search for the same name for the root case since we would be searching in other mod directories in that case
-				dirp = opendir (search_path);
-				search_dir.assign(search_path);
+				search_dir = fs::u8path(search_path);
 			} else {
 				// On Unix we can have a different case for the search paths so we also need to account for that
 				// We do that by looking at the parent of search_path and enumerating all directories and the check if any of
 				// them are a case-insensitive match
-				SCP_string directory_name;
+				fs::path directory_name;
 
 				auto parentPathIter = pathTypeToRealPath.find(Pathtypes[i].parent_index);
 
 				if (parentPathIter == pathTypeToRealPath.end()) {
 					// No parent known yet, use the standard dirname
-					char dirname_copy[CF_MAX_PATHNAME_LENGTH];
-					memcpy(dirname_copy, search_path, sizeof(search_path));
-					// According to the documentation of directory_name and basename, the return value does not need to be freed
-					directory_name.assign(dirname(dirname_copy));
+					auto path = util::filesystem::u8path(search_path);
+
+					directory_name = path.parent_path();
 				} else {
 					// we have a valid parent path -> use that
 					directory_name = parentPathIter->second;
 				}
 
-				char basename_copy[CF_MAX_PATHNAME_LENGTH];
-				memcpy(basename_copy, search_path, sizeof(search_path));
-				// According to the documentation of dirname and basename, the return value does not need to be freed
-				auto search_name = basename(basename_copy);
+				// The name of the directory we are currently looking at
+				auto search_name = fs::u8path(search_path).filename().u8string();
 
-				auto parentDirP = opendir(directory_name.c_str());
-
-				if (parentDirP) {
-					struct dirent *dir = nullptr;
-					while ((dir = readdir (parentDirP)) != nullptr) {
-
-						if (stricmp(search_name, dir->d_name) != 0) {
+				auto iter = util::filesystem::directory_iterator(directory_name, error_code);
+				if (!error_code) {
+					for (auto& entry : iter) {
+						if (stricmp(search_name.c_str(), entry.path().filename().u8string().c_str()) != 0) {
 							continue;
 						}
 
-						SCP_string fn;
-						sprintf(fn, "%s/%s", directory_name.c_str(), dir->d_name);
-
-						struct stat buf;
-						if (stat(fn.c_str(), &buf) == -1) {
-							continue;
-						}
-
-						if (S_ISDIR(buf.st_mode)) {
+						if (util::filesystem::is_directory(entry.status())) {
 							// Found a case insensitive match
-							dirp = opendir(fn.c_str());
-							search_dir = fn;
+							search_dir = entry.path();
 							// We also need to store this in our mapping since we may need it in the future
-							pathTypeToRealPath.insert(std::make_pair(i, fn));
+							pathTypeToRealPath.insert(std::make_pair(i, search_dir));
 							break;
 						}
 					}
-					closedir(parentDirP);
 				}
 			}
 		}
 
-		if ( dirp ) {
-			struct dirent *dir = nullptr;
-			while ((dir = readdir (dirp)) != NULL)
-			{
-				if (!fnmatch ("*.*", dir->d_name, 0))
-				{
-					SCP_string fn;
-					sprintf(fn, "%s/%s", search_dir.c_str(), dir->d_name);
+		auto iter = util::filesystem::directory_iterator(search_dir, error_code);
 
-					struct stat buf;
-					if (stat(fn.c_str(), &buf) == -1) {
-						continue;
-					}
-					
-					if (!S_ISREG(buf.st_mode)) {
-						continue;
-					}
-					
-					char *ext = strrchr( dir->d_name, '.' );
-					if ( ext )	{
-						if ( is_ext_in_list( Pathtypes[i].extensions, ext ) )	{
-							// Found a file!!!!
-							cf_file *file = cf_create_file();
+		if (error_code) {
+			// Something failed
+			continue;
+		}
+		for (auto& entry : iter) {
+			if (!util::filesystem::is_regular_file(entry.status())) {
+				continue;
+			}
 
-							strcpy_s( file->name_ext, dir->d_name );
-							file->root_index = root_index;
-							file->pathtype_index = i;
+			auto ext = entry.path().extension().u8string();
+			if (!ext.empty()) {
+				if (is_ext_in_list( Pathtypes[i].extensions, ext.c_str()) ) {
+					// Found a file!!!!
+					cf_file *file = cf_create_file();
+
+					strcpy_s( file->name_ext, entry.path().filename().u8string().c_str() );
+					file->root_index = root_index;
+					file->pathtype_index = i;
 
 
-							file->write_time = buf.st_mtime;
-							file->size = buf.st_size;
+					file->write_time = util::filesystem::last_write_time_t(entry.path());
+					file->size = (int) util::filesystem::file_size(entry.path());
 
-							file->pack_offset = 0;			// Mark as a non-packed file
+					file->pack_offset = 0;			// Mark as a non-packed file
 
-							file->real_name = vm_strdup(fn.c_str());
+					file->real_name = vm_strdup(entry.path().u8string().c_str());
 
-							num_files++;
-							//mprintf(( "Found file '%s'\n", file->name_ext ));
-						}
-					}
+					num_files++;
+					//mprintf(( "Found file '%s'\n", file->name_ext ));
 				}
 			}
-			closedir(dirp);
 		}
-#endif
 	}
 
 	mprintf(( "%i files\n", num_files ));
@@ -1578,16 +1439,43 @@ static int cf_file_already_in_list( SCP_vector<SCP_string> &list, const char *fi
 	return 0;
 }
 
+/**
+ * @brief Takes a glob filter and returns a regex object for it
+ *
+ * @warning This is a very basic implementation. It will break if any advanced globbing expressions are used
+ *
+ * @param filter The glob filter to convert
+ * @return The regex matcher
+ */
+static std::regex glob_to_regex(const char* filter) {
+	std::stringstream ss;
+
+	ss << "^";
+
+	for (const char* s = filter; *s != '\0'; ++s) {
+		switch(*s)
+		{
+			case '*': ss << ".*"; break;
+			case '?': ss << '.'; break;
+			case '.': ss << "\\."; break;
+			case '\\': ss << "\\\\"; break;
+			default: ss << *s;
+		}
+	}
+
+	ss << "$";
+
+	return std::regex(ss.str());
+}
+
 // An alternative cf_get_file_list*(), true dynamic list version.
 // This one has a 'type', which is a CF_TYPE_* value.  Because this specifies the directory
 // location, 'filter' only needs to be the filter itself, with no path information.
 // See above descriptions of cf_get_file_list() for more information about how it all works.
 int cf_get_file_list( SCP_vector<SCP_string> &list, int pathtype, const char *filter, int sort, SCP_vector<file_list_info> *info )
 {
-	char *ptr;
 	uint i;
 	int own_flag = 0;
-	size_t l;
 	SCP_vector<file_list_info> my_info;
 	file_list_info tinfo;
 
@@ -1609,97 +1497,38 @@ int cf_get_file_list( SCP_vector<SCP_string> &list, int pathtype, const char *fi
 		Get_file_list_child = NULL;
 	}
 
-#if defined _WIN32
-	cf_create_default_path_string( filespec, sizeof(filespec)-1, pathtype, (char*)Get_file_list_child );
-	strcat_s(filespec, DIR_SEPARATOR_STR);
-	strcat_s(filespec, filter);
-
-	_finddata_t find;
-	intptr_t find_handle;
-
-	find_handle = _findfirst( filespec, &find );
-	if (find_handle != -1) {
-		do {
-            if (strcmp(strrchr(filter, '.'), strrchr(find.name,'.')) != 0)
-                continue;
-
-			if (!(find.attrib & _A_SUBDIR)) {
-				if ( !Get_file_list_filter || (*Get_file_list_filter)(find.name) ) {
-					if ( check_duplicates && cf_file_already_in_list(list, find.name) ) {
-						continue;
-					}
-
-					ptr = strrchr(find.name, '.');
-					if (ptr)
-						l = (size_t)(ptr - find.name);
-					else
-						l = strlen(find.name);
-
-					list.push_back( SCP_string(find.name, l) );
-
-					if (info) {
-						tinfo.write_time = find.time_write;
-						info->push_back( tinfo );
-					}
-				}
-			}
-
-		} while (!_findnext(find_handle, &find));
-
-		_findclose( find_handle );
-	}
-
-#elif defined SCP_UNIX
 	cf_create_default_path_string( filespec, sizeof(filespec)-1, pathtype, (char*)Get_file_list_child );
 
-	DIR *dirp;
-	struct dirent *dir;
+    auto filter_regex = glob_to_regex(filter);
 
-	dirp = opendir (filespec);
-	if ( dirp ) {
-		while ((dir = readdir (dirp)) != NULL) {
+	util::error_code error_code;
+	auto iter = util::filesystem::directory_iterator(util::filesystem::u8path(filespec), error_code);
 
-			if (fnmatch(filter, dir->d_name, 0) != 0)
-				continue;
-
-			char fn[MAX_PATH];
-			if (snprintf(fn, MAX_PATH, "%s/%s", filespec, dir->d_name) >= MAX_PATH) {
-				// Make sure the string is null terminated
-				fn[MAX_PATH-1] = 0;
-			}
-
-			struct stat buf;
-			if (stat(fn, &buf) == -1) {
+	if (!error_code) {
+		for (auto& p : iter) {
+			if (!util::filesystem::is_regular_file(p.status())) {
 				continue;
 			}
 
-			if (!S_ISREG(buf.st_mode)) {
+			auto name = p.path().filename().string();
+			if (!std::regex_search(std::begin(name), std::end(name), filter_regex)) {
 				continue;
 			}
 
-			if ( !Get_file_list_filter || (*Get_file_list_filter)(dir->d_name) ) {
-				if ( check_duplicates && cf_file_already_in_list(list, dir->d_name) ) {
+			if ( !Get_file_list_filter || (*Get_file_list_filter)(name.c_str())) {
+				if ( check_duplicates && cf_file_already_in_list(list, name.c_str()) ) {
 					continue;
 				}
 
-				ptr = strrchr(dir->d_name, '.');
-				if (ptr)
-					l = (size_t)(ptr - dir->d_name);
-				else
-					l = strlen(dir->d_name);
-
-				list.push_back( SCP_string(dir->d_name, l) );
+				list.push_back( p.path().stem().string() );
 
 				if (info) {
-					tinfo.write_time = buf.st_mtime;
+					tinfo.write_time = util::filesystem::last_write_time_t(p.path());
 					info->push_back( tinfo );
 				}
 			}
 		}
-
-		closedir(dirp);
 	}
-#endif
 
 	bool skip_packfiles = false;
 	if ( (pathtype == CF_TYPE_PLAYERS) || (pathtype == CF_TYPE_SINGLE_PLAYERS) || (pathtype == CF_TYPE_MULTI_PLAYERS) ) {
@@ -1739,7 +1568,8 @@ int cf_get_file_list( SCP_vector<SCP_string> &list, int pathtype, const char *fi
 			if ( !Get_file_list_filter || (*Get_file_list_filter)(f->name_ext) ) {
 				//mprintf(( "Found '%s' in root %d path %d\n", f->name_ext, f->root_index, f->pathtype_index ));
 
-				ptr = strrchr(f->name_ext, '.');
+				auto ptr = strrchr(f->name_ext, '.');
+				size_t l;
 				if (ptr)
 					l = (size_t)(ptr - f->name_ext);
 				else
@@ -1800,7 +1630,6 @@ int cf_get_file_list( int max, char **list, int pathtype, const char *filter, in
 	char *ptr;
 	uint i;
 	int num_files = 0, own_flag = 0;
-	size_t l;
 
 	if (max < 1) {
 		Get_file_list_filter = NULL;
@@ -1817,102 +1646,45 @@ int cf_get_file_list( int max, char **list, int pathtype, const char *filter, in
 
 	char filespec[MAX_PATH_LEN];
 
-#if defined _WIN32
-	cf_create_default_path_string( filespec, sizeof(filespec)-1, pathtype, filter );
-
-	_finddata_t find;
-	intptr_t find_handle;
-
-	find_handle = _findfirst( filespec, &find );
-	if (find_handle != -1) {
-		do {
-			if (num_files >= max)
-				break;
-
-            if (strcmp(strrchr(filter, '.'), strrchr(find.name,'.')) != 0)
-                continue;
-
-			if ( strlen(find.name) >= MAX_FILENAME_LEN )
-				continue;
-
-			if (!(find.attrib & _A_SUBDIR)) {
-				if ( !Get_file_list_filter || (*Get_file_list_filter)(find.name) ) {
-					ptr = strrchr(find.name, '.');
-					if (ptr)
-						l = ptr - find.name;
-					else
-						l = strlen(find.name);
-
-					list[num_files] = (char *)vm_malloc(l + 1);
-					strncpy(list[num_files], find.name, l);
-					list[num_files][l] = 0;
-					if (info)
-						info[num_files].write_time = find.time_write;
-
-					num_files++;
-				}
-			}
-
-		} while (!_findnext(find_handle, &find));
-
-		_findclose( find_handle );
-	}
-
-#elif defined SCP_UNIX
 	cf_create_default_path_string( filespec, sizeof(filespec)-1, pathtype, NULL );
 
-	DIR *dirp;
-	struct dirent *dir;
+	auto filter_regex = glob_to_regex(filter);
 
-	dirp = opendir (filespec);
-	if ( dirp ) {
-		while ((dir = readdir (dirp)) != NULL)
-		{
+	util::error_code error_code;
+	auto iter = util::filesystem::directory_iterator(util::filesystem::u8path(filespec), error_code);
+
+	if (!error_code) {
+		for (auto& p : iter) {
+			if (!util::filesystem::is_regular_file(p.status())) {
+				continue;
+			}
+
+			auto name = p.path().filename().string();
+			if (!std::regex_search(std::begin(name), std::end(name), filter_regex)) {
+				continue;
+			}
+
 			if (num_files >= max)
 				break;
 
-			if ( strlen(dir->d_name) >= MAX_FILENAME_LEN ) {
+			if ( name.size() >= MAX_FILENAME_LEN ) {
 				continue;
 			}
 
-			if (fnmatch(filter, dir->d_name, 0) != 0)
-				continue;
+			if ( !Get_file_list_filter || (*Get_file_list_filter)(name.c_str()) ) {
 
-			char fn[MAX_PATH];
-			if (snprintf(fn, MAX_PATH, "%s/%s", filespec, dir->d_name) >= MAX_PATH) {
-				// Make sure the string is null terminated
-				fn[MAX_PATH-1] = 0;
-			}
+				auto base_name = p.path().stem().string();
 
-			struct stat buf;
-			if (stat(fn, &buf) == -1) {
-				continue;
-			}
-
-			if (!S_ISREG(buf.st_mode)) {
-				continue;
-			}
-
-			if ( !Get_file_list_filter || (*Get_file_list_filter)(dir->d_name) ) {
-				ptr = strrchr(dir->d_name, '.');
-				if (ptr)
-					l = ptr - dir->d_name;
-				else
-					l = strlen(dir->d_name);
-
-				list[num_files] = (char *)vm_malloc(l + 1);
-				strncpy(list[num_files], dir->d_name, l);
-				list[num_files][l] = 0;
+				list[num_files] = (char *)vm_malloc(base_name.size() + 1);
+				strncpy(list[num_files], base_name.c_str(), base_name.size());
+				list[num_files][base_name.size()] = 0;
 				if (info)
-					info[num_files].write_time = buf.st_mtime;
+					info[num_files].write_time = util::filesystem::last_write_time_t(p.path());
 
 				num_files++;
 			}
 		}
-
-		closedir(dirp);
 	}
-#endif
 
 	bool skip_packfiles = false;
 	if ((pathtype == CF_TYPE_PLAYERS) || (pathtype == CF_TYPE_SINGLE_PLAYERS) || (pathtype == CF_TYPE_MULTI_PLAYERS)) {
@@ -1958,6 +1730,7 @@ int cf_get_file_list( int max, char **list, int pathtype, const char *filter, in
 				//mprintf(( "Found '%s' in root %d path %d\n", f->name_ext, f->root_index, f->pathtype_index ));
 
 					ptr = strrchr(f->name_ext, '.');
+					size_t l;
 					if (ptr)
 						l = ptr - f->name_ext;
 					else
@@ -2043,100 +1816,45 @@ int cf_get_file_list_preallocated( int max, char arr[][MAX_FILENAME_LEN], char *
 	char filespec[MAX_PATH_LEN];
 
 	// Search the default directories
-#if defined _WIN32
-	cf_create_default_path_string( filespec, sizeof(filespec)-1, pathtype, filter );
-
-	intptr_t find_handle;
-	_finddata_t find;
-	
-	find_handle = _findfirst( filespec, &find );
-	if (find_handle != -1) {
-		do {
-			if (num_files >= max)			
-				break;
-
-			if (!(find.attrib & _A_SUBDIR)) {
-            
-                if (strcmp(strstr(filter, "."), strstr(find.name,".")) != 0)
-                    continue;
-
-				if ( strlen(find.name) >= MAX_FILENAME_LEN )
-					continue;
-
-				if ( !Get_file_list_filter || (*Get_file_list_filter)(find.name) ) {
-
-					strncpy(arr[num_files], find.name, MAX_FILENAME_LEN - 1 );
-					char *ptr = strrchr(arr[num_files], '.');
-					if ( ptr ) {
-						*ptr = 0;
-					}
-
-					if (info)	{
-						info[num_files].write_time = find.time_write;
-					}
-
-					num_files++;
-				}
-			}
-
-		} while (!_findnext(find_handle, &find));
-
-		_findclose( find_handle );
-	}
-
-#elif defined SCP_UNIX
 	cf_create_default_path_string( filespec, sizeof(filespec)-1, pathtype, NULL );
 
-	DIR *dirp;
-	struct dirent *dir;
 
-	dirp = opendir (filespec);
-	if ( dirp ) {
-		while ((dir = readdir (dirp)) != NULL)
-		{
+	auto filter_regex = glob_to_regex(filter);
+
+	util::error_code error_code;
+	auto iter = util::filesystem::directory_iterator(util::filesystem::u8path(filespec), error_code);
+
+	if (!error_code) {
+		for (auto& p : iter) {
+			if (!util::filesystem::is_regular_file(p.status())) {
+				continue;
+			}
+
+			auto name = p.path().filename().string();
+			if (!std::regex_search(std::begin(name), std::end(name), filter_regex)) {
+				continue;
+			}
+
 			if (num_files >= max)
 				break;
 
-			if (fnmatch(filter, dir->d_name, 0) != 0)
-				continue;
-
-			char fn[MAX_PATH];
-			if (snprintf(fn, MAX_PATH, "%s/%s", filespec, dir->d_name) >= MAX_PATH) {
-				// Make sure the string is null terminated
-				fn[MAX_PATH-1] = 0;
-			}
-
-			struct stat buf;
-			if (stat(fn, &buf) == -1) {
+			if ( name.size() >= MAX_FILENAME_LEN ) {
 				continue;
 			}
 
-			if (!S_ISREG(buf.st_mode)) {
-				continue;
-			}
+			if ( !Get_file_list_filter || (*Get_file_list_filter)(name.c_str()) ) {
+				auto base_name = p.path().stem();
 
-			if ( strlen(dir->d_name) >= MAX_FILENAME_LEN ) {
-				continue;
-			}
-
-			if ( !Get_file_list_filter || (*Get_file_list_filter)(dir->d_name) ) {
-
-				strncpy(arr[num_files], dir->d_name, MAX_FILENAME_LEN - 1 );
-				char *ptr = strrchr(arr[num_files], '.');
-				if ( ptr ) {
-					*ptr = 0;
-				}
+				strncpy(arr[num_files], base_name.string().c_str(), MAX_FILENAME_LEN - 1 );
 
 				if (info)	{
-					info[num_files].write_time = buf.st_mtime;
+					info[num_files].write_time = util::filesystem::last_write_time_t(p.path());
 				}
 
 				num_files++;
 			}
 		}
-		closedir(dirp);
 	}
-#endif
 
 	bool skip_packfiles = false;
 	if ((pathtype == CF_TYPE_PLAYERS) || (pathtype == CF_TYPE_SINGLE_PLAYERS) || (pathtype == CF_TYPE_MULTI_PLAYERS)) {

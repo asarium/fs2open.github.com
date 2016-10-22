@@ -130,16 +130,14 @@ mark_as_advanced(FORCE ENABLE_COTIRE)
 # Include cotire file from https://github.com/sakra/cotire/
 include(cotire)
 
+SET(GENERATED_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated_source)
+INCLUDE(headers)
+include(generateHeaders)
+
 INCLUDE(globals)
 INCLUDE(toolchain)
 INCLUDE(platforms)
 include(version)
-
-INCLUDE(headers)
-
-SET(GENERATED_SOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated_source)
-
-include(generateHeaders)
 
 if(FSO_BUILD_APPIMAGE)
 	include(appimage)

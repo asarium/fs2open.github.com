@@ -163,22 +163,6 @@ int _getcwd(char *out_buf, unsigned int len)
 	return 1;
 }
 
-// change directory to specified path
-int _chdir(const char *path)
-{
-	int status = chdir(path);
-
-#ifndef NDEBUG
-	int m_error = errno;
-
-	if (status) {
-		Warning(__FILE__, __LINE__, "Cannot chdir to %s: %s", path, strerror(m_error));
-	}
-#endif
-
-	return status;
-}
-
 // make specified directory
 int _mkdir(const char *path)
 {

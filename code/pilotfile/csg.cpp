@@ -15,6 +15,7 @@
 #include "ship/ship.h"
 #include "sound/audiostr.h"
 #include "stats/medals.h"
+#include "utils/filesystem.h"
 #include "weapon/weapon.h"
 
 #define REDALERT_INTERNAL
@@ -1350,7 +1351,6 @@ void pilotfile::csg_close()
 
 bool pilotfile::load_savefile(const char *campaign)
 {
-	char base[_MAX_FNAME] = { '\0' };
 	std::ostringstream buf;
 
 	if (Game_mode & GM_MULTIPLAYER) {
@@ -1366,7 +1366,7 @@ bool pilotfile::load_savefile(const char *campaign)
 	p = &Players[Player_num];
 
 	// build up filename for the savefile...
-	_splitpath((char*)campaign, NULL, NULL, base, NULL);
+	auto base = util::filesystem::path(campaign).stem().string();
 
 	buf << p->callsign << "." << base << ".csg";
 
@@ -1527,7 +1527,6 @@ bool pilotfile::load_savefile(const char *campaign)
 
 bool pilotfile::save_savefile()
 {
-	char base[_MAX_FNAME] = { '\0' };
 	std::ostringstream buf;
 
 	if (Game_mode & GM_MULTIPLAYER) {
@@ -1543,7 +1542,7 @@ bool pilotfile::save_savefile()
 	}
 
 	// build up filename for the savefile...
-	_splitpath(Campaign.filename, NULL, NULL, base, NULL);
+	auto base = util::filesystem::path(Campaign.filename).stem().string();
 
 	buf << p->callsign << "." << base << ".csg";
 

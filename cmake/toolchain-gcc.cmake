@@ -131,3 +131,8 @@ endif()
 
 # Always define this to make sure that the fixed width format macros are available
 target_compile_definitions(compiler INTERFACE __STDC_FORMAT_MACROS=1)
+
+if (HAVE_EXPERIMENTAL_FILESYSTEM AND NOT HAVE_FILESYSTEM)
+	message(STATUS "GCC: linking filesystem library")
+	target_link_libraries(compiler INTERFACE stdc++fs)
+endif()

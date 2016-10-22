@@ -24,7 +24,6 @@
 #endif
 
 #ifdef SCP_UNIX
-#include <glob.h>
 #include <sys/mman.h>
 #endif
 
@@ -33,6 +32,8 @@
 #include "cfile/cfilesystem.h"
 #include "osapi/osapi.h"
 #include "parse/encrypt.h"
+
+#include <utils/filesystem.h>
 
 #include <limits>
 
@@ -254,36 +255,6 @@ void cfile_refresh()
 	cf_build_secondary_filelist(Cfile_cdrom_dir);
 }
 
-
-
-#ifdef _WIN32
-// Changes to a drive if valid.. 1=A, 2=B, etc
-// If flag, then changes to it.
-// Returns 0 if not-valid, 1 if valid.
-int cfile_chdrive( int DriveNum, int flag )
-{
-	int Valid = 0;
-	int n, org;
-
-	org = -1;
-	if (!flag)
-		org = _getdrive();
-
-	_chdrive( DriveNum );
-	n = _getdrive();
-
-
-	if (n == DriveNum )
-		Valid = 1;
-
-	if ( (!flag) && (n != org) )
-		_chdrive( org );
-
-	return Valid;
-
-}
-#endif // _WIN32
-
 /**
  * @brief Common code for changing directory
  *
@@ -296,34 +267,17 @@ int cfile_chdrive( int DriveNum, int flag )
  */
 static int _cfile_chdir(const char *new_dir, const char *cur_dir __UNUSED)
 {
-	int status;
-	const char *path = NULL;
+	const char *path = new_dir;
 	const char no_dir[] = "\\.";
-
-#ifdef _WIN32
-	const char *colon = strchr(new_dir, ':');
-
-	if (colon) {
-		if (!cfile_chdrive(tolower(*(colon - 1)) - 'a' + 1, 1))
-			return 1;
-
-		path = colon + 1;
-	} else
-#endif /* _WIN32 */
-	{
-		path = new_dir;
-	}
 
 	if (*path == '\0') {
 		path = no_dir;
 	}
 
 	/* This chdir might get a critical error! */
-	status = _chdir(path);
-	if (status != 0) {
-#ifdef _WIN32
-		cfile_chdrive(tolower(cur_dir[0]) - 'a' + 1, 1);
-#endif /* _WIN32 */
+	util::error_code err;
+	util::filesystem::current_path(path, err);
+	if (err) {
 		return 2;
 	}
 
@@ -346,9 +300,6 @@ static int _cfile_chdir(const char *new_dir, const char *cur_dir __UNUSED)
 int cfile_push_chdir(int type)
 {
 	char dir[CFILE_ROOT_DIRECTORY_LEN];
-	char OriginalDirectory[CFILE_ROOT_DIRECTORY_LEN];
-
-	_getcwd(OriginalDirectory, CFILE_ROOT_DIRECTORY_LEN - 1);
 
 	Assert(Cfile_stack_pos < CFILE_STACK_MAX);
 
@@ -356,12 +307,12 @@ int cfile_push_chdir(int type)
 		return -1;
 	}
 
-	strncpy(Cfile_stack[Cfile_stack_pos++], OriginalDirectory,
-	        CFILE_ROOT_DIRECTORY_LEN - 1);
+	auto current = util::filesystem::current_path().string();
+	strncpy(Cfile_stack[Cfile_stack_pos++], current.c_str(), CFILE_ROOT_DIRECTORY_LEN - 1);
 
 	cf_create_default_path_string(dir, sizeof(dir) - 1, type, NULL);
 
-	return _cfile_chdir(dir, OriginalDirectory);
+	return _cfile_chdir(dir, current.c_str());
 }
 
 /**
@@ -375,11 +326,8 @@ int cfile_push_chdir(int type)
  */
 int cfile_chdir(const char *dir)
 {
-	char OriginalDirectory[CFILE_ROOT_DIRECTORY_LEN];
-
-	_getcwd(OriginalDirectory, CFILE_ROOT_DIRECTORY_LEN - 1);
-
-	return _cfile_chdir(dir, OriginalDirectory);
+	auto current = util::filesystem::current_path().string();
+	return _cfile_chdir(dir, current.c_str());
 }
 
 int cfile_pop_dir()
@@ -397,8 +345,6 @@ int cfile_pop_dir()
 // NOTE : WILL NOT DELETE READ-ONLY FILES
 int cfile_flush_dir(int dir_type)
 {
-	int del_count;
-
 	Assert( CF_TYPE_SPECIFIED(dir_type) );
 
 	// attempt to change the directory to the passed type
@@ -407,44 +353,23 @@ int cfile_flush_dir(int dir_type)
 	}
 
 	// proceed to delete the files
-	del_count = 0;
-#if defined _WIN32
-	intptr_t find_handle;
-	_finddata_t find;
-	find_handle = _findfirst( "*", &find );
-	if (find_handle != -1) {
-		do {			
-			if (!(find.attrib & _A_SUBDIR) && !(find.attrib & _A_RDONLY)) {
-				// delete the file
-				cf_delete(find.name,dir_type);				
+	int del_count = 0;
+	util::error_code error_code;
+	auto iter = util::filesystem::directory_iterator(util::filesystem::current_path(), error_code);
 
-				// increment the deleted count
-				del_count++;
+	if (!error_code) {
+		for (auto& p : iter) {
+			if (!util::filesystem::is_regular_file(p.status())) {
+				continue;
 			}
-		} while (!_findnext(find_handle, &find));
-		_findclose( find_handle );
-	}
-#elif defined SCP_UNIX
-	glob_t globinfo;
-	memset(&globinfo, 0, sizeof(globinfo));
-	int status = glob("*", 0, NULL, &globinfo);
-	if (status == 0) {
-		for (unsigned int i = 0;  i < globinfo.gl_pathc;  i++) {
-			// Determine if this is a regular file
-			struct stat statbuf;
 
-			stat(globinfo.gl_pathv[i], &statbuf);
-			if (S_ISREG(statbuf.st_mode)) {
-				// delete the file
-				cf_delete(globinfo.gl_pathv[i], dir_type);				
+			// delete the file
+			cf_delete(p.path().string().c_str(), dir_type);
 
-				// increment the deleted count
-				del_count++;				
-			}
+			// increment the deleted count
+			del_count++;
 		}
-		globfree(&globinfo);
 	}
-#endif
 
 	// pop the directory back
 	cfile_pop_dir();
@@ -594,28 +519,6 @@ int cf_rename(const char *old_name, const char *name, int dir_type)
 
 }
 
-
-// This takes a path (e.g. "C:\Games\FreeSpace2\Lots\More\Directories") and creates it in its entirety.
-// Do note that this requires the path to have normalized directory separators as defined by DIR_SEPARATOR_CHAR
-static void mkdir_recursive(const char *path) {
-    size_t pre = 0, pos;
-    SCP_string tmp(path);
-    SCP_string dir;
-
-    if (tmp[tmp.size() - 1] != DIR_SEPARATOR_CHAR) {
-        // force trailing / so we can handle everything in loop
-        tmp += DIR_SEPARATOR_CHAR;
-    }
-
-    while ((pos = tmp.find_first_of(DIR_SEPARATOR_CHAR, pre)) != std::string::npos) {
-        dir = tmp.substr(0, pos++);
-        pre = pos;
-        if (dir.empty()) continue; // if leading / first time is 0 length
-        
-        _mkdir(dir.c_str());
-    }
-}
-
 // Creates the directory path if it doesn't exist. Even creates all its
 // parent paths.
 void cf_create_directory( int dir_type )
@@ -623,7 +526,6 @@ void cf_create_directory( int dir_type )
 	int num_dirs = 0;
 	int dir_tree[CF_MAX_PATH_TYPES];
 	char longname[MAX_PATH_LEN];
-	struct stat statbuf;
 
 	Assertion( CF_TYPE_SPECIFIED(dir_type), "Invalid dir_type passed to cf_create_directory." );
 
@@ -641,9 +543,14 @@ void cf_create_directory( int dir_type )
 
 	for (i=num_dirs-1; i>=0; i-- )	{
 		cf_create_default_path_string( longname, sizeof(longname)-1, dir_tree[i], NULL );
-		if (stat(longname, &statbuf) != 0) {
-			mprintf(( "CFILE: Creating new directory '%s'\n", longname ));
-			mkdir_recursive(longname);
+
+		mprintf(( "CFILE: Creating new directory '%s'\n", longname ));
+
+		util::error_code err;
+		util::filesystem::create_directories_if_not_exists(util::filesystem::path(longname), err);
+
+		if (err) {
+			mprintf(("  Failed to create directory! Error: %s\n", err.message().c_str()));
 		}
 	}
 }

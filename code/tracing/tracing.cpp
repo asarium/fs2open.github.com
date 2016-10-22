@@ -3,10 +3,12 @@
 #include "graphics/2d.h"
 #include "parse/parselo.h"
 #include "io/timer.h"
+#include "utils/filesystem.h"
 
 #include "TraceEventWriter.h"
 #include "MainFrameTimer.h"
 #include "FrameProfiler.h"
+#include "globalincs/systemvars.h"
 
 #include <cinttypes>
 #include <fstream>
@@ -220,7 +222,18 @@ void init() {
 		do_trace_events = true;
 		do_async_events = true;
 		do_counter_events = true;
+
+		util::error_code err;
+		util::filesystem::create_directories_if_not_exists(util::filesystem::u8path("tracing"), err);
+
+		if (err) {
+			mprintf(("Failed to create tracing directory: %s\n", err.message().c_str()));
+		}
 	}
+}
+
+void profile_deinit()
+{
 	if (Cmdline_profile_write_file) {
 		mainFrameTimer.reset(new ThreadedMainFrameTimer());
 		do_async_events = true;

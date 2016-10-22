@@ -345,10 +345,6 @@ int cf_find_file_location_ext(const char *filename, const int ext_num, const cha
 // Functions to change directories
 int cfile_chdir(const char *dir);
 
-#ifdef _WIN32
-int cfile_chdrive(int DriveNum, int flag);
-#endif
-
 // push current directory on a 'stack' (so we can restore it) and change the directory
 int cfile_push_chdir(int type);
 

@@ -45,6 +45,7 @@
 #include "ship/ship.h"
 #include "starfield/supernova.h"
 #include "ui/ui.h"
+#include "utils/filesystem.h"
 #include "weapon/weapon.h"
 
 
@@ -792,8 +793,6 @@ void mission_campaign_init()
  */
 void mission_campaign_savefile_generate_root(char *filename, player *pl)
 {
-	char base[_MAX_FNAME];
-
 	Assert ( strlen(Campaign.filename) != 0 ); //-V805
 
 	if (pl == NULL) {
@@ -805,11 +804,11 @@ void mission_campaign_savefile_generate_root(char *filename, player *pl)
 
 	// build up the filename for the save file.  There could be a problem with filename length,
 	// but this problem can get fixed in several ways -- ignore the problem for now though.
-	_splitpath( Campaign.filename, NULL, NULL, base, NULL );
+	auto base = util::filesystem::path(Campaign.filename).stem().string();
 
-	Assert ( (strlen(base) + strlen(pl->callsign) + 1) < _MAX_FNAME );
+	Assert ( (base.size() + strlen(pl->callsign) + 1) < _MAX_FNAME );
 
-	sprintf( filename, NOX("%s.%s."), pl->callsign, base );
+	sprintf( filename, NOX("%s.%s."), pl->callsign, base.c_str() );
 }
 
 /**
@@ -838,15 +837,15 @@ int campaign_savefile_save(char *pname)
  */
 void mission_campaign_savefile_delete( char *cfilename )
 {
-	char filename[_MAX_FNAME], base[_MAX_FNAME];
+	char filename[_MAX_FNAME];
 
-	_splitpath( cfilename, NULL, NULL, base, NULL );
+	auto base = util::filesystem::path(cfilename).stem().string();
 
 	if ( Player->flags & PLAYER_FLAGS_IS_MULTI ) {
 		return;	// no such thing as a multiplayer campaign savefile
 	}
 
-	sprintf( filename, NOX("%s.%s.csg"), Player->callsign, base ); // only support the new filename here - taylor
+	sprintf( filename, NOX("%s.%s.csg"), Player->callsign, base.c_str() ); // only support the new filename here - taylor
 
 	cf_delete( filename, CF_TYPE_PLAYERS );
 }

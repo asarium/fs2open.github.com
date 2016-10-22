@@ -39,6 +39,12 @@ target_link_libraries(code PUBLIC md5)
 
 enable_clang_tidy(code)
 
+if (NOT HAVE_FILESYSTEM AND NOT HAVE_EXPERIMENTAL_FILESYSTEM)
+	message(STATUS "No standard filesystem library could be found, boost will be used instead.")
+	find_package(BoostScp)
+	target_link_libraries(code PUBLIC boost)
+endif()
+
 IF (FSO_USE_SPEECH)
 	find_package(Speech REQUIRED)
 	target_link_libraries(code PUBLIC speech)

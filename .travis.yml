@@ -98,6 +98,7 @@ matrix:
                       - clang-4.0
                       - clang-tidy-4.0
                       - libc++-dev
+                      - libboost-all-dev
           script:
             - ./ci/travis/script.sh
             - ./ci/travis/clang_tidy.sh
@@ -136,6 +137,7 @@ matrix:
                       - *global_deps
                       - clang-4.0
                       - libc++-dev
+                      - libboost-all-dev
         - os: osx
           env: CONFIGURATION="Release"
 before_install:
