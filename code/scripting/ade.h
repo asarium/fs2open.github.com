@@ -340,6 +340,8 @@ int ade_friendly_error(lua_State *L);
  * @ingroup ade_api
  */
 const char *ade_get_type_string(lua_State *L, int argnum);
+
+void load_default_script(lua_State* L, const char* name);
 }
 
 #endif //FS2_OPEN_ADE_H

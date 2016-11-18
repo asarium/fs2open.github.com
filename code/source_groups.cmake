@@ -154,6 +154,7 @@ SET(file_root_def_files_files
 	def_files/bloom-comp-f.sdr
 	def_files/blur-f.sdr
 	def_files/brightpass-f.sdr
+	def_files/cfile_require.lua
 	def_files/controlconfigdefaults.tbl
 	def_files/deferred-clear-f.sdr
 	def_files/deferred-clear-v.sdr

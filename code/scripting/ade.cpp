@@ -1,7 +1,10 @@
 //
 //
 
+#include "def_files/def_files.h"
+#include "mod_table/mod_table.h"
 #include "scripting/ade.h"
+#include "scripting/lua/LuaFunction.h"
 #include "ship/ship.h"
 #include "ade_api.h"
 
@@ -963,6 +966,42 @@ const char *ade_get_type_string(lua_State *L, int argnum)
 		return "Unknown";
 
 	return Lua_type_names[type];
+}
+
+void load_default_script(lua_State* L, const char* name) {
+	using namespace luacpp;
+
+	SCP_string source;
+	SCP_string source_name;
+	if (Enable_external_default_scripts && cf_exists(name, CF_TYPE_SCRIPTS)) {
+		// Load from disk
+		source_name = name;
+
+		auto cfp = cfopen(name, "rb", CFILE_NORMAL, CF_TYPE_SCRIPTS);
+		Assertion(cfp != nullptr, "Failed to open default file!");
+
+		auto length = cfilelength(cfp);
+
+		source.resize((size_t) length);
+		cfread(&source[0], 1, length, cfp);
+
+		cfclose(cfp);
+	} else {
+		// Load from default files
+		source_name = SCP_string("default ") + name;
+
+		auto def = defaults_get_file(name);
+
+		auto c = reinterpret_cast<const char*>(def.data);
+		source.assign(c, c + def.size);
+	}
+
+	auto func = LuaFunction::createFromCode(L, source, source_name);
+	try {
+		func();
+	} catch (const LuaException& e) {
+		LuaError(L, "Error while loading default script: %s", e.what());
+	}
 }
 
 }

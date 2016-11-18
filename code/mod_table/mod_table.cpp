@@ -25,6 +25,7 @@ int Default_ship_select_effect = 2;
 int Default_weapon_select_effect = 2;
 int Default_fiction_viewer_ui = -1;
 bool Enable_external_shaders = false;
+bool Enable_external_default_scripts = false;
 int Default_detail_level = 3; // "very high" seems a reasonable default in 2012 -zookeeper
 bool Full_color_head_anis = false;
 bool Weapons_inherit_parent_collision_group = false;
@@ -330,6 +331,16 @@ void parse_mod_table(const char *filename)
 					Default_fiction_viewer_ui = ui_index;
 				else
 					Warning(LOCATION, "Unrecognized fiction viewer UI: %s", ui_name);
+			}
+		}
+
+		if (optional_string("$Enable external default scripts:")) {
+			stuff_boolean(&Enable_external_default_scripts);
+
+			if (Enable_external_default_scripts) {
+				mprintf(("Game Settings Table: Enabled external default scripts.\n"));
+			} else {
+				mprintf(("Game Settings Table: Disabled external default scripts.\n"));
 			}
 		}
 
