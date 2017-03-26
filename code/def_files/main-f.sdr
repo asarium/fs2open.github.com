@@ -59,9 +59,6 @@ uniform float anim_timer;
 uniform float vpwidth;
 uniform float vpheight;
 #endif
-#ifdef FLAG_TRANSFORM
-in float fragNotVisible;
-#endif
 #ifdef FLAG_TEAMCOLOR
 uniform vec3 base_color;
 uniform vec3 stripe_color;
@@ -262,9 +259,6 @@ vec3 CalculateLighting(vec3 normal, vec3 diffuseMaterial, vec3 specularMaterial,
 #endif
 void main()
 {
-#ifdef FLAG_TRANSFORM
-	if(fragNotVisible >= 0.9) { discard; }
-#endif
 #ifdef FLAG_SHADOW_MAP
 	// need depth and depth squared for variance shadow maps
 	fragOut0 = vec4(fragPosition.z, fragPosition.z * fragPosition.z * VARIANCE_SHADOW_SCALE_INV, 0.0, 1.0);

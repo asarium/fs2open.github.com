@@ -27,11 +27,6 @@ out float fragFogDist;
 #ifdef FLAG_TRANSFORM
 uniform samplerBuffer transform_tex;
 uniform int buffer_matrix_offset;
-#ifdef FLAG_SHADOW_MAP
-out float geoNotVisible;
-#else
-out float fragNotVisible;
-#endif
 #endif
 #ifdef FLAG_SHADOW_MAP
 out float geoInstance;
@@ -90,11 +85,7 @@ void main()
  #ifdef FLAG_TRANSFORM
 	float invisible;
 	getModelTransform(orient, invisible, int(vertModelID), buffer_matrix_offset);
-  #ifdef FLAG_SHADOW_MAP
-	geoNotVisible = invisible;
-  #else
-	fragNotVisible = invisible;
-  #endif
+	gl_ClipDistance[1] = invisible >= 0.9 ? -1.0 : 1.0f;
  #endif
 	texCoord = textureMatrix * vertTexCoord;
 	vec4 vertex = vertPosition;

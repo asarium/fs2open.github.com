@@ -901,6 +901,11 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map)
 			mprintf(("WARNING: Error setting bitmap texture (%i)!\n", base_map));
 		}
 	}
+
+	if (Current_shader->shader != SDR_TYPE_MODEL) {
+		// Reset the clip distance for all other shaders than models
+		GL_state.ClipDistance(1, false);
+	}
 }
 
 void opengl_tnl_set_model_material(model_material *material_info)
@@ -1158,6 +1163,9 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	}
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_TRANSFORM ) {
+		// We use the second clipping plane for clipping the invisible submodels
+		GL_state.ClipDistance(1, true);
+
 		Current_shader->program->Uniforms.setUniformi("transform_tex", render_pass);
 		Current_shader->program->Uniforms.setUniformi("buffer_matrix_offset", (int)GL_transform_buffer_offset);
 		
@@ -1166,6 +1174,9 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		GL_state.Texture.Enable(opengl_get_transform_buffer_texture());
 
 		++render_pass;
+	} else {
+		// If we don't use the batched transforms we just disable this clipping plane
+		GL_state.ClipDistance(1, false);
 	}
 
 	// Team colors are passed to the shader here, but the shader needs to handle their application.

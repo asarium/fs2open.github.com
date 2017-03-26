@@ -7,10 +7,6 @@ in vec4 geoTexCoord[];
 out vec4 fragPosition;
 out vec3 fragNormal;
 out vec4 fragTexCoord;
-#ifdef FLAG_TRANSFORM
-in float geoNotVisible[];
-out float fragNotVisible;
-#endif
 void main(void)
 {
 	int instanceID = int(geoInstance[0]);
@@ -23,12 +19,11 @@ void main(void)
 		fragNormal = geoNormal[vert];
 		fragTexCoord = geoTexCoord[vert];
 		gl_Layer = instanceID;
-#ifdef FLAG_TRANSFORM
-		fragNotVisible = geoNotVisible[0];
-#endif
-#ifdef FLAG_CLIP
+
+		// Pass clipping values through the shader
 		gl_ClipDistance[0] = gl_in[vert].gl_ClipDistance[0];
-#endif
+		gl_ClipDistance[1] = gl_in[vert].gl_ClipDistance[1];
+
 		EmitVertex();
 	}
 	EndPrimitive();
