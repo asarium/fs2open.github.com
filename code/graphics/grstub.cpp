@@ -385,7 +385,7 @@ void gr_stub_shadow_map_end()
 {
 }
 
-void gr_stub_render_shield_impact(shield_material *material_info, primitive_type prim_type, vertex_layout *layout, int buffer_handle, int n_verts)
+void gr_stub_render_shield_impact(shield_material *material_info, primitive_type prim_type, vertex_layout *layout, const buffer_binding&, int n_verts)
 {
 
 }
@@ -395,22 +395,22 @@ void gr_stub_render_model(model_material* material_info, indexed_vertex_source *
 
 }
 
-void gr_stub_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+void gr_stub_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding&)
 {
 
 }
 
-void gr_stub_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+void gr_stub_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding&)
 {
 
 }
 
-void gr_stub_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+void gr_stub_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding&)
 {
 
 }
 
-void gr_stub_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+void gr_stub_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding&)
 {
 
 }

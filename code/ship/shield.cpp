@@ -406,7 +406,7 @@ void shield_render_decal(polymodel *pm, matrix *orient, vec3d *pos, matrix* hit_
 	material_info.set_impact_transform(*hit_orient, *hit_pos);
 	material_info.set_cull_mode(false);
 
-	gr_render_shield_impact(&material_info, PRIM_TYPE_TRIS, &pm->shield.layout, pm->shield.buffer_id, pm->shield.buffer_n_verts);
+	gr_render_shield_impact(&material_info, PRIM_TYPE_TRIS, &pm->shield.layout, buffer_binding(pm->shield.buffer_id), pm->shield.buffer_n_verts);
 
 	g3_done_instance(true);
 }

@@ -866,17 +866,17 @@ void batching_render_batch_item(primitive_batch_item *item, vertex_layout *layou
 		particle_material material_def;
 
 		material_set_unlit_volume(&material_def, item->batch_item_info.texture, prim_type == PRIM_TYPE_POINTS);
-		gr_render_primitives_particle(&material_def, prim_type, layout, (int)item->offset, (int)item->n_verts, buffer_num);
+		gr_render_primitives_particle(&material_def, prim_type, layout, (int)item->offset, (int)item->n_verts, buffer_binding(buffer_num));
 	} else if ( item->batch_item_info.mat_type == batch_info::DISTORTION ) {
 		distortion_material material_def;
 
 		material_set_distortion(&material_def, item->batch_item_info.texture, item->batch_item_info.thruster);
-		gr_render_primitives_distortion(&material_def, PRIM_TYPE_TRIS, layout, (int)item->offset, (int)item->n_verts, buffer_num);
+		gr_render_primitives_distortion(&material_def, PRIM_TYPE_TRIS, layout, (int)item->offset, (int)item->n_verts, buffer_binding(buffer_num));
 	} else {
 		material material_def;
 
 		material_set_unlit_emissive(&material_def, item->batch_item_info.texture, 1.0f, 2.0f);
-		gr_render_primitives(&material_def, PRIM_TYPE_TRIS, layout, (int)item->offset, (int)item->n_verts, buffer_num);
+		gr_render_primitives(&material_def, PRIM_TYPE_TRIS, layout, (int)item->offset, (int)item->n_verts, buffer_binding(buffer_num));
 	}
 }
 

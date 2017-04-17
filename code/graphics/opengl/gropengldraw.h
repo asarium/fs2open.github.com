@@ -40,7 +40,7 @@ void gr_opengl_draw_deferred_light_cylinder(const vec3d *position, const matrix 
 void gr_opengl_shadow_map_start(matrix4 *shadow_view_matrix, const matrix *light_orient);
 void gr_opengl_shadow_map_end();
 
-void gr_opengl_render_shield_impact(shield_material *material_info, primitive_type prim_type, vertex_layout *layout, int buffer_handle, int n_verts);
+void gr_opengl_render_shield_impact(shield_material *material_info, primitive_type prim_type, vertex_layout *layout, const buffer_binding& buffers, int n_verts);
 
 void opengl_setup_scene_textures();
 void opengl_scene_texture_shutdown();
@@ -53,15 +53,15 @@ void gr_opengl_deferred_lighting_begin();
 void gr_opengl_deferred_lighting_end();
 void gr_opengl_deferred_lighting_finish();
 
-void opengl_render_primitives(primitive_type prim_type, vertex_layout* layout, int n_verts, int buffer_handle, size_t vert_offset, size_t byte_offset);
+void opengl_render_primitives(primitive_type prim_type, vertex_layout* layout, int n_verts, const buffer_binding& buffers, size_t vert_offset, size_t byte_offset);
 void opengl_render_primitives_immediate(primitive_type prim_type, vertex_layout* layout, int n_verts, void* data, int size);
 
-void gr_opengl_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
-void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
-void gr_opengl_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
-void gr_opengl_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
+void gr_opengl_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& binding_info);
+void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& binding_info);
+void gr_opengl_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& binding_info);
+void gr_opengl_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& binding_info);
 
-void opengl_bind_vertex_layout(vertex_layout &layout, uint base_vertex = 0, ubyte* base_ptr = NULL);
+void opengl_bind_vertex_layout(const vertex_layout &layout, const buffer_binding& buffers, uint base_vertex = 0, ubyte* base_ptr = NULL);
 
 void opengl_draw_textured_quad(GLfloat x1, GLfloat y1, GLfloat u1, GLfloat v1,
 							   GLfloat x2, GLfloat y2, GLfloat u2, GLfloat v2 );

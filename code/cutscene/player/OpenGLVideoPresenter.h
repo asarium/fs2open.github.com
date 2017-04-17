@@ -14,6 +14,7 @@ namespace cutscene {
 namespace player {
 class OpenGLVideoPresenter: public VideoPresenter {
 	int _vertexBuffer = -1;
+	buffer_binding _bindingInfo;
 	vertex_layout _vertexLayout;
 	int _sdr_handle = -1;
 

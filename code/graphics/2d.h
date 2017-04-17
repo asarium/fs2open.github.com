@@ -228,6 +228,50 @@ public:
 	}
 };
 
+class buffer_binding {
+	SCP_unordered_map<vertex_format_data::vertex_format, int> _buffer_bindings;
+
+	int _default_vertex_buffer = -1;
+	int _index_buffer = -1;
+
+ public:
+	buffer_binding() {
+		// Leave in an invalid state
+	}
+
+	explicit buffer_binding(int vertex_buffer) {
+		Assertion(vertex_buffer >= 0, "Default vertex buffer must be valid!");
+
+		_default_vertex_buffer = vertex_buffer;
+	}
+
+	buffer_binding(int vertex_buffer, int index_buffer) : buffer_binding(vertex_buffer) {
+		Assertion(index_buffer >= 0, "Index buffer must be valid!");
+
+		_index_buffer = index_buffer;
+	}
+
+	void bindBuffer(vertex_format_data::vertex_format bindPoint, int buffer) {
+		Assertion(buffer >= 0, "Buffer must be valid!");
+
+		_buffer_bindings.insert(std::make_pair(bindPoint, buffer));
+	}
+
+	int getIndexBuffer() const {
+		return _index_buffer;
+	}
+
+	int getVertexBuffer(vertex_format_data::vertex_format bindPoint) const {
+		auto iter = _buffer_bindings.find(bindPoint);
+
+		if (iter != _buffer_bindings.end()) {
+			return iter->second;
+		}
+
+		return _default_vertex_buffer;
+	}
+};
+
 typedef enum gr_capability {
 	CAPABILITY_ENVIRONMENT_MAP,
 	CAPABILITY_NORMAL_MAP,
@@ -504,6 +548,8 @@ struct indexed_vertex_source {
 	int Vbuffer_handle;
 	int Ibuffer_handle;
 
+	buffer_binding Binding_info;
+
 	uint Vertex_list_size;
 	uint Index_list_size;
 
@@ -732,11 +778,11 @@ typedef struct screen {
 
 	// new drawing functions
 	void (*gf_render_model)(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, size_t texi);
-	void (*gf_render_shield_impact)(shield_material *material_info, primitive_type prim_type, vertex_layout *layout, int buffer_handle, int n_verts);
-	void (*gf_render_primitives)(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
-	void (*gf_render_primitives_particle)(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
-	void (*gf_render_primitives_distortion)(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
-	void (*gf_render_primitives_2d)(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle);
+	void (*gf_render_shield_impact)(shield_material *material_info, primitive_type prim_type, vertex_layout *layout, const buffer_binding& buffers, int n_verts);
+	void (*gf_render_primitives)(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& buffers);
+	void (*gf_render_primitives_particle)(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& buffers);
+	void (*gf_render_primitives_distortion)(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& buffers);
+	void (*gf_render_primitives_2d)(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& buffers);
 
 	bool (*gf_is_capable)(gr_capability capability);
 
@@ -982,24 +1028,24 @@ inline void gr_post_process_restore_zbuffer() {
 #define gr_shadow_map_end				GR_CALL(*gr_screen.gf_shadow_map_end)
 #define gr_render_shield_impact			GR_CALL(*gr_screen.gf_render_shield_impact)
 
-__inline void gr_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle = -1)
+__inline void gr_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& binding)
 {
-	(*gr_screen.gf_render_primitives)(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+	(*gr_screen.gf_render_primitives)(material_info, prim_type, layout, offset, n_verts, binding);
 }
 
-__inline void gr_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle = -1)
+__inline void gr_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& binding)
 {
-	(*gr_screen.gf_render_primitives_particle)(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+	(*gr_screen.gf_render_primitives_particle)(material_info, prim_type, layout, offset, n_verts, binding);
 }
 
-__inline void gr_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle = -1)
+__inline void gr_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& binding)
 {
-	(*gr_screen.gf_render_primitives_distortion)(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+	(*gr_screen.gf_render_primitives_distortion)(material_info, prim_type, layout, offset, n_verts, binding);
 }
 
-__inline void gr_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle = -1)
+__inline void gr_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& binding)
 {
-	(*gr_screen.gf_render_primitives_2d)(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+	(*gr_screen.gf_render_primitives_2d)(material_info, prim_type, layout, offset, n_verts, binding);
 }
 
 __inline void gr_render_model(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, size_t texi)

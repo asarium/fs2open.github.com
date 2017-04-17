@@ -18,6 +18,7 @@ OpenGLVideoPresenter::OpenGLVideoPresenter(const MovieProperties& props) : _scal
 	opengl_set_texture_target(GL_TEXTURE_2D);
 
 	_vertexBuffer = gr_create_vertex_buffer(true);
+	_bindingInfo = buffer_binding(_vertexBuffer);
 
 	auto w = static_cast<int>(props.size.width);
 	auto h = static_cast<int>(props.size.height);
@@ -205,8 +206,7 @@ void OpenGLVideoPresenter::uploadVideoFrame(const VideoFramePtr& frame) {
 void OpenGLVideoPresenter::displayFrame() {
 	opengl_shader_set_current(_sdr_handle);
 
-	opengl_bind_buffer_object(_vertexBuffer);
-	opengl_bind_vertex_layout(_vertexLayout);
+	opengl_bind_vertex_layout(_vertexLayout, _bindingInfo);
 
 	// Bind textures
 	GL_state.Texture.SetActiveUnit(0);

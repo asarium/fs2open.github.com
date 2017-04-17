@@ -2013,6 +2013,8 @@ void model_interp_submit_buffers(indexed_vertex_source *vert_src)
 		vm_free(vert_src->Index_list);
 		vert_src->Index_list = NULL;
 	}
+
+	vert_src->Binding_info = buffer_binding(vert_src->Vbuffer_handle, vert_src->Ibuffer_handle);
 }
 
 bool model_interp_pack_buffer(indexed_vertex_source *vert_src, vertex_buffer *vb)

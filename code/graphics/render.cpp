@@ -1123,7 +1123,7 @@ void gr_render_primitives_immediate(material* material_info,
 
 	vertex_layout immediate_layout = adjust_immediate_vertex_layout(layout, offset);
 
-	gr_render_primitives(material_info, prim_type, &immediate_layout, 0, n_verts, gr_immediate_buffer_handle);
+	gr_render_primitives(material_info, prim_type, &immediate_layout, 0, n_verts, buffer_binding(gr_immediate_buffer_handle));
 }
 
 void gr_render_primitives_2d_immediate(material* material_info,
@@ -1136,5 +1136,5 @@ void gr_render_primitives_2d_immediate(material* material_info,
 
 	vertex_layout immediate_layout = adjust_immediate_vertex_layout(layout, offset);
 
-	gr_render_primitives_2d(material_info, prim_type, &immediate_layout, 0, n_verts, gr_immediate_buffer_handle);
+	gr_render_primitives_2d(material_info, prim_type, &immediate_layout, 0, n_verts, buffer_binding(gr_immediate_buffer_handle));
 }

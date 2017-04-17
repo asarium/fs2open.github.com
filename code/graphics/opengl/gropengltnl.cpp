@@ -368,15 +368,6 @@ void opengl_tnl_shutdown()
 	opengl_destroy_all_buffers();
 }
 
-static void opengl_init_arrays(indexed_vertex_source *vert_src, vertex_buffer *bufferp)
-{
-	Assertion(vert_src->Vbuffer_handle >= 0, "Vertex buffers require a valid buffer handle!");
-
-	opengl_bind_buffer_object(vert_src->Vbuffer_handle);
-	
-	opengl_bind_vertex_layout(bufferp->layout);
-}
-
 void opengl_render_model_program(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, buffer_data *datap)
 {
 	GL_state.Texture.SetShaderMode(GL_TRUE);
@@ -394,11 +385,7 @@ void opengl_render_model_program(model_material* material_info, indexed_vertex_s
 	Assert(vert_source);
 
 	// basic setup of all data
-	opengl_init_arrays(vert_source, bufferp);
-
-	Assertion(vert_source->Ibuffer_handle >= 0, "The index values must be located in a GPU buffer!");
-
-	opengl_bind_buffer_object(vert_source->Ibuffer_handle);
+	opengl_bind_vertex_layout(bufferp->layout, vert_source->Binding_info);
 
 	if ( Rendering_to_shadow_map ) {
 		glDrawElementsInstancedBaseVertex(GL_TRIANGLES, (GLsizei) count, element_type,

@@ -48,8 +48,9 @@ int Scene_texture_height;
 GLfloat Scene_texture_u_scale = 1.0f;
 GLfloat Scene_texture_v_scale = 1.0f;
 
-GLuint deferred_light_sphere_vbo = 0;
-GLuint deferred_light_sphere_ibo = 0;
+int deferred_light_sphere_vbo = 0;
+int deferred_light_sphere_ibo = 0;
+
 GLushort deferred_light_sphere_vcount = 0;
 GLuint deferred_light_sphere_icount = 0;
 
@@ -94,7 +95,7 @@ inline GLenum opengl_primitive_type(primitive_type prim_type)
 	}
 }
 
-void opengl_bind_vertex_component(const vertex_format_data &vert_component, uint base_vertex, ubyte* base_ptr)
+static void opengl_bind_vertex_component(const vertex_format_data &vert_component, const buffer_binding& buffers, uint base_vertex, ubyte* base_ptr)
 {
 	opengl_vertex_bind &bind_info = GL_array_binding_data[vert_component.format_type];
 	opengl_vert_attrib &attrib_info = GL_vertex_attrib_info[bind_info.attribute_id];
@@ -122,22 +123,27 @@ void opengl_bind_vertex_component(const vertex_format_data &vert_component, uint
 
 		if ( index >= 0 ) {
 			GL_state.Array.EnableVertexAttrib(index);
+			opengl_bind_buffer_object(buffers.getVertexBuffer(vert_component.format_type));
 			GL_state.Array.VertexAttribPointer(index, bind_info.size, bind_info.data_type, bind_info.normalized, (GLsizei)vert_component.stride, data_src);
 		}
 	}
 }
 
-void opengl_bind_vertex_layout(vertex_layout &layout, uint base_vertex, ubyte* base_ptr)
+void opengl_bind_vertex_layout(const vertex_layout &layout, const buffer_binding& buffers, uint base_vertex, ubyte* base_ptr)
 {
 	GL_state.Array.BindPointersBegin();
 
 	size_t num_vertex_bindings = layout.get_num_vertex_components();
 
 	for ( size_t i = 0; i < num_vertex_bindings; ++i ) {
-		opengl_bind_vertex_component(*layout.get_vertex_component(i), base_vertex, base_ptr);
+		opengl_bind_vertex_component(*layout.get_vertex_component(i), buffers, base_vertex, base_ptr);
 	}
 
 	GL_state.Array.BindPointersEnd();
+
+	if (buffers.getIndexBuffer() >= 0) {
+		opengl_bind_buffer_object(buffers.getIndexBuffer());
+	}
 }
 
 void gr_opengl_sphere(material* material_def, float rad)
@@ -192,58 +198,22 @@ void gr_opengl_deferred_light_sphere_init(int rings, int segments) // Generate a
 
 	glGetError();
 
-	glGenBuffers(1, &deferred_light_sphere_vbo);
+	deferred_light_sphere_vbo = gr_create_vertex_buffer(true);
+	gr_update_buffer_data(deferred_light_sphere_vbo, nVertex * sizeof(float), Vertices);
 
-	// make sure we have one
-	if (deferred_light_sphere_vbo) {
-		glBindBuffer(GL_ARRAY_BUFFER, deferred_light_sphere_vbo);
-		glBufferData(GL_ARRAY_BUFFER, nVertex * sizeof(float), Vertices, GL_STATIC_DRAW);
-
-		// just in case
-		if ( opengl_check_for_errors() ) {
-			glDeleteBuffers(1, &deferred_light_sphere_vbo);
-			deferred_light_sphere_vbo = 0;
-			return;
-		}
-
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-		vm_free(Vertices);
-		Vertices = NULL;
-	}
-
-	glGenBuffers(1, &deferred_light_sphere_ibo);
-
-	// make sure we have one
-	if (deferred_light_sphere_ibo) {
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, deferred_light_sphere_ibo);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, nIndex * sizeof(ushort), Indices, GL_STATIC_DRAW);
-
-		// just in case
-		if ( opengl_check_for_errors() ) {
-			glDeleteBuffers(1, &deferred_light_sphere_ibo);
-			deferred_light_sphere_ibo = 0;
-			return;
-		}
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-		vm_free(Indices);
-		Indices = NULL;
-	}
-
+	deferred_light_sphere_ibo = gr_create_index_buffer(true);
+	gr_update_buffer_data(deferred_light_sphere_vbo, nIndex * sizeof(ushort), Indices);
 }
 
 void opengl_draw_sphere()
 {
-	GL_state.Array.BindArrayBuffer(deferred_light_sphere_vbo);
-	GL_state.Array.BindElementBuffer(deferred_light_sphere_ibo);
-
 	vertex_layout vertex_declare;
 
 	vertex_declare.add_vertex_component(vertex_format_data::POSITION3, 0, 0);
 
-	opengl_bind_vertex_layout(vertex_declare);
+	buffer_binding binding(deferred_light_sphere_vbo, deferred_light_sphere_ibo);
+
+	opengl_bind_vertex_layout(vertex_declare, binding);
 
 	glDrawRangeElements(GL_TRIANGLES, 0, deferred_light_sphere_vcount, deferred_light_sphere_icount, GL_UNSIGNED_SHORT, 0);
 }
@@ -377,14 +347,13 @@ void gr_opengl_draw_deferred_light_cylinder(vec3d *position,matrix *orient, floa
 	Current_shader->program->Uniforms.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
 	Current_shader->program->Uniforms.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 
-	GL_state.Array.BindArrayBuffer(deferred_light_cylinder_vbo);
-	GL_state.Array.BindElementBuffer(deferred_light_cylinder_ibo);
-
 	vertex_layout vertex_declare;
 
 	vertex_declare.add_vertex_component(vertex_format_data::POSITION3, 0, 0);
 
-	opengl_bind_vertex_layout(vertex_declare);
+	buffer_binding binding(deferred_light_cylinder_vbo, deferred_light_cylinder_ibo);
+
+	opengl_bind_vertex_layout(vertex_declare, binding);
 
 	glDrawRangeElements(GL_TRIANGLES, 0, deferred_light_cylinder_vcount, deferred_light_cylinder_icount, GL_UNSIGNED_SHORT, 0);
 
@@ -837,8 +806,6 @@ void gr_opengl_scene_texture_end()
 
 		opengl_shader_set_passthrough(true, false);
 
-		GL_state.Array.BindArrayBuffer(0);
-
 		if (GL_rendering_to_texture)
 		{
 			opengl_draw_textured_quad(0.0f, 0.0f, 0.0f, 0.0f, (float)gr_screen.max_w, (float)gr_screen.max_h, Scene_texture_u_scale, Scene_texture_v_scale);
@@ -1084,7 +1051,7 @@ void gr_opengl_deferred_lighting_finish()
 	gr_clear_states();
 }
 
-void gr_opengl_render_shield_impact(shield_material *material_info, primitive_type prim_type, vertex_layout *layout, int buffer_handle, int n_verts)
+void gr_opengl_render_shield_impact(shield_material *material_info, primitive_type prim_type, vertex_layout *layout, const buffer_binding& buffers, int n_verts)
 {
 	matrix4 impact_transform;
 	matrix4 impact_projection;
@@ -1113,7 +1080,7 @@ void gr_opengl_render_shield_impact(shield_material *material_info, primitive_ty
 	Current_shader->program->Uniforms.setUniformMatrix4f("modelViewMatrix", GL_model_view_matrix);
 	Current_shader->program->Uniforms.setUniformMatrix4f("projMatrix", GL_projection_matrix);
 	
-	opengl_render_primitives(prim_type, layout, n_verts, buffer_handle, 0, 0);
+	opengl_render_primitives(prim_type, layout, n_verts, buffers, 0, 0);
 }
 
 void gr_opengl_update_distortion()
@@ -1208,15 +1175,11 @@ void gr_opengl_update_distortion()
 	GL_state.CullFace(cull);
 }
 
-void opengl_render_primitives(primitive_type prim_type, vertex_layout* layout, int n_verts, int buffer_handle, size_t vert_offset, size_t byte_offset)
+void opengl_render_primitives(primitive_type prim_type, vertex_layout* layout, int n_verts, const buffer_binding& buffers, size_t vert_offset, size_t byte_offset)
 {
 	GR_DEBUG_SCOPE("Render primitives");
 
-	Assertion(buffer_handle >= 0, "A valid buffer handle is required! Use the immediate buffer if data is not in GPU buffer yet.");
-
-	opengl_bind_buffer_object(buffer_handle);
-
-	opengl_bind_vertex_layout(*layout, 0, (ubyte*)byte_offset);
+	opengl_bind_vertex_layout(*layout, buffers, 0, (ubyte*)byte_offset);
 
 	glDrawArrays(opengl_primitive_type(prim_type), (GLint)vert_offset, n_verts);
 }
@@ -1225,21 +1188,21 @@ void opengl_render_primitives_immediate(primitive_type prim_type, vertex_layout*
 {
 	auto offset = gr_add_to_immediate_buffer(size, data);
 
-	opengl_render_primitives(prim_type, layout, n_verts, gr_immediate_buffer_handle, 0, offset);
+	opengl_render_primitives(prim_type, layout, n_verts, buffer_binding(gr_immediate_buffer_handle), 0, offset);
 }
 
-void gr_opengl_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+void gr_opengl_render_primitives(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& binding_info)
 {
 	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives()");
 
 	opengl_tnl_set_material(material_info, true);
 
-	opengl_render_primitives(prim_type, layout, n_verts, buffer_handle, offset, 0);
+	opengl_render_primitives(prim_type, layout, n_verts, binding_info, offset, 0);
 
 	GL_CHECK_FOR_ERRORS("end of gr_opengl_render_primitives()");
 }
 
-void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& binding_info)
 {
 	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives_2d()");
 
@@ -1248,7 +1211,7 @@ void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim
 
 	gr_opengl_set_2d_matrix();
 
-	gr_opengl_render_primitives(material_info, prim_type, layout, offset, n_verts, buffer_handle);
+	gr_opengl_render_primitives(material_info, prim_type, layout, offset, n_verts, binding_info);
 
 	gr_opengl_end_2d_matrix();
 
@@ -1257,18 +1220,18 @@ void gr_opengl_render_primitives_2d(material* material_info, primitive_type prim
 	GL_CHECK_FOR_ERRORS("end of gr_opengl_render_primitives_2d()");
 }
 
-void gr_opengl_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+void gr_opengl_render_primitives_particle(particle_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& binding_info)
 {
 	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives_particle()");
 
 	opengl_tnl_set_material_particle(material_info);
 	
-	opengl_render_primitives(prim_type, layout, n_verts, buffer_handle, offset, 0);
+	opengl_render_primitives(prim_type, layout, n_verts, binding_info, offset, 0);
 
 	GL_CHECK_FOR_ERRORS("end of gr_opengl_render_primitives_particle()");
 }
 
-void gr_opengl_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, int buffer_handle)
+void gr_opengl_render_primitives_distortion(distortion_material* material_info, primitive_type prim_type, vertex_layout* layout, int offset, int n_verts, const buffer_binding& binding_info)
 {
 	GL_CHECK_FOR_ERRORS("start of gr_opengl_render_primitives_distortion()");
 
@@ -1276,7 +1239,7 @@ void gr_opengl_render_primitives_distortion(distortion_material* material_info, 
 	
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	
-	opengl_render_primitives(prim_type, layout, n_verts, buffer_handle, offset, 0);
+	opengl_render_primitives(prim_type, layout, n_verts, binding_info, offset, 0);
 
 	GLenum buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
 	glDrawBuffers(2, buffers);
