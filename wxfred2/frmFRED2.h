@@ -27,6 +27,8 @@
  */
 
 // Child windows and dialogs:
+#include "glcViewport.h"
+
 #include "editors/frmShipsEditor.h"
 #include "editors/frmWingEditor.h"
 #include "editors/dlgObjectEditor.h"
@@ -236,6 +238,12 @@ protected:
 private:
 //	void InitMods();
 	// Widgets
+
+	// member variables
+	wxChar version[32];
+	wxString currentFilename;
+	const wxString fredName;
+
 	wxChoice* cbNewObject;
 	wxStatusBar* sbFRED;
 
@@ -264,12 +272,6 @@ private:
 	dlgSexpHelp* dlgSexpHelp_p;
 
 	// Viewports and Rendering
-//	wxGLContext mission_state;
-//	wxGLCanvas viewport;
-
-	// member variables
-	wxChar version[32];
-	wxString currentFilename;
-	const wxString fredName;
+	glcViewport* viewport_p;
 };
 #endif

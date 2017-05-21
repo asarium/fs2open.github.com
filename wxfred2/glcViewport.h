@@ -7,18 +7,15 @@
  * You may not sell or otherwise commercially exploit the source or things you
  * create based on the source.
  */
-
 #include "base/wxFRED_base.h"
 
-#include "globalincs/pstypes.h"
-#include "physics/physics.h"
+#include <globalincs/pstypes.h>
+#include <mission/missiongrid.h>
+#include <physics/physics.h>
 
-#include "wx/glcanvas.h"
-
-
-#if !wxUSE_GLCANVAS
-    #error "OpenGL required: set wxUSE_GLCANVAS to 1 and rebuild the library"
-#endif
+#include <wx/event.h>
+#include <wx/window.h>
+#include <wx/windowid.h>
 
 enum cmode
 {
@@ -27,35 +24,80 @@ enum cmode
 	cmode_ship		// Controls selected object
 };
 
-class glcViewport : public wxGLCanvas
+struct ViewSettings
+{
+	// Camera Data
+	vec3d   c_pos;      // Camera Position
+	matrix  c_orient;   // Camera Orientation
+	physics_info c_physics; // Camera Physics
+	int physics_speed = 1;  // Physics speed multiplier
+	int physics_rot = 20;   // Physics rotation multiplier
+
+	// View|Display Filter...Commands
+	bool show_playerStarts;
+	bool show_ships;
+	bool show_waypoints;
+
+	// View...Commands
+	bool show_background;
+	bool show_compass;
+	bool show_coordinates;
+	bool show_distances;
+	bool show_grid;
+	bool show_grid_aa;
+	bool show_grid_doubleFine;
+	bool show_grid_positions;
+	bool show_horizon;
+	bool show_lightingFromSuns;
+	bool show_models;
+	bool show_model_paths;
+	bool show_model_dockpoints;
+	bool show_outlines;
+	bool show_shipInfo;
+
+	bool show_asteroids;
+};
+
+/**
+ * @class glcViewport
+ *
+ * @brief The viewport class.
+ *
+ * @details Where the bulk of the wxFRED GUI is the frontend to the mission file, this is the frontend to the graphics
+ *   system. It provides handlers for the GUI events and calls the appropriate rendering functions provided by wxFredRender
+ */
+class glcViewport : public wxWindow
 {
 public:
-	glcViewport( wxWindow *parent, wxWindowID id = wxID_ANY, int*gl_attrib = NULL);
+	glcViewport( wxWindow *parent, wxWindowID id = wxID_ANY );
+	~glcViewport( void );
+
+
+	cmode	Control_mode;		// Control behavior setting. Public for now for lazy reasons
+
+	// These are public for now, because lazy
+	ViewSettings vset;  // View settings of this viewport.
+	grid* grid;         // Grid of this viewport
 
 protected:
 	// Handlers for glcViewport
 	void OnPaint( wxPaintEvent& event );
 	void OnSize( wxSizeEvent& event);
-	void OnEraseBackgroun( wxEraseEvent& event);
-
+	void OnEraseBackground( wxEraseEvent& event);
 	void OnMouse( wxMouseEvent& event );
+
+	// Internal functions
+
+	/**
+	 * @brief Sets the viewport's c_physics
+	 *
+	 * @note z64: This system is a bit derp. It inits the physics_info and then scales it by the physics_speed and physics_rot factors
+	 */
+	void set_physics();
+
 private:
-	// Member data
-	vec3d	c_pos;	// Camera Position
-	matrix	c_rot;	// Camera Rotation/Orientation
-
-	// Viewport modes and options
-	cmode Control_mode;
-
-	bool show_coordinates;
-	bool show_distances;
-	bool show_grid;
-	bool show_grid_aa;
-	bool show_grid_positions;
-	bool show_horizon;
-	bool show_outlines;
-
-
+	// Event handling
+	DECLARE_EVENT_TABLE()
 };
 
 #endif // _GLCVIEWPORT_H

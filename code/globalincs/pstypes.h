@@ -430,6 +430,7 @@ SCP_string dump_stacktrace();
 // ref: http://gcc.gnu.org/onlinedocs/libstdc++/manual/status.html
 #ifndef NDEBUG
 	#if SCP_COMPILER_CXX_STATIC_ASSERT && SCP_COMPILER_CXX_AUTO_TYPE
+	#ifndef USING_THIRD_PARTY_LIBS
 	// feature support seems to be: gcc   clang   msvc
 	// auto                         4.4   2.9     2010
 	// std::is_trivial              4.5   ?       2012 (2010 only duplicates std::is_pod)
@@ -520,6 +521,7 @@ using std::memcpy_if_trivial_else_error;
 using std::memmove_if_trivial_else_error;
 using std::memset_if_trivial_else_error;
 
+	#endif // USING_THIRD_PARTY_LIBS
 	#endif // HAVE_CXX11
 #endif // NDEBUG
 

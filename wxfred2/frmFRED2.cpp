@@ -40,13 +40,15 @@
 #include "help/dlgSexpHelp.h"
 
 #include "base/wxFRED_base.h"
+#include "glcViewport.h"
+#include "wxfred2.h"
 
 #include <globalincs/version.h>
 #include <globalincs/pstypes.h>
 
+#include <wx/glcanvas.h>
 #include <wx/msgdlg.h>
 #include <wx/wx.h>
-#include <wx/glcanvas.h>
 
 // Public:
 frmFRED2::frmFRED2( const wxChar *title, int xpos, int ypos, int width, int height )
@@ -61,16 +63,14 @@ frmFRED2::frmFRED2( const wxChar *title, int xpos, int ypos, int width, int heig
 		frmCampaignEditor_p(NULL), dlgMissionStats_p(NULL), dlgAboutBox_p(NULL), dlgSexpHelp_p(NULL)
 {
 	// Title bar setup
-	// z64: somewhat roundabout way to include the FS2 Open version number in the form title.
-	
-	wxSprintf( version, "v%i.%i.%i", FS_VERSION_MAJOR, FS_VERSION_MINOR, FS_VERSION_BUILD );
+	wxSprintf( version, "v%s", FS_VERSION_FULL );
 	this->SetFredTitle();
 
 	// New Object Selection ListBox
-	cbNewObject = new wxChoice( tbrFRED, ID_TOOL_NEWOBJECTLIST, wxDefaultPosition, wxSize(193,-1), 0, NULL, wxCB_SORT );
+	auto choice = wxString("GTF Ulysses");
+	cbNewObject = new wxChoice( tbrFRED, ID_TOOL_NEWOBJECTLIST, wxDefaultPosition, wxSize(193,-1), 1, &choice, wxCB_SORT );
 	// TODO: Auto-size the choice box to the longest string in the list.
 	// TODO: Grab the actual list of object classes
-	cbNewObject->Append(_T("GTF Ulysses"));
 	cbNewObject->SetSelection(0);
 
 	tbrFRED->AddControl( cbNewObject );
@@ -81,8 +81,8 @@ frmFRED2::frmFRED2( const wxChar *title, int xpos, int ypos, int width, int heig
 
 	// The Viewport
 	wxBoxSizer* bSizerView = new wxBoxSizer( wxVERTICAL );
-	wxGLCanvas *TheViewport = new wxGLCanvas(this, wxID_ANY, NULL, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE);
-	bSizerView->Add( TheViewport );
+	viewport_p = new glcViewport(this, wxID_ANY);
+	bSizerView->Add(viewport_p);
 	this->SetSizer( bSizerView );
 	this->Layout();
 
@@ -137,8 +137,10 @@ void frmFRED2::OnFileNew( wxCommandEvent &event )
 
 void frmFRED2::OnFileOpen( wxCommandEvent &event )
 {
-	wxFileDialog *dlg =
-		new wxFileDialog( this, "Open FreeSpace 2 Mission", wxGetCwd(), wxEmptyString, "FreeSpace2 Missions (*.fs2)|*.fs2| All Files (*.*)|*.*");
+	bool file_loaded = false;
+	wxFileDialog *dlg;
+	
+	dlg = new wxFileDialog( this, "Open FreeSpace 2 Mission", wxGetCwd(), wxEmptyString, "FreeSpace2 Missions (*.fs2)|*.fs2| All Files (*.*)|*.*");
 
 	if( dlg->ShowModal() != wxID_OK )
 	{
@@ -146,9 +148,21 @@ void frmFRED2::OnFileOpen( wxCommandEvent &event )
 		return;
 	}
 
-	currentFilename = dlg->GetFilename();
-	// TODO: actually (attempt) to open the file
-	SetFredTitle();
+	// Application: Try to load the file
+	file_loaded = wxGetApp().Mission_load(dlg->GetPath());
+
+	if( !file_loaded )
+	{
+		wxMessageBox(_T("Error opening mission file."), _T("Error opening file."), wxOK);
+		// TODO: Do some fancy Debug stuffs, or a better notification of what went wrong. For now, do nothing
+		return;
+	}
+	else
+	{
+		currentFilename = dlg->GetFilename();
+		SetFredTitle();
+		//TODO: Set up the viewport
+	}
 }
 
 void frmFRED2::OnFileSave( wxCommandEvent &event )
