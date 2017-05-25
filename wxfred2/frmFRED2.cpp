@@ -133,6 +133,7 @@ void frmFRED2::OnClose( wxCloseEvent &event )
 void frmFRED2::OnSize( wxSizeEvent &event )
 {
 // TODO: Implement OnSize
+	Layout();
 }
 
 void frmFRED2::OnFileNew( wxCommandEvent &event )

@@ -52,6 +52,11 @@ class wxFRED2 : public wxApp
 {
 public:
 	virtual bool OnInit();
+	
+	/**
+	* @brief Deconstructor
+	*/
+	~wxFRED2();
 
 
 

@@ -23,7 +23,7 @@ EVT_MOUSE_EVENTS(glcViewport::OnMouse)
 END_EVENT_TABLE()
 
 glcViewport::glcViewport(wxWindow *parent, wxWindowID id)
-: wxWindow(parent, id, wxDefaultPosition, wxDefaultSize, wxFULL_REPAINT_ON_RESIZE) {
+: wxWindow(parent, id, wxDefaultPosition, wxDefaultSize) {
 	vec3d f, u, r;
 
 	// Init position
@@ -60,7 +60,22 @@ void glcViewport::OnPaint(wxPaintEvent& event) {
 	wxfred::render_frame(this);
 }
 
-void glcViewport::OnSize(wxSizeEvent& event) {}
+void glcViewport::OnSize(wxSizeEvent& event) {
+	auto canvas = FindWindowByName("GLCanvas", this);
+	// Should never happen, but just in case...
+	Assertion(canvas != nullptr, "glcViewport could not find its child canvas!");
+
+	auto oldSize = canvas->GetSize();
+	auto newSize = event.GetSize();
+
+	if (oldSize != newSize) {
+		wxfred::render_resize(this, newSize.GetWidth(), newSize.GetHeight());
+		
+		// z64: Blah. Force a wxPaintEvent becuase Refresh and Update arn't working as expected
+		wxPaintEvent event_paint(GetId());
+		GetEventHandler()->ProcessEvent(event_paint);
+	}
+}
 
 void glcViewport::OnEraseBackground(wxEraseEvent& event) {}
 
