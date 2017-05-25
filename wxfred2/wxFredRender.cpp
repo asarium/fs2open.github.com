@@ -6,6 +6,7 @@
  */
 
 #include "wxFredRender.h"
+#include "wxGraphicsOperations.h"
 
 #include <globalincs/alphacolors.h>
 #include <globalincs/pstypes.h>
@@ -24,162 +25,11 @@
 #include <wx/glcanvas.h>
 #include <wx/window.h>
 
-#if !wxUSE_GLCANVAS
-#error "OpenGL required: set wxUSE_GLCANVAS to 1 and rebuild the library"
-#endif
 using namespace wxfred;
-
-class wxOpenGLContext : public os::OpenGLContext
-{
-public:
-	/**
-	 * @brief The context constructor. Must have a valid wxGLCanvas as input
-	 */
-	explicit wxOpenGLContext(wxGLCanvas* win) {
-		Assertion(win != nullptr, "Could not create wxOpenGLContext! Must have a valid wxGLCanvas class (or derivative)\n");
-
-		canvas_p = win;
-		context_p = new wxGLContext(win);
-
-		Assertion(context_p != nullptr, "Failed to create wxGLContext!");
-	};
-
-	/**
-	 * @brief The context deconstructor.
-	 */
-	~wxOpenGLContext() {};
-
-	/**
-	 * @brief The OpenGL loader function. Loads the OPENGL32.DLL
-	 */
-	static void* wglLoader(const char* name) {
-		auto wglAddr = reinterpret_cast<void*>(wglGetProcAddress(name));
-
-		return wglAddr;
-	}
-
-	/**
-	 * @brief Gets the OpenGL loader function
-	 */
-	os::OpenGLLoadProc getLoaderFunction() override {
-		return wglLoader;
-	};
-
-	/**
-	 * @brief Swaps the buffers of this context
-	 */
-	void swapBuffers() override {
-		canvas_p->SwapBuffers();
-	}
-
-	/**
-	 * @brief Sets the swap interval, used in vsync modes
-	 *
-	 * @note Unused by wxFRED
-	 * @note This might cause problems. wxWidgets doesn't provide a SwapInterval wrapper, so we'd have to use something
-	 *  else to get vsync operational
-	 */
-	void setSwapInterval(int status) override {};
-
-	void makeCurrent() {
-		if (!canvas_p->SetCurrent(*context_p)) {
-			mprintf(("Failed to make OpenGL conext current!\n"));
-		}
-	}
-
-	void setTarget(wxGLCanvas* win) {
-		Assertion(win != nullptr, "Cannot set render target to a nullptr!\n");
-
-		// Check if target window has same properties as context (and existing canvas)
-		canvas_p = win;
-	}
-
-private:
-	// HACK: Since OpenGL apparently likes global state we also have to make this global...
-	static void* _oglDllHandle;
-	static size_t _oglDllReferenceCount;
-
-	wxGLContext *context_p; //!< Reference to the wxGLContext, which must exist
-	wxGLCanvas  *canvas_p;  //!< Reference to the current canvas, which must exist
-};
-
-class wxGraphicsOperations : public os::GraphicsOperations
-{
-public:
-	explicit wxGraphicsOperations(wxWindow *win) {
-		Assertion(win != nullptr, "Failed to create wxGraphicsOperations! An invalid reference to a wxWindow was passed to the constructor.\n");
-		_parent = win;
-	}
-
-	~wxGraphicsOperations() {
-		// Destroy context on death
-	}
-
-	std::unique_ptr<os::OpenGLContext> createOpenGLContext(const os::OpenGLContextAttributes& attrs, uint32_t width, uint32_t height) override {
-		// wxWidgets 3.0's wierd-ass attribute list
-		int attributeList[] = {
-			WX_GL_RGBA,
-			WX_GL_DOUBLEBUFFER,
-			WX_GL_MIN_RED, attrs.red_size,
-			WX_GL_MIN_GREEN, attrs.green_size,
-			WX_GL_MIN_BLUE, attrs.blue_size,
-			WX_GL_MIN_ALPHA, attrs.alpha_size,
-
-			WX_GL_DEPTH_SIZE, attrs.depth_size,
-			WX_GL_STENCIL_SIZE, attrs.stencil_size,
-
-			WX_GL_SAMPLE_BUFFERS, ((attrs.multi_samples == 0) ? 0 : 1),
-			WX_GL_SAMPLES, attrs.multi_samples,	// "4 for 2x2 antialiasing supersampling on most graphics cards "
-
-			// Currently unused
-			//			0, attrs.major_version,
-			//			0, attrs.minor_version,
-
-			//			0, attrs.flags,
-			//			OpenGLProfile profile,
-
-			0	// attributeList must be 0 terminated. :shrug:
-		};
-
-		mprintf(("  Requested GL Video values = R: %d, G: %d, B: %d, depth: %d, stencil: %d, double-buffer: %d, FSAA: %d\n",
-			attrs.red_size, attrs.green_size, attrs.blue_size, attrs.depth_size, attrs.stencil_size, 1, attrs.multi_samples));
-
-		// Create canvas with attributes
-		auto canvas = new wxGLCanvas(_parent, wxID_ANY, attributeList, wxDefaultPosition, wxSize(width, height), NULL, "GLCanvas", wxNullPalette);
-		if (canvas == nullptr) {
-			Error(LOCATION, "Could not create initial wxGLCanvas!\n");
-			return nullptr;
-		}
-
-		// wxWidgets doesn't supply a method to get the attributes used, because creation of the wxCanvas will fail on anything unsupported
-
-		// Create context from the canvas
-		return std::unique_ptr<os::OpenGLContext>(new wxOpenGLContext(canvas));
-	};
-
-	/**
-	 * @brief Makes the given context current. i.e. subsequent gr calls will draw to this context
-	 *
-	 * @param[in] ctx The context to be made current, or nullptr to disconnect context from caller
-	 */
-	void makeOpenGLContextCurrent(os::OpenGLContext* ctx) override {
-		if (ctx != nullptr) {
-			reinterpret_cast<wxOpenGLContext*>(ctx)->makeCurrent();
-		} // Else, do nothing. Context cleans up after itself on death
-	}
-
-private:
-	wxWindow* _parent;	// The initial window we'll be making canvas/context for
-};
 
 const float FRED_DEFAULT_HTL_FOV = 0.485f;
 
-static std::unique_ptr<wxGraphicsOperations> graphicsOperations;
-
 static bool fred_inited = false;
-
-void* wxOpenGLContext::_oglDllHandle = nullptr;
-size_t wxOpenGLContext::_oglDllReferenceCount = 0;
 
 // Colors used for 2d rendering
 color colour_black;
@@ -260,10 +110,10 @@ void hilight_bitmap() {
 void wxfred::render_init(glcViewport* win) {
 	if (!fred_inited) {
 		// Create the GraphicsOperations helper object with the target window
-		graphicsOperations.reset(new wxGraphicsOperations(win));
+		std::unique_ptr<wxGraphicsOperations> graphicsOperations(new wxGraphicsOperations(win));
 
 		// Do graphics init
-		gr_init(graphicsOperations.get(), GR_OPENGL, 640, 480, 32);
+		gr_init(std::move(graphicsOperations), GR_OPENGL, 640, 480, 32);
 
 		font::init();
 
@@ -299,6 +149,12 @@ void wxfred::render_init(glcViewport* win) {
 }
 
 void wxfred::render_frame(glcViewport *win) {
+	if (!fred_inited) {
+		// TODO: Maybe fix the calling code so that this check doesn't need to be here
+		// This can happen if a dialog is shown before the render init is complete
+		return;
+	}
+
 	Assertion(fred_inited, "Call to render_frame was made before render_init!\n");
 
 	// Caller viewport must set context as current before entering!!
@@ -333,7 +189,7 @@ void wxfred::render_frame(glcViewport *win) {
 	}
 
 	if (win->vset.show_grid) {
-		render_grid(win->grid);
+		render_grid(win->_grid);
 	}
 
 	//	if (Bg_bitmap_dialog) {

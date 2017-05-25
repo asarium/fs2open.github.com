@@ -82,7 +82,13 @@ bool wxFRED2::OnInit() {
 	wxImage::AddHandler(new wxPNGHandler);
 	frmFRED2 *Fred_gui = new frmFRED2(title, 50, 50, 800, 600);
 	SetTopWindow(Fred_gui);
-	Fred_gui->Show(TRUE);
+	Fred_gui->Show();
+
+
+	wxMilliSleep(1000);
+
+	// This needs to happen after the main window has been shown
+	Fred_gui->InitRender();
 
 	return true;
 }
@@ -109,7 +115,7 @@ void wxFRED2::Mission_clear() {
 	fred_render_init();
 	*/
 
-	extern void allocate_mission_text(int size);	// from parse/parselo.h
+	extern void allocate_mission_text(size_t size);	// from parse/parselo.h
 	allocate_mission_text(MISSION_TEXT_SIZE);
 
 	The_mission.cutscenes.clear();
@@ -202,7 +208,7 @@ void wxFRED2::Mission_clear() {
 
 		count = 0;
 		for (j = 0; j < MAX_WEAPON_TYPES; j++) {
-			if (Weapon_info[j].wi_flags & WIF_PLAYER_ALLOWED) {
+			if (Weapon_info[j].wi_flags[Weapon::Info_Flags::Player_allowed]) {
 				if (Weapon_info[j].subtype == WP_LASER) {
 					Team_data[i].weaponry_count[count] = 16;
 				} else {
@@ -272,12 +278,6 @@ void wxFRED2::Mission_clear() {
 	The_mission.ai_profile = &Ai_profiles[Default_ai_profile];
 
 	nebula_init(Nebula_filenames[Nebula_index], Nebula_pitch, Nebula_bank, Nebula_heading);
-
-	char palette_filename[1024];
-	strcpy_s(palette_filename, "gamepalette1-01");
-	//	sprintf( palette_filename, "gamepalette%d-%02d", 1, Mission_palette+1 );
-	mprintf(("Loading palette %s\n", palette_filename));
-	palette_load_table(palette_filename);
 
 	strcpy_s(The_mission.loading_screen[GR_640], "");
 	strcpy_s(The_mission.loading_screen[GR_1024], "");
@@ -369,10 +369,10 @@ OIN_t wxFRED2::Copy_object(OIN_t oin) {
 			aip2->goals[i] = aip1->goals[i];
 		}
 
-		if (aip1->ai_flags & AIF_KAMIKAZE)
-			aip2->ai_flags |= AIF_KAMIKAZE;
-		if (aip1->ai_flags & AIF_NO_DYNAMIC)
-			aip2->ai_flags |= AIF_NO_DYNAMIC;
+		if (aip1->ai_flags[AI::AI_Flags::Kamikaze])
+			aip2->ai_flags |= AI::AI_Flags::Kamikaze;
+		if (aip1->ai_flags[AI::AI_Flags::No_dynamic])
+			aip2->ai_flags |= AI::AI_Flags::No_dynamic;
 
 		aip2->kamikaze_damage = aip1->kamikaze_damage;
 
@@ -683,7 +683,6 @@ OIN_t wxFRED2::Create_waypoint(vec3d *pos, OIN_t oin) {
 
 void wxFRED2::Init_FSO(void) {
 	SDL_SetMainReady();
-	memory::init();
 
 	srand((unsigned) time(NULL));
 	//	init_pending_messages();

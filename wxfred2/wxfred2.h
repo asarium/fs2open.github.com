@@ -53,6 +53,8 @@ class wxFRED2 : public wxApp
 public:
 	virtual bool OnInit();
 
+
+
 	/**
 	* @brief Checks to see if any recently called wxFRED2 functions generated warnings
 	*

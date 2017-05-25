@@ -77,7 +77,7 @@ public:
 
 	// These are public for now, because lazy
 	ViewSettings vset;  // View settings of this viewport.
-	grid* grid;         // Grid of this viewport
+	grid* _grid;         // Grid of this viewport
 
 protected:
 	// Handlers for glcViewport

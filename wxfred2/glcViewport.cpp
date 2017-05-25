@@ -39,11 +39,8 @@ glcViewport::glcViewport(wxWindow *parent, wxWindowID id)
 	set_physics();
 
 	// Init grid
-	grid = create_default_grid();
-	maybe_create_new_grid(grid, &vset.c_pos, &vset.c_orient, 1);
-
-	// Init renderer
-	wxfred::render_init(this);
+	_grid = create_default_grid();
+	maybe_create_new_grid(_grid, &vset.c_pos, &vset.c_orient, 1);
 }
 
 glcViewport::~glcViewport(void) {
@@ -53,6 +50,11 @@ glcViewport::~glcViewport(void) {
 
 // Handlers for glcViewport
 void glcViewport::OnPaint(wxPaintEvent& event) {
+	if (!IsShown()) {
+		// Don't do anything if we are not visible
+		return;
+	}
+
 	wxPaintDC dc(this);	// Required. Even if we don't directly use it.
 
 	wxfred::render_frame(this);

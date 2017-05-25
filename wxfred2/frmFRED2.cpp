@@ -11,8 +11,8 @@
 
 
 #include "frmFRED2.h"
-#include "res/fred_app.xpm"
-#include "res/fred_debug.xpm"
+#include "res/fred_app.png.h"
+#include "res/fred_debug.png.h"
 
 #include "editors/frmShipsEditor.h"
 #include "editors/frmWingEditor.h"
@@ -42,6 +42,7 @@
 #include "base/wxFRED_base.h"
 #include "glcViewport.h"
 #include "wxfred2.h"
+#include "wxFredRender.h"
 
 #include <globalincs/version.h>
 #include <globalincs/pstypes.h>
@@ -80,18 +81,17 @@ frmFRED2::frmFRED2( const wxChar *title, int xpos, int ypos, int width, int heig
 	sbFRED = this->CreateStatusBar( 5, wxSTB_DEFAULT_STYLE, wxID_ANY, "wxFRED2" );
 
 	// The Viewport
-	wxBoxSizer* bSizerView = new wxBoxSizer( wxVERTICAL );
-	viewport_p = new glcViewport(this, wxID_ANY);
-	bSizerView->Add(viewport_p);
-	this->SetSizer( bSizerView );
+	viewport_p = new glcViewport(m_contentPanel, wxID_ANY);
 	this->Layout();
 
 	// Set the icon to use for the taskbar and titlebar of this frame
+	wxIcon fredIcon;
 #ifdef NDEBUG
-	this->SetIcon(wxIcon(fred_app_xpm));
+	fredIcon.CopyFromBitmap(fred_app_png_to_wx_bitmap());
 #else
-	this->SetIcon(wxIcon(fred_debug_xpm));
+    fredIcon.CopyFromBitmap(fred_debug_png_to_wx_bitmap());
 #endif
+	this->SetIcon(fredIcon);
 }
 
 frmFRED2::~frmFRED2( void )
@@ -100,6 +100,11 @@ frmFRED2::~frmFRED2( void )
 	{
 		delete sbFRED;
 	}
+}
+
+void frmFRED2::InitRender() {
+	// Init renderer
+	wxfred::render_init(viewport_p);
 }
 
 // Protected:

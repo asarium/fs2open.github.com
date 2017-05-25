@@ -70,6 +70,8 @@ public:
 	// member variables
 	//wxFREDMission* the_Mission;
 
+	void InitRender();
+
 protected:
 	frmFRED2( void );
 	frmFRED2( const frmFRED2 &otherFRED );

@@ -522,14 +522,14 @@
 				<label></label>
 				<tooltip>Select and Move (M)</tooltip>
 				<longhelp>Select and move selected objects.</longhelp>
-				<bitmap>..\res\selectmove.png</bitmap>
+				<bitmap>../res/selectmove.png</bitmap>
 				<radio>1</radio>
 			</object>
 			<object class="tool" name="optSelectRotate">
 				<label>Select and Rotate</label>
 				<tooltip>Select and Rotate (R)</tooltip>
 				<longhelp>Select and rotate selected objects.</longhelp>
-				<bitmap>..\res\selectrot.png</bitmap>
+				<bitmap>../res/selectrot.png</bitmap>
 				<radio>1</radio>
 			</object>
 			<object class="separator" />
@@ -537,7 +537,7 @@
 				<label></label>
 				<tooltip>Rotate Locally (X)</tooltip>
 				<longhelp>Enable/disable local rotation for the selected group.</longhelp>
-				<bitmap>..\res\rotlocal.png</bitmap>
+				<bitmap>../res/rotlocal.png</bitmap>
 				<toggle>1</toggle>
 			</object>
 			<object class="separator" />
@@ -545,42 +545,42 @@
 				<label></label>
 				<tooltip>X Constraint (`)</tooltip>
 				<longhelp>Constrain actions to the global X axis.</longhelp>
-				<bitmap>..\res\constx.png</bitmap>
+				<bitmap>../res/constx.png</bitmap>
 				<radio>1</radio>
 			</object>
 			<object class="tool" name="optConstraintY">
 				<label></label>
 				<tooltip>Y Constraint (`)</tooltip>
 				<longhelp>Constrain actions to the global Y axis.</longhelp>
-				<bitmap>..\res\consty.png</bitmap>
+				<bitmap>../res/consty.png</bitmap>
 				<radio>1</radio>
 			</object>
 			<object class="tool" name="optConstraintZ">
 				<label></label>
 				<tooltip>Z Constraint (`)</tooltip>
 				<longhelp>Constrain actions to the global Z axis.</longhelp>
-				<bitmap>..\res\constz.png</bitmap>
+				<bitmap>../res/constz.png</bitmap>
 				<radio>1</radio>
 			</object>
 			<object class="tool" name="optConstraintXZ">
 				<label></label>
 				<tooltip>XZ Constraint (`)</tooltip>
 				<longhelp>Constrain actions to the global XZ plane.</longhelp>
-				<bitmap>..\res\constxz.png</bitmap>
+				<bitmap>../res/constxz.png</bitmap>
 				<radio>1</radio>
 			</object>
 			<object class="tool" name="optConstraintYZ">
 				<label></label>
 				<tooltip>YZ Constraint (`)</tooltip>
 				<longhelp>Constrain actions to the global YZ plane.</longhelp>
-				<bitmap>..\res\constyz.png</bitmap>
+				<bitmap>../res/constyz.png</bitmap>
 				<radio>1</radio>
 			</object>
 			<object class="tool" name="optConstraintXY">
 				<label></label>
 				<tooltip>XY Constraint (`)</tooltip>
 				<longhelp>Constrain actions to the global XY plane.</longhelp>
-				<bitmap>..\res\constxy.png</bitmap>
+				<bitmap>../res/constxy.png</bitmap>
 				<radio>1</radio>
 			</object>
 			<object class="separator" />
@@ -588,13 +588,13 @@
 				<label></label>
 				<tooltip>Selection List (H)</tooltip>
 				<longhelp>Select object(s) from a list.</longhelp>
-				<bitmap>..\res\selectlist.png</bitmap>
+				<bitmap>../res/selectlist.png</bitmap>
 			</object>
 			<object class="tool" name="chkSelectionLock">
 				<label></label>
 				<tooltip>Selection Lock (L)</tooltip>
 				<longhelp>Lock the current selection from changes.</longhelp>
-				<bitmap>..\res\selectlock.png</bitmap>
+				<bitmap>../res/selectlock.png</bitmap>
 				<toggle>1</toggle>
 			</object>
 			<object class="separator" />
@@ -602,43 +602,49 @@
 				<label></label>
 				<tooltip>Form Wing (Ctrl+W)</tooltip>
 				<longhelp>Adds the current selection to a wing.</longhelp>
-				<bitmap>..\res\wingform.png</bitmap>
+				<bitmap>../res/wingform.png</bitmap>
 			</object>
 			<object class="tool" name="btnWingDisband">
 				<label></label>
 				<tooltip>Disband Wing (Ctrl+D)</tooltip>
 				<longhelp>Removes the current selection from (any) wing.</longhelp>
-				<bitmap>..\res\wingdisband.png</bitmap>
+				<bitmap>../res/wingdisband.png</bitmap>
 			</object>
 			<object class="separator" />
 			<object class="tool" name="btnZoomSelected">
 				<label>tool</label>
 				<tooltip>Zoom Selected (Alt+Z)</tooltip>
 				<longhelp>Zoom to view current selection.</longhelp>
-				<bitmap>..\res\zoomsel.png</bitmap>
+				<bitmap>../res/zoomsel.png</bitmap>
 			</object>
 			<object class="tool" name="btnZoomExtents">
 				<label>tool</label>
 				<tooltip>Zoom Extents (Shift+Z)</tooltip>
 				<longhelp>Zoom to view all objects in the mission.</longhelp>
-				<bitmap>..\res\zoomext.png</bitmap>
+				<bitmap>../res/zoomext.png</bitmap>
 			</object>
 			<object class="separator" />
 			<object class="tool" name="chkShowDistances">
 				<label></label>
 				<tooltip>Show Distances (D)</tooltip>
 				<longhelp>Show the distances between all selected objects.</longhelp>
-				<bitmap>..\res\showdist.png</bitmap>
+				<bitmap>../res/showdist.png</bitmap>
 				<toggle>1</toggle>
 			</object>
 			<object class="tool" name="chkOrbitSelected">
 				<label>tool</label>
 				<tooltip>Rotate about Selection (Ctrl+V)</tooltip>
 				<longhelp>Rotate the vieport camera about the current selection.</longhelp>
-				<bitmap>..\res\orbitsel.png</bitmap>
+				<bitmap>../res/orbitsel.png</bitmap>
 				<toggle>1</toggle>
 			</object>
 			<object class="separator" />
+		</object>
+		<object class="wxPanel" name="m_contentPanel">
+			<style>wxTAB_TRAVERSAL</style>
+			<object class="wxBoxSizer">
+				<orient>wxVERTICAL</orient>
+			</object>
 		</object>
 	</object>
 	<object class="wxFrame" name="frmShipsEditor">
@@ -3187,7 +3193,7 @@
 													<object class="wxBitmapButton" name="btnPlayAudio">
 														<style>wxBU_AUTODRAW</style>
 														<size>23,23</size>
-														<bitmap>..\res\play.xpm</bitmap>
+														<bitmap>../res/play.png</bitmap>
 														<default>0</default>
 													</object>
 												</object>
@@ -6658,7 +6664,7 @@
 								<object class="wxBitmapButton" name="m_bpButton7">
 									<style>wxBU_AUTODRAW</style>
 									<size>24,24</size>
-									<bitmap>..\res\play.xpm</bitmap>
+									<bitmap>../res/play.png</bitmap>
 									<default>0</default>
 								</object>
 							</object>
@@ -6966,7 +6972,7 @@
 							<object class="wxBitmapButton" name="btnPlayVoice">
 								<style>wxBU_AUTODRAW</style>
 								<size>23,23</size>
-								<bitmap>..\res\play.xpm</bitmap>
+								<bitmap>../res/play.png</bitmap>
 								<default>0</default>
 							</object>
 						</object>
@@ -7018,7 +7024,7 @@
 									<object class="wxBitmapButton" name="btnPlayMusic">
 										<style>wxBU_AUTODRAW</style>
 										<size>23,23</size>
-										<bitmap>..\res\play.xpm</bitmap>
+										<bitmap>../res/play.png</bitmap>
 										<default>0</default>
 									</object>
 								</object>
@@ -7050,7 +7056,7 @@
 									<object class="wxBitmapButton" name="btnPlayMusicFromPack">
 										<style>wxBU_AUTODRAW</style>
 										<size>23,23</size>
-										<bitmap>..\res\play.xpm</bitmap>
+										<bitmap>../res/play.png</bitmap>
 										<default>0</default>
 									</object>
 								</object>
@@ -7474,7 +7480,7 @@
 											<object class="wxBitmapButton" name="btnPlayVoice">
 												<style>wxBU_AUTODRAW|wxBU_EXACTFIT</style>
 												<size>23,23</size>
-												<bitmap>..\res\play.xpm</bitmap>
+												<bitmap>../res/play.png</bitmap>
 												<default>0</default>
 											</object>
 										</object>
@@ -7576,7 +7582,7 @@
 											<object class="wxBitmapButton" name="btnPlaySuccess">
 												<style>wxBU_AUTODRAW|wxBU_EXACTFIT</style>
 												<size>23,23</size>
-												<bitmap>..\res\play.xpm</bitmap>
+												<bitmap>../res/play.png</bitmap>
 												<default>0</default>
 											</object>
 										</object>
@@ -7605,7 +7611,7 @@
 											<object class="wxBitmapButton" name="btnPlayNuetral">
 												<style>wxBU_AUTODRAW|wxBU_EXACTFIT</style>
 												<size>23,23</size>
-												<bitmap>..\res\play.xpm</bitmap>
+												<bitmap>../res/play.png</bitmap>
 												<default>0</default>
 											</object>
 										</object>
@@ -7634,7 +7640,7 @@
 											<object class="wxBitmapButton" name="btnPlayFailure">
 												<style>wxBU_AUTODRAW|wxBU_EXACTFIT</style>
 												<size>23,23</size>
-												<bitmap>..\res\play.xpm</bitmap>
+												<bitmap>../res/play.png</bitmap>
 												<default>0</default>
 											</object>
 										</object>
@@ -7901,7 +7907,7 @@
 							<object class="wxBitmapButton" name="btnVoicePlay">
 								<style>wxBU_AUTODRAW|wxBU_EXACTFIT</style>
 								<size>23,23</size>
-								<bitmap>..\res\play.xpm</bitmap>
+								<bitmap>../res/play.png</bitmap>
 								<default>0</default>
 							</object>
 						</object>
@@ -8000,7 +8006,7 @@
 								<object class="wxBitmapButton" name="btnPlayMusic">
 									<style>wxBU_AUTODRAW</style>
 									<size>23,23</size>
-									<bitmap>..\res\play.xpm</bitmap>
+									<bitmap>../res/play.png</bitmap>
 									<default>0</default>
 								</object>
 							</object>
@@ -9108,7 +9114,7 @@
 				<object class="wxStaticBitmap" name="bmpLogo">
 					<style>wxSUNKEN_BORDER</style>
 					<bg>#ffffff</bg>
-					<bitmap>..\res\fred_splash.xpm</bitmap>
+					<bitmap>../res/fred_splash.png</bitmap>
 				</object>
 			</object>
 			<object class="sizeritem">

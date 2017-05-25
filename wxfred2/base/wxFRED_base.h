@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Jun 17 2015)
+// C++ code generated with wxFormBuilder (version May 22 2017)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO "NOT" EDIT THIS FILE!
@@ -20,6 +20,8 @@
 #include <wx/colour.h>
 #include <wx/settings.h>
 #include <wx/toolbar.h>
+#include <wx/sizer.h>
+#include <wx/panel.h>
 #include <wx/frame.h>
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
@@ -27,13 +29,11 @@
 #include <wx/combobox.h>
 #include <wx/checkbox.h>
 #include <wx/button.h>
-#include <wx/sizer.h>
 #include <wx/gbsizer.h>
 #include <wx/spinctrl.h>
 #include <wx/treectrl.h>
 #include <wx/statbox.h>
 #include <wx/tglbtn.h>
-#include <wx/panel.h>
 #include <wx/radiobut.h>
 #include <wx/dialog.h>
 #include <wx/listbox.h>
@@ -95,6 +95,7 @@ namespace fredBase
 			wxToolBarToolBase* btnZoomExtents; 
 			wxToolBarToolBase* chkShowDistances; 
 			wxToolBarToolBase* chkOrbitSelected; 
+			wxPanel* m_contentPanel;
 		
 		public:
 			
@@ -292,9 +293,9 @@ namespace fredBase
 			wxSpinCtrl* spnBank;
 			wxStaticText* lblHeading;
 			wxSpinCtrl* spnHeading;
-			wxStdDialogButtonSizer* m_sdbSizer6;
-			wxButton* m_sdbSizer6OK;
-			wxButton* m_sdbSizer6Cancel;
+			wxStdDialogButtonSizer* m_sdbSizer1;
+			wxButton* m_sdbSizer1OK;
+			wxButton* m_sdbSizer1Cancel;
 		
 		public:
 			
@@ -418,9 +419,9 @@ namespace fredBase
 			wxStaticText* lblMessageTeam;
 			wxChoice* cboTeamMessage;
 			wxStaticText* m_staticText139;
-			wxStdDialogButtonSizer* m_sdbSizer7;
-			wxButton* m_sdbSizer7OK;
-			wxButton* m_sdbSizer7Cancel;
+			wxStdDialogButtonSizer* m_sdbSizer2;
+			wxButton* m_sdbSizer2OK;
+			wxButton* m_sdbSizer2Cancel;
 		
 		public:
 			
@@ -463,9 +464,9 @@ namespace fredBase
 			wxChoice* cboSetWeaponAmountFromVariable;
 			wxStaticText* lblAmountOfWeaponsInWings;
 			wxTextCtrl* txtAmountOfWeaponsInWings;
-			wxStdDialogButtonSizer* m_sdbSizer8;
-			wxButton* m_sdbSizer8OK;
-			wxButton* m_sdbSizer8Cancel;
+			wxStdDialogButtonSizer* m_sdbSizer3;
+			wxButton* m_sdbSizer3OK;
+			wxButton* m_sdbSizer3Cancel;
 		
 		public:
 			
@@ -675,9 +676,9 @@ namespace fredBase
 			wxStaticText* lblInnerZ;
 			wxTextCtrl* numInnerBoxMinZ;
 			wxTextCtrl* numInnerBoxMaxZ;
-			wxStdDialogButtonSizer* m_sdbSizer9;
-			wxButton* m_sdbSizer9OK;
-			wxButton* m_sdbSizer9Cancel;
+			wxStdDialogButtonSizer* m_sdbSizer4;
+			wxButton* m_sdbSizer4OK;
+			wxButton* m_sdbSizer4Cancel;
 		
 		public:
 			
@@ -980,9 +981,9 @@ namespace fredBase
 			wxChoice* cboShipTeam;
 			wxRadioButton* optShipTeamHasShieldSystem;
 			wxRadioButton* optShipTeamNoShieldSystem;
-			wxStdDialogButtonSizer* m_sdbSizer10;
-			wxButton* m_sdbSizer10OK;
-			wxButton* m_sdbSizer10Cancel;
+			wxStdDialogButtonSizer* m_sdbSizer5;
+			wxButton* m_sdbSizer5OK;
+			wxButton* m_sdbSizer5Cancel;
 		
 		public:
 			

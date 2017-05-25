@@ -11,7 +11,7 @@ ELSEIF(WIN32)
 	set(wxWidgets_CONFIGURATION "mswu" CACHE STRING "Release WxWidgets configuration" FORCE)
 ENDIF(UNIX)
 
-find_package(wxWidgets COMPONENTS gl core base REQUIRED)
+find_package(wxWidgets REQUIRED COMPONENTS gl core base)
 
 include(${wxWidgets_USE_FILE})
 

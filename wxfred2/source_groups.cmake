@@ -11,6 +11,8 @@ set (file_root
 	wxFredRender.cpp
 	wxFredRender.h
 	wxfredstubs.cpp
+	wxGraphicsOperations.h
+	wxGraphicsOperations.cpp
 )
 
 # Base files
@@ -81,72 +83,71 @@ set (file_root_misc
 )
 
 set(file_root_res_pngs
+	res/bitmap1.png
+	res/black_do.png
+	res/bmp00001.png
+	res/chained_directive.png
+	res/chained.png
 	res/constx.png
 	res/constxy.png
 	res/constxz.png
 	res/consty.png
 	res/constyz.png
 	res/constz.png
+	res/data00.png
+	res/data05.png
+	res/data10.png
+	res/data15.png
+	res/data20.png
+	res/data25.png
+	res/data30.png
+	res/data35.png
+	res/data40.png
+	res/data45.png
+	res/data50.png
+	res/data55.png
+	res/data60.png
+	res/data65.png
+	res/data70.png
+	res/data75.png
+	res/data80.png
+	res/data85.png
+	res/data90.png
+	res/data95.png
+	res/data.png
+	res/fred_app.png
+	res/fred_debug.png
 	res/fredknows.png
+	res/fred_splash.png
+	res/green_do.png
 	res/orbitsel.png
+	res/play.png
+	res/root_directive.png
+	res/root.png
 	res/rotlocal.png
-	res/select.png
 	res/selectlist.png
 	res/selectlock.png
 	res/selectmove.png
+	res/select.png
 	res/selectrot.png
 	res/showdist.png
+	res/toolbar1.png
+	res/toolbar.png
+	res/variable.png
+	res/V_fred.png
 	res/wingdisband.png
 	res/wingform.png
+	res/wxFREDIcon.png
 	res/zoomext.png
 	res/zoomsel.png
 )
 
 set(file_root_res
 	${file_root_res_pngs}
-	res/bitmap1.xpm
-	res/black_do.xpm
-	res/bmp00001.xpm
-	res/chained.xpm
-	res/chained_directive.xpm
-	res/data.xpm
-	res/data00.xpm
-	res/data05.xpm
-	res/data10.xpm
-	res/data15.xpm
-	res/data20.xpm
-	res/data25.xpm
-	res/data30.xpm
-	res/data35.xpm
-	res/data40.xpm
-	res/data45.xpm
-	res/data50.xpm
-	res/data55.xpm
-	res/data60.xpm
-	res/data65.xpm
-	res/data70.xpm
-	res/data75.xpm
-	res/data80.xpm
-	res/data85.xpm
-	res/data90.xpm
-	res/data95.xpm
 	res/fred.ico
 	res/freddoc.ico
-	res/fred_app.xpm
-	res/fred_debug.xpm
-	res/fred_splash.xpm
-	res/green_do.xpm
-	res/play.xpm
-	res/root.xpm
-	res/root_directive.xpm
-	res/toolbar.xpm
-	res/toolbar1.xpm
-	res/toolbar1_x2.xpm
-	res/variable.xpm
 	res/V_fred.ico
-	res/V_fred.xpm
 	res/wxFREDicon.rc
-	res/wxFREDIcon.xpm
 	res/wxfred_icon-d.ico
 	res/wxfred_icon.ico
 )

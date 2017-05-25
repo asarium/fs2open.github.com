@@ -36,6 +36,7 @@ bool Env_cubemap_drawn = false;
 int Multi_ping_timestamp = -1;
 int Sun_drew = 0;
 int Networking_disabled = 0;
+bool running_unittests = false;
 
 void init_ets(class object*){}
 
@@ -185,7 +186,7 @@ void get_version_string(char*, int){}
 int Show_target_weapons;
 int Show_target_debug_info;
 int Game_do_state_should_skip;
-long Game_time_compression;
+fix Game_time_compression;
 struct fs_builtin_mission *game_find_builtin_mission(char*){return NULL;}
 void game_format_time(fix, char*){}
 void game_do_state(int){}
