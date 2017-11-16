@@ -120,131 +120,142 @@ void gr_opengl_deferred_lighting_finish()
 
 	using namespace graphics;
 
-	// Get a uniform buffer for out data
-	auto buffer = gr_get_uniform_buffer(uniform_block_type::Lights);
-	auto& uniformAligner = buffer->aligner();
+	// We need to precompute how many elements we are going to need
+	size_t num_data_elements = 0;
+	for (int i = 0; i < Num_lights; ++i) {
+		light* l = &lights_copy[i];
+		if (l->type != LT_CONE && l->type != LT_POINT && l->type != LT_TUBE) {
+			continue;
+		}
 
-	{
-		GR_DEBUG_SCOPE("Build buffer data");
+		++num_data_elements;
+		if (l->type == LT_TUBE) {
+			++num_data_elements;
+		}
+	}
 
-		for (int i = 0; i < Num_lights; ++i) {
-			light* l = &lights_copy[i];
-			if (l->type != LT_CONE && l->type != LT_POINT && l->type != LT_TUBE) {
-				continue;
-			}
+	if (num_data_elements > 0) {
+		// Get a uniform buffer for out data
+		auto buffer = gr_get_uniform_buffer(uniform_block_type::Lights, num_data_elements);
+		auto& uniformAligner = buffer.aligner();
 
-			auto light_data = uniformAligner.addTypedElement<deferred_light_data>();
+		{
+			GR_DEBUG_SCOPE("Build buffer data");
 
-			light_data->lightType = 0;
+			for (int i = 0; i < Num_lights; ++i) {
+				light* l = &lights_copy[i];
+				if (l->type != LT_CONE && l->type != LT_POINT && l->type != LT_TUBE) {
+					continue;
+				}
 
-			vec3d diffuse;
-			diffuse.xyz.x = l->r * l->intensity;
-			diffuse.xyz.y = l->g * l->intensity;
-			diffuse.xyz.z = l->b * l->intensity;
+				auto light_data = uniformAligner.addTypedElement<deferred_light_data>();
 
-			vec3d spec;
-			spec.xyz.x = l->spec_r * l->intensity;
-			spec.xyz.y = l->spec_g * l->intensity;
-			spec.xyz.z = l->spec_b * l->intensity;
-
-			switch (l->type) {
-			case LT_CONE:
-				light_data->lightType = 2;
-				light_data->dualCone = l->dual_cone ? 1.0f : 0.0f;
-				light_data->coneAngle = l->cone_angle;
-				light_data->coneInnerAngle = l->cone_inner_angle;
-				light_data->coneDir = l->vec2;
-				FALLTHROUGH;
-			case LT_POINT:
-				light_data->diffuseLightColor = diffuse;
-				light_data->specLightColor = spec;
-				light_data->lightRadius = MAX(l->rada, l->radb) * 1.25f;
-
-				light_data->scale.xyz.x = MAX(l->rada, l->radb) * 1.28f;
-				light_data->scale.xyz.y = MAX(l->rada, l->radb) * 1.28f;
-				light_data->scale.xyz.z = MAX(l->rada, l->radb) * 1.28f;
-				break;
-			case LT_TUBE:
-				light_data->diffuseLightColor = diffuse;
-				light_data->specLightColor = spec;
-				light_data->lightRadius = l->radb * 1.5f;
-				light_data->lightType = 1;
-
-				vec3d a;
-				vm_vec_sub(&a, &l->vec, &l->vec2);
-				auto length = vm_vec_mag(&a);
-
-				light_data->scale.xyz.x = l->radb * 1.53f;
-				light_data->scale.xyz.y = l->radb * 1.53f;
-				light_data->scale.xyz.z = length;
-
-				// Tube lights consist of two different types of lights with almost the same properties
-				light_data = uniformAligner.addTypedElement<deferred_light_data>();
-				light_data->diffuseLightColor = diffuse;
-				light_data->specLightColor = spec;
-				light_data->lightRadius = l->radb * 1.5f;
 				light_data->lightType = 0;
 
-				light_data->scale.xyz.x = l->radb * 1.53f;
-				light_data->scale.xyz.y = l->radb * 1.53f;
-				light_data->scale.xyz.z = l->radb * 1.53f;
-				break;
+				vec3d diffuse;
+				diffuse.xyz.x = l->r * l->intensity;
+				diffuse.xyz.y = l->g * l->intensity;
+				diffuse.xyz.z = l->b * l->intensity;
+
+				vec3d spec;
+				spec.xyz.x = l->spec_r * l->intensity;
+				spec.xyz.y = l->spec_g * l->intensity;
+				spec.xyz.z = l->spec_b * l->intensity;
+
+				switch (l->type) {
+				case LT_CONE:
+					light_data->lightType = 2;
+					light_data->dualCone = l->dual_cone ? 1.0f : 0.0f;
+					light_data->coneAngle = l->cone_angle;
+					light_data->coneInnerAngle = l->cone_inner_angle;
+					light_data->coneDir = l->vec2;
+					FALLTHROUGH;
+				case LT_POINT:
+					light_data->diffuseLightColor = diffuse;
+					light_data->specLightColor = spec;
+					light_data->lightRadius = MAX(l->rada, l->radb) * 1.25f;
+
+					light_data->scale.xyz.x = MAX(l->rada, l->radb) * 1.28f;
+					light_data->scale.xyz.y = MAX(l->rada, l->radb) * 1.28f;
+					light_data->scale.xyz.z = MAX(l->rada, l->radb) * 1.28f;
+					break;
+				case LT_TUBE:
+					light_data->diffuseLightColor = diffuse;
+					light_data->specLightColor = spec;
+					light_data->lightRadius = l->radb * 1.5f;
+					light_data->lightType = 1;
+
+					vec3d a;
+					vm_vec_sub(&a, &l->vec, &l->vec2);
+					auto length = vm_vec_mag(&a);
+
+					light_data->scale.xyz.x = l->radb * 1.53f;
+					light_data->scale.xyz.y = l->radb * 1.53f;
+					light_data->scale.xyz.z = length;
+
+					// Tube lights consist of two different types of lights with almost the same properties
+					light_data = uniformAligner.addTypedElement<deferred_light_data>();
+					light_data->diffuseLightColor = diffuse;
+					light_data->specLightColor = spec;
+					light_data->lightRadius = l->radb * 1.5f;
+					light_data->lightType = 0;
+
+					light_data->scale.xyz.x = l->radb * 1.53f;
+					light_data->scale.xyz.y = l->radb * 1.53f;
+					light_data->scale.xyz.z = l->radb * 1.53f;
+					break;
+				}
+			}
+
+			// Uniform data has been assembled, upload it to the GPU and issue the draw calls
+			buffer.submitData();
+		}
+		{
+			GR_DEBUG_SCOPE("Render light geometry");
+
+			size_t element_index = 0;
+			for (int i = 0; i < Num_lights; ++i) {
+				GR_DEBUG_SCOPE("Deferred apply single light");
+
+				light* l = &lights_copy[i];
+				switch (l->type) {
+				case LT_CONE:
+				case LT_POINT:
+					gr_bind_uniform_buffer(uniform_block_type::Lights,
+										   buffer.getBufferOffset(uniformAligner.getOffset(element_index)),
+										   sizeof(graphics::deferred_light_data),
+										   buffer.bufferHandle());
+					gr_opengl_draw_deferred_light_sphere(&l->vec);
+					++element_index;
+					break;
+				case LT_TUBE:
+					gr_bind_uniform_buffer(uniform_block_type::Lights,
+										   buffer.getBufferOffset(uniformAligner.getOffset(element_index)),
+										   sizeof(graphics::deferred_light_data),
+										   buffer.bufferHandle());
+
+					vec3d a;
+					matrix orient;
+					vm_vec_sub(&a, &l->vec, &l->vec2);
+					vm_vector_2_matrix(&orient, &a, NULL, NULL);
+
+					gr_opengl_draw_deferred_light_cylinder(&l->vec2, &orient);
+					++element_index;
+
+					// The next two draws use the same uniform block element
+					gr_bind_uniform_buffer(uniform_block_type::Lights,
+										   buffer.getBufferOffset(uniformAligner.getOffset(element_index)),
+										   sizeof(graphics::deferred_light_data),
+										   buffer.bufferHandle());
+
+					gr_opengl_draw_deferred_light_sphere(&l->vec);
+					gr_opengl_draw_deferred_light_sphere(&l->vec2);
+					++element_index;
+					break;
+				}
 			}
 		}
-
-		// Uniform data has been assembled, upload it to the GPU and issue the draw calls
-		buffer->submitData();
 	}
-
-	{
-		GR_DEBUG_SCOPE("Render light geometry");
-
-		size_t element_index = 0;
-		for (int i = 0; i < Num_lights; ++i) {
-			GR_DEBUG_SCOPE("Deferred apply single light");
-
-			light* l = &lights_copy[i];
-			switch (l->type) {
-			case LT_CONE:
-			case LT_POINT:
-				gr_bind_uniform_buffer(uniform_block_type::Lights,
-									   uniformAligner.getOffset(element_index),
-									   sizeof(graphics::deferred_light_data),
-									   buffer->bufferHandle());
-				gr_opengl_draw_deferred_light_sphere(&l->vec);
-				++element_index;
-				break;
-			case LT_TUBE:
-				gr_bind_uniform_buffer(uniform_block_type::Lights,
-									   uniformAligner.getOffset(element_index),
-									   sizeof(graphics::deferred_light_data),
-									   buffer->bufferHandle());
-
-				vec3d a;
-				matrix orient;
-				vm_vec_sub(&a, &l->vec, &l->vec2);
-				vm_vector_2_matrix(&orient, &a, NULL, NULL);
-
-				gr_opengl_draw_deferred_light_cylinder(&l->vec2, &orient);
-				++element_index;
-
-				// The next two draws use the same uniform block element
-				gr_bind_uniform_buffer(uniform_block_type::Lights,
-									   uniformAligner.getOffset(element_index),
-									   sizeof(graphics::deferred_light_data),
-									   buffer->bufferHandle());
-
-				gr_opengl_draw_deferred_light_sphere(&l->vec);
-				gr_opengl_draw_deferred_light_sphere(&l->vec2);
-				++element_index;
-				break;
-			}
-		}
-
-		// We don't need the buffer anymore
-		buffer->finished();
-	}
-
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_color_texture, 0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, Scene_depth_texture, 0);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, 0);

@@ -401,8 +401,6 @@ void renderAll() {
 		return;
 	}
 
-
-	graphics::decal_draw_list draw_list;
 	auto mission_time = f2fl(Missiontime);
 
 	bool full_neb = ((The_mission.flags[Mission::Mission_Flags::Fullneb]) && (Neb2_render_mode != NEB2_RENDER_NONE)
@@ -415,6 +413,7 @@ void renderAll() {
 		return;
 	}
 
+	graphics::decal_draw_list draw_list(active_decals.size());
 	for (auto& decal : active_decals) {
 		int diffuse_bm = -1;
 		int normal_bm = -1;
