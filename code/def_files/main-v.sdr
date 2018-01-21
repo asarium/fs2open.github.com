@@ -218,6 +218,8 @@ void main()
 	}
  #elif defined(FLAG_TRANSFORM)
 	gl_ClipDistance[0] = clipModel ? -1.0 : 1.0;
+ #else
+	gl_ClipDistance[0] = 1.0;
  #endif
  #ifndef FLAG_SHADOW_MAP
 	fragPosition = position;

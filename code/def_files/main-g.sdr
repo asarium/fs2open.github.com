@@ -121,9 +121,8 @@ void main(void)
 		fragTexCoord = geoTexCoord[vert];
 
 		gl_Layer = instanceID;
-#if defined(FLAG_CLIP) || defined(FLAG_TRANSFORM)
 		gl_ClipDistance[0] = gl_in[vert].gl_ClipDistance[0];
-#endif
+		
 		EmitVertex();
 	}
 	EndPrimitive();
