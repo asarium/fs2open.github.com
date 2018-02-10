@@ -4,6 +4,8 @@
 
 #include "UniformBuffer.h"
 
+#include <array>
+
 namespace graphics {
 namespace util {
 
@@ -33,6 +35,7 @@ class UniformBufferManager {
 	size_t _segment_offset = 0; // Offset of the next element to be added to the buffer
 
 	int _offset_alignment = -1;
+	bool _use_persistent_mapping = false;
 
 	SCP_vector<std::pair<int, gr_sync>> _retired_buffers;
 

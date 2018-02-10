@@ -3,6 +3,8 @@
 #include "UniformBufferManager.h"
 #include "uniform_structs.h"
 
+#include "tracing/tracing.h"
+
 namespace {
 
 size_t getElementSize(uniform_block_type type) {
@@ -46,8 +48,9 @@ namespace util {
 
 UniformBufferManager::UniformBufferManager() {
 	bool success = gr_get_property(gr_property::UNIFORM_BUFFER_OFFSET_ALIGNMENT, &_offset_alignment);
-
 	Assertion(success, "Uniform buffer usage requires a backend which allows to query the offset alignment!");
+
+	_use_persistent_mapping = gr_is_capable(CAPABILITY_PERSISTENT_BUFFER_MAPPING);
 
 	_segment_fences.fill(nullptr);
 	changeSegmentSize(4096);
@@ -134,20 +137,23 @@ UniformBuffer UniformBufferManager::getUniformBuffer(uniform_block_type type, si
 		return getUniformBuffer(type, num_elements);
 	}
 
+	auto data_offset = _segment_size * _active_segment + _segment_offset;
+	_segment_offset = end_offset;
+
 	if (_temp_buffer.size() < size) {
 		_temp_buffer.resize(size);
 	}
 
-	auto data_offset = _segment_size * _active_segment + _segment_offset;
-	_segment_offset = end_offset;
-
+	// Even in the persistent mapping case we still use a temporary buffer since writing to GPU memory is not very fast
+	// when doing a lot of small writes (e.g. when building model uniform data). Instead we use the temporary buffer and
+	// do a single memcpy when we are done
 	return UniformBuffer(this,
 						 data_offset,
 						 _temp_buffer.data(),
 						 size,
 						 getElementSize(type),
 						 getHeaderSize(type),
-						 _offset_alignment);
+						 static_cast<size_t>(_offset_alignment));
 }
 void UniformBufferManager::changeSegmentSize(size_t new_size) {
 	if (_active_uniform_buffer >= 0) {
@@ -163,18 +169,28 @@ void UniformBufferManager::changeSegmentSize(size_t new_size) {
 		}
 	}
 
-	// TODO: Add persistent mapping support here
-	_active_uniform_buffer = gr_create_buffer(BufferType::Uniform, BufferUsageHint::Dynamic);
 	_active_buffer_size = new_size * NUM_SEGMENTS;
+	_active_uniform_buffer = gr_create_buffer(BufferType::Uniform,
+											  _use_persistent_mapping ? BufferUsageHint::PersistentMapping
+																	  : BufferUsageHint::Dynamic);
 	gr_update_buffer_data(_active_uniform_buffer, _active_buffer_size, nullptr);
+	if (_use_persistent_mapping) {
+		_buffer_ptr = gr_map_buffer(_active_uniform_buffer);
+	}
 
 	_active_segment = 0;
 	_segment_size = new_size;
 	_segment_offset = 0;
 }
 void UniformBufferManager::submitData(void* buffer, size_t data_size, size_t offset) {
-	// TODO: Add persistent mapping support here
-	gr_update_buffer_data_offset(_active_uniform_buffer, offset, data_size, buffer);
+	if (_use_persistent_mapping) {
+		auto buffer_dest = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(_buffer_ptr) + offset);
+		memcpy(buffer_dest, buffer, data_size);
+		// The data is already in the buffer but we still need to flush the memory range
+		gr_flush_mapped_buffer(_active_uniform_buffer, offset, data_size);
+	} else {
+		gr_update_buffer_data_offset(_active_uniform_buffer, offset, data_size, buffer);
+	}
 }
 int UniformBufferManager::getActiveBufferHandle() {
 	return _active_uniform_buffer;

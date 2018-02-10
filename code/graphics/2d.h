@@ -283,6 +283,7 @@ typedef enum gr_capability {
 	CAPABILITY_BATCHED_SUBMODELS,
 	CAPABILITY_POINT_PARTICLES,
 	CAPABILITY_TIMESTAMP_QUERY,
+	CAPABILITY_PERSISTENT_BUFFER_MAPPING,
 } gr_capability;
 
 enum class gr_property {
@@ -587,7 +588,8 @@ enum class BufferType {
 enum class BufferUsageHint {
 	Static,
 	Dynamic,
-	Streaming
+	Streaming,
+	PersistentMapping
 };
 
 /**
@@ -728,8 +730,10 @@ typedef struct screen {
 	int (*gf_create_buffer)(BufferType type, BufferUsageHint usage);
 	void (*gf_delete_buffer)(int handle);
 
-	void (*gf_update_buffer_data)(int handle, size_t size, void* data);
-	void (*gf_update_buffer_data_offset)(int handle, size_t offset, size_t size, void* data);
+	void (*gf_update_buffer_data)(int handle, size_t size, const void* data);
+	void (*gf_update_buffer_data_offset)(int handle, size_t offset, size_t size, const void* data);
+	void* (*gf_map_buffer)(int handle);
+	void (*gf_flush_mapped_buffer)(int handle, size_t offset, size_t size);
 	void (*gf_update_transform_buffer)(void* data, size_t size);
 
 	// postprocessing effects
@@ -970,6 +974,12 @@ inline int gr_create_buffer(BufferType type, BufferUsageHint usage)
 #define gr_delete_buffer				GR_CALL(*gr_screen.gf_delete_buffer)
 #define gr_update_buffer_data			GR_CALL(*gr_screen.gf_update_buffer_data)
 #define gr_update_buffer_data_offset	GR_CALL(*gr_screen.gf_update_buffer_data_offset)
+inline void* gr_map_buffer(int handle) {
+	return gr_screen.gf_map_buffer(handle);
+}
+inline void gr_flush_mapped_buffer(int handle, size_t offset, size_t size) {
+	gr_screen.gf_flush_mapped_buffer(handle, offset, size);
+}
 #define gr_update_transform_buffer		GR_CALL(*gr_screen.gf_update_transform_buffer)
 
 #define gr_scene_texture_begin			GR_CALL(*gr_screen.gf_scene_texture_begin)
