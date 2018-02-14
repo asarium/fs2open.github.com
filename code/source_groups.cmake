@@ -350,6 +350,7 @@ set (file_root_graphics_openglgr
 
 # Graphics -> OpenGLGr -> OpenGL CPPs files
 set (file_root_graphics_openglgr_opengl_cpps
+	graphics/opengl/dsa_emulation.cpp
 	graphics/opengl/gropengl.cpp
 	graphics/opengl/gropenglbmpman.cpp
 	graphics/opengl/gropengldeferred.cpp
@@ -366,6 +367,7 @@ set (file_root_graphics_openglgr_opengl_cpps
 
 # Graphics -> OpenGLGr -> OpenGL Headers files
 set (file_root_graphics_openglgr_opengl_headers
+	graphics/opengl/dsa_emulation.h
 	graphics/opengl/gropengl.h
 	graphics/opengl/gropenglbmpman.h
 	graphics/opengl/gropengldeferred.h
@@ -556,6 +558,12 @@ set(file_root_libs_ffmpeg
 	libs/ffmpeg/FFmpegContext.cpp
 	libs/ffmpeg/FFmpegContext.h
 	libs/ffmpeg/FFmpegHeaders.h
+)
+
+set(file_root_lbs_renderdoc
+	libs/renderdoc/renderdoc.cpp
+	libs/renderdoc/renderdoc.h
+	libs/renderdoc/renderdoc_app.h
 )
 
 # Lighting files
@@ -1325,6 +1333,7 @@ source_group("JumpNode"                           FILES ${file_root_jumpnode})
 source_group("Lab"                                FILES ${file_root_lab})
 source_group("Libs"                               FILES ${file_root_libs})
 source_group("Libs\\FFmpeg"                       FILES ${file_root_libs_ffmpeg})
+source_group("Libs\\RenderDoc"                    FILES ${file_root_lbs_renderdoc})
 source_group("Lighting"                           FILES ${file_root_lighting})
 source_group("Localization"                       FILES ${file_root_localization})
 source_group("Math"                               FILES ${file_root_math})
@@ -1424,6 +1433,7 @@ set (file_root
 	${file_root_lab}
 	${file_root_libs}
 	${file_root_libs_ffmpeg}
+	${file_root_lbs_renderdoc}
 	${file_root_lighting}
 	${file_root_localization}
 	${file_root_math}

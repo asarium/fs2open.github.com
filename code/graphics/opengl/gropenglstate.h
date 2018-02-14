@@ -240,8 +240,9 @@ class opengl_state
 		GLuint current_program;
 
 		// The framebuffer state actually consists of draw and read buffers but we only use both at the same time
-		GLuint current_framebuffer;
-		SCP_vector<GLuint> framebuffer_stack;
+		GLuint current_read_framebuffer;
+		GLuint current_write_framebuffer;
+		SCP_vector<std::pair<GLuint, GLuint>> framebuffer_stack;
 
 		GLuint current_vao = 0;
 	public:
@@ -289,6 +290,9 @@ class opengl_state
 		bool IsCurrentProgram(GLuint program);
 
 		void BindFrameBuffer(GLuint name);
+		void BindReadFrameBuffer(GLuint name);
+		void BindWriteFrameBuffer(GLuint name);
+		GLuint getCurrentDrawFramebuffer();
 
 		void PushFramebufferState();
 		void PopFramebufferState();

@@ -42,6 +42,7 @@
 #include "render/3d.h"
 #include "tracing/tracing.h"
 #include "utils/boost/hash_combine.h"
+#include "libs/renderdoc/renderdoc.h"
 
 #if ( SDL_VERSION_ATLEAST(1, 2, 7) )
 #include "SDL_cpuinfo.h"
@@ -2135,6 +2136,10 @@ void gr_flip(bool execute_scripting)
 	uniform_buffer_managers_retire_buffers();
 
 	gr_screen.gf_flip();
+
+	if (renderdoc::isCapturing()) {
+		renderdoc::endCapture();
+	}
 }
 
 void gr_print_timestamp(int x, int y, fix timestamp, int resize_mode)

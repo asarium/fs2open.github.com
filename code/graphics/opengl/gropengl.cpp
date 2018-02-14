@@ -35,6 +35,7 @@
 #include "popup/popup.h"
 #include "tracing/tracing.h"
 #include "pngutils/pngutils.h"
+#include "libs/renderdoc/renderdoc.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -43,6 +44,7 @@
 #endif
 
 #include <glad/glad.h>
+#include "dsa_emulation.h"
 
 // minimum GL version we can reliably support is 3.2
 static const int MIN_REQUIRED_GL_VERSION = 32;
@@ -315,20 +317,20 @@ void gr_opengl_print_screen(const char *filename)
 	// now for the data
 	if (Use_PBOs) {
 		Assert( !pbo );
-		glGenBuffers(1, &pbo);
+		glCreateBuffers(1, &pbo);
 
 		if ( !pbo ) {
 			return;
 		}
 
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
-		glBufferData(GL_PIXEL_PACK_BUFFER, (gr_screen.max_w * gr_screen.max_h * 4), NULL, GL_STATIC_READ);
+		glNamedBufferData(pbo, (gr_screen.max_w * gr_screen.max_h * 4), NULL, GL_STATIC_READ);
 
-		glReadBuffer(GL_FRONT);
+		glNamedFramebufferReadBuffer(GL_state.getCurrentDrawFramebuffer(), GL_FRONT);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo);
 		glReadPixels(0, 0, gr_screen.max_w, gr_screen.max_h, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
 		// map the image data so that we can save it to file
-		pixels = (GLubyte*) glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+		pixels = (GLubyte*) glMapNamedBuffer(pbo, GL_READ_ONLY);
 	} else {
 		pixels = (GLubyte*) vm_malloc(gr_screen.max_w * gr_screen.max_h * 4, memory::quiet_alloc);
 
@@ -345,7 +347,7 @@ void gr_opengl_print_screen(const char *filename)
 	}
 	
 	if (pbo) {
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+		glUnmapNamedBuffer(pbo);
 		pixels = NULL;
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 		glDeleteBuffers(1, &pbo);
@@ -638,7 +640,7 @@ void gr_opengl_get_region(int front, int w, int h, ubyte *data)
 //	if (front) {
 //		glReadBuffer(GL_FRONT);
 //	} else {
-		glReadBuffer(GL_BACK);
+		glNamedFramebufferReadBuffer(GL_state.getCurrentDrawFramebuffer(), GL_BACK);
 //	}
 
 	GL_state.SetAlphaBlendMode(ALPHA_BLEND_NONE);
@@ -675,12 +677,12 @@ int gr_opengl_save_screen()
 	}
 
 	GLboolean save_state = GL_state.DepthTest(GL_FALSE);
-	glReadBuffer(GL_FRONT_LEFT);
+	glNamedFramebufferReadBuffer(GL_state.getCurrentDrawFramebuffer(), GL_FRONT_LEFT);
 
 	if ( Use_PBOs ) {
 		GLubyte *pixels = NULL;
 
-		glGenBuffers(1, &GL_screen_pbo);
+		glCreateBuffers(1, &GL_screen_pbo);
 
 		if (!GL_screen_pbo) {
 			if (GL_saved_screen) {
@@ -691,12 +693,13 @@ int gr_opengl_save_screen()
 			return -1;
 		}
 
+		glNamedBufferData(GL_screen_pbo, gr_screen.max_w * gr_screen.max_h * 4, NULL, GL_STATIC_READ);
+
 		glBindBuffer(GL_PIXEL_PACK_BUFFER, GL_screen_pbo);
-		glBufferData(GL_PIXEL_PACK_BUFFER, gr_screen.max_w * gr_screen.max_h * 4, NULL, GL_STATIC_READ);
-
 		glReadPixels(0, 0, gr_screen.max_w, gr_screen.max_h, GL_read_format, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
 
-		pixels = (GLubyte*)glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+		pixels = (GLubyte*)glMapNamedBuffer(GL_screen_pbo, GL_READ_ONLY);
 
 		width_times_pixel = (gr_screen.max_w * 4);
 
@@ -709,8 +712,7 @@ int gr_opengl_save_screen()
 			sptr += width_times_pixel;
 		}
 
-		glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
-		glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+		glUnmapNamedBuffer(GL_screen_pbo);
 
 		glDeleteBuffers(1, &GL_screen_pbo);
 		GL_screen_pbo = 0;
@@ -1406,6 +1408,9 @@ bool gr_opengl_init(std::unique_ptr<os::GraphicsOperations>&& graphicsOps)
 		  gr_screen.max_h,
 		  gr_screen.bits_per_pixel ));
 
+	// Load the RenderDoc API if available before doing anything with OpenGL
+	renderdoc::loadApi();
+
 	graphic_operations = std::move(graphicsOps);
 
 	if ( opengl_init_display_device() ) {
@@ -1419,6 +1424,8 @@ bool gr_opengl_init(std::unique_ptr<os::GraphicsOperations>&& graphicsOps)
 	if (!gladLoadGLLoader(GL_context->getLoaderFunction())) {
 		Error(LOCATION, "Failed to load OpenGL!");
 	}
+	// If ARB_direct_state_access is not supported then we need to emulate support for it
+	graphics::opengl::emulate_dsa();
 
 	// version check
 	GL_version = (GLVersion.major * 10) + GLVersion.minor;

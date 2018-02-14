@@ -200,7 +200,7 @@ int opengl_create_buffer_object(GLenum type, GLenum gl_usage, BufferUsageHint us
 	buffer_obj.type = type;
 	buffer_obj.size = 0;
 
-	glGenBuffers(1, &buffer_obj.buffer_id);
+	glCreateBuffers(1, &buffer_obj.buffer_id);
 
 	GL_buffer_objects.push_back(buffer_obj);
 
@@ -246,26 +246,23 @@ GLuint opengl_buffer_get_id(GLenum expected_type, int handle) {
 	return buffer_obj.buffer_id;
 }
 
-void gr_opengl_update_buffer_data(int handle, size_t size, const void* data)
-{
+void gr_opengl_update_buffer_data(int handle, size_t size, const void* data) {
 	// This has to be verified by the caller or else we will run into OPenGL errors
 	Assertion(size > 0, "Buffer updates must include some data!");
 
 	GR_DEBUG_SCOPE("Update buffer data");
 
 	Assert(handle >= 0);
-	Assert((size_t)handle < GL_buffer_objects.size());
+	Assert((size_t) handle < GL_buffer_objects.size());
 
-	opengl_buffer_object &buffer_obj = GL_buffer_objects[handle];
-
-	opengl_bind_buffer_object(handle);
+	opengl_buffer_object& buffer_obj = GL_buffer_objects[handle];
 
 	if (buffer_obj.usage == BufferUsageHint::PersistentMapping) {
 		Assertion(buffer_obj.size == 0, "Tried to resize a buffer for persistent mapping! This is not allowed.");
 		Assertion(GLAD_GL_ARB_buffer_storage != 0, "Persistent mapping was used when it wasn't supported!");
-		glBufferStorage(buffer_obj.type, size, data, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
+		glNamedBufferStorage(buffer_obj.buffer_id, size, data, GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
 	} else {
-		glBufferData(buffer_obj.type, size, data, buffer_obj.gl_usage);
+		glNamedBufferData(buffer_obj.buffer_id, size, data, buffer_obj.gl_usage);
 	}
 
 	GL_vertex_data_in -= buffer_obj.size;
@@ -273,27 +270,24 @@ void gr_opengl_update_buffer_data(int handle, size_t size, const void* data)
 	GL_vertex_data_in += buffer_obj.size;
 }
 
-void gr_opengl_update_buffer_data_offset(int handle, size_t offset, size_t size, const void* data)
-{
+void gr_opengl_update_buffer_data_offset(int handle, size_t offset, size_t size, const void* data) {
 	GR_DEBUG_SCOPE("Update buffer data with offset");
 
 	Assert(handle >= 0);
-	Assert((size_t)handle < GL_buffer_objects.size());
+	Assert((size_t) handle < GL_buffer_objects.size());
 
-	opengl_buffer_object &buffer_obj = GL_buffer_objects[handle];
+	opengl_buffer_object& buffer_obj = GL_buffer_objects[handle];
 
 	Assertion(buffer_obj.usage != BufferUsageHint::PersistentMapping,
 			  "Persistently mapped buffers may not be updated!");
 
-	opengl_bind_buffer_object(handle);
-
-	glBufferSubData(buffer_obj.type, offset, size, data);
+	glNamedBufferSubData(buffer_obj.buffer_id, offset, size, data);
 }
 void* gr_opengl_map_buffer(int handle) {
 	GR_DEBUG_SCOPE("Map buffer");
 
 	Assert(handle >= 0);
-	Assert((size_t)handle < GL_buffer_objects.size());
+	Assert((size_t) handle < GL_buffer_objects.size());
 
 	auto& buffer_obj = GL_buffer_objects[handle];
 
@@ -301,11 +295,10 @@ void* gr_opengl_map_buffer(int handle) {
 			  "Buffer mapping is only supported for persistently mapped buffers!");
 	Assertion(GLAD_GL_ARB_buffer_storage != 0, "Persistent mapping is not available in this OpenGL context!");
 
-	opengl_bind_buffer_object(handle);
-	return glMapBufferRange(buffer_obj.type,
-							0,
-							buffer_obj.size,
-							GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
+	return glMapNamedBufferRange(buffer_obj.buffer_id,
+								 0,
+								 buffer_obj.size,
+								 GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_FLUSH_EXPLICIT_BIT);
 }
 void gr_opengl_flush_mapped_buffer(int handle, size_t offset, size_t size) {
 	GR_DEBUG_SCOPE("Flush mapped buffer");
@@ -319,8 +312,7 @@ void gr_opengl_flush_mapped_buffer(int handle, size_t offset, size_t size) {
 			  "Buffer mapping is only supported for persistently mapped buffers!");
 	Assertion(GLAD_GL_ARB_buffer_storage != 0, "Persistent mapping is not available in this OpenGL context!");
 
-	opengl_bind_buffer_object(handle);
-	glFlushMappedBufferRange(buffer_obj.type, offset, size);
+	glFlushMappedNamedBufferRange(buffer_obj.buffer_id, offset, size);
 }
 
 void gr_opengl_delete_buffer(int handle)
@@ -398,7 +390,7 @@ int opengl_create_texture_buffer_object()
 	opengl_buffer_object &buffer_obj = GL_buffer_objects[buffer_object_handle];
 
 	// create the texture
-	glGenTextures(1, &buffer_obj.texture);
+	glCreateTextures(GL_TEXTURE_BUFFER, 1, &buffer_obj.texture);
 	glBindTexture(GL_TEXTURE_BUFFER, buffer_obj.texture);
 
 	gr_opengl_update_buffer_data(buffer_object_handle, 100, NULL);
@@ -422,8 +414,7 @@ void gr_opengl_update_transform_buffer(void* data, size_t size)
 
 	// need to rebind the buffer object to the texture buffer after it's been updated.
 	// didn't have to do this on AMD and Nvidia drivers but Intel drivers seem to want it.
-	glBindTexture(GL_TEXTURE_BUFFER, buffer_obj.texture);
-	glTexBuffer(GL_TEXTURE_BUFFER, GL_RGBA32F, buffer_obj.buffer_id);
+	glTextureBuffer(buffer_obj.texture, GL_RGBA32F, buffer_obj.buffer_id);
 }
 
 GLuint opengl_get_transform_buffer_texture()
@@ -451,10 +442,10 @@ void opengl_tnl_init()
 	if(Cmdline_shadow_quality)
 	{
 		//Setup shadow map framebuffer
-		glGenFramebuffers(1, &shadow_fbo);
+		glCreateFramebuffers(1, &shadow_fbo);
 		GL_state.BindFrameBuffer(shadow_fbo);
 
-		glGenTextures(1, &Shadow_map_depth_texture);
+		glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &Shadow_map_depth_texture);
 
 		GL_state.Texture.SetActiveUnit(0);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY);
@@ -476,13 +467,22 @@ void opengl_tnl_init()
 		//glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);
 		//glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);
 		int size = (Cmdline_shadow_quality == 2 ? 1024 : 512);
-		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT32, size, size, 4, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		opengl_init_3d_texture(GL_TEXTURE_2D_ARRAY,
+							   Shadow_map_depth_texture,
+							   1,
+							   GL_DEPTH_COMPONENT32,
+							   size,
+							   size,
+							   4,
+							   GL_DEPTH_COMPONENT,
+							   GL_FLOAT,
+							   nullptr);
 		//glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, size, size, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
 
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, Shadow_map_depth_texture, 0);
+		glNamedFramebufferTexture(shadow_fbo, GL_DEPTH_ATTACHMENT, Shadow_map_depth_texture, 0);
 		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, Shadow_map_depth_texture, 0);
 
-		glGenTextures(1, &Shadow_map_texture);
+		glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &Shadow_map_texture);
 
 		GL_state.Texture.SetActiveUnit(0);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY);
@@ -499,10 +499,19 @@ void opengl_tnl_init()
 // 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 // 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 // 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_RGB32F, size, size, 4, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+		opengl_init_3d_texture(GL_TEXTURE_2D_ARRAY,
+							   Shadow_map_texture,
+							   1,
+							   GL_RGB32F,
+							   size,
+							   size,
+							   4,
+							   GL_RGBA,
+							   GL_UNSIGNED_INT_8_8_8_8_REV,
+							   nullptr);
 		//glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, size, size, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
 
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, Shadow_map_texture, 0);
+		glNamedFramebufferTexture(shadow_fbo, GL_COLOR_ATTACHMENT0, Shadow_map_texture, 0);
 		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Shadow_map_texture, 0);
 
 		GL_state.BindFrameBuffer(0);
@@ -644,7 +653,7 @@ void gr_opengl_shadow_map_start(matrix4 *shadow_view_matrix, const matrix *light
 
 	//glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	GLenum buffers[] = { GL_COLOR_ATTACHMENT0};
-	glDrawBuffers(1, buffers);
+	glNamedFramebufferDrawBuffers(shadow_fbo, 1, buffers);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -879,7 +888,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 		if ( Scene_framebuffer_in_frame ) {
 			GL_state.Texture.Enable(render_pass, GL_TEXTURE_2D, Scene_effect_texture);
-			glDrawBuffer(GL_COLOR_ATTACHMENT0);
+			glNamedFramebufferDrawBuffer(Scene_framebuffer, GL_COLOR_ATTACHMENT0);
 		} else {
 			GL_state.Texture.Enable(render_pass, GL_TEXTURE_2D, Framebuffer_fallback_texture_id);
 		}

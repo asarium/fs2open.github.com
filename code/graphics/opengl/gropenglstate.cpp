@@ -194,7 +194,8 @@ void opengl_state::init()
 	current_program = 0;
 	glUseProgram(0);
 
-	current_framebuffer = 0;
+	current_read_framebuffer = 0;
+	current_write_framebuffer = 0;
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	framebuffer_stack.clear();
@@ -498,21 +499,46 @@ bool opengl_state::IsCurrentProgram(GLuint program) {
 	return current_program == program;
 }
 void opengl_state::BindFrameBuffer(GLuint name) {
-	if (current_framebuffer != name) {
-		glBindFramebuffer(GL_FRAMEBUFFER, name);
-		current_framebuffer = name;
+	if (current_write_framebuffer == name && current_read_framebuffer == name) {
+		return;
 	}
+	glBindFramebuffer(GL_FRAMEBUFFER, name);
+	current_read_framebuffer = name;
+	current_write_framebuffer = name;
+}
+void opengl_state::BindReadFrameBuffer(GLuint name) {
+	if (current_read_framebuffer == name) {
+		return;
+	}
+	glBindFramebuffer(GL_READ_FRAMEBUFFER, name);
+	current_read_framebuffer = name;
+}
+GLuint opengl_state::getCurrentDrawFramebuffer() {
+	return current_write_framebuffer;
+}
+void opengl_state::BindWriteFrameBuffer(GLuint name) {
+	if (current_write_framebuffer == name) {
+		return;
+	}
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, name);
+	current_write_framebuffer = name;
 }
 void opengl_state::PushFramebufferState() {
-	framebuffer_stack.push_back(current_framebuffer);
+	framebuffer_stack.push_back(std::make_pair(current_read_framebuffer, current_write_framebuffer));
 }
 void opengl_state::PopFramebufferState() {
-	Assertion(framebuffer_stack.size() > 0, "Tried to pop the framebuffer state stack while it was empty!");
+	Assertion(!framebuffer_stack.empty(), "Tried to pop the framebuffer state stack while it was empty!");
 
 	auto restoreBuffer = framebuffer_stack.back();
 	framebuffer_stack.pop_back();
 
-	BindFrameBuffer(restoreBuffer);
+	// Avoid calling two API functions if the two framebuffers are the same
+	if (restoreBuffer.first == restoreBuffer.second) {
+		BindFrameBuffer(restoreBuffer.first);
+	} else {
+		BindReadFrameBuffer(restoreBuffer.first);
+		BindWriteFrameBuffer(restoreBuffer.second);
+	}
 }
 void opengl_state::BindVertexArray(GLuint vao) {
 	if (current_vao == vao) {

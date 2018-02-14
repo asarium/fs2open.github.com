@@ -785,7 +785,7 @@ int opengl_compile_shader(shader_type sdr, uint flags)
  */
 void opengl_shader_init()
 {
-	glGenTextures(1,&Framebuffer_fallback_texture_id);
+	glCreateTextures(GL_TEXTURE_2D, 1, &Framebuffer_fallback_texture_id);
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Framebuffer_fallback_texture_id);
@@ -796,7 +796,15 @@ void opengl_shader_init()
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 	GLuint pixels[4] = {0,0,0,0};
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, &pixels);
+	opengl_init_2d_texture(GL_TEXTURE_2D,
+						   Framebuffer_fallback_texture_id,
+						   1,
+						   GL_RGBA8,
+						   1,
+						   1,
+						   GL_BGRA,
+						   GL_UNSIGNED_INT_8_8_8_8_REV,
+						   &pixels);
 
 	GL_shader.clear();
 

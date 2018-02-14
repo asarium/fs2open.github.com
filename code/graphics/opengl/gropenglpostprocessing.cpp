@@ -18,7 +18,7 @@
 
 
 extern bool PostProcessing_override;
-extern int opengl_check_framebuffer();
+extern int opengl_check_framebuffer(GLuint framebuffer);
 
 //Needed to track where the FXAA shaders are
 size_t fxaa_shader_id;
@@ -221,7 +221,7 @@ void gr_opengl_post_process_begin()
 	GL_state.PushFramebufferState();
 	GL_state.BindFrameBuffer(Post_framebuffer_id[0]);
 
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	glNamedFramebufferDrawBuffer(Post_framebuffer_id[0], GL_COLOR_ATTACHMENT0);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -252,7 +252,7 @@ void opengl_post_pass_fxaa() {
 	}
 
 	// We only want to draw to ATTACHMENT0
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	glNamedFramebufferDrawBuffer(GL_state.getCurrentDrawFramebuffer(), GL_COLOR_ATTACHMENT0);
 	GL_state.ColorMask(true, true, true, true);
 
 	// Do a prepass to convert the main shaders' RGBA output into RGBL
@@ -835,10 +835,10 @@ bool opengl_post_init_shaders()
 void opengl_setup_bloom_textures()
 {
 	// two more framebuffers, one each for the two different sized bloom textures
-	glGenFramebuffers(1, &Bloom_framebuffer);
+	glCreateFramebuffers(1, &Bloom_framebuffer);
 
 	// need to generate textures for bloom too
-	glGenTextures(2, Bloom_textures);
+	glCreateTextures(GL_TEXTURE_2D, 2, Bloom_textures);
 
 	// half size
 	int width = Post_texture_width >> 1;
@@ -849,9 +849,15 @@ void opengl_setup_bloom_textures()
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 		GL_state.Texture.Enable(Bloom_textures[tex]);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-
-		glGenerateMipmap(GL_TEXTURE_2D);
+		opengl_init_2d_texture(GL_TEXTURE_2D,
+							   Bloom_textures[tex],
+							   get_num_mipmap_levels(width, height) + 1,
+							   GL_RGBA16F,
+							   width,
+							   height,
+							   GL_BGRA,
+							   GL_UNSIGNED_INT_8_8_8_8_REV,
+							   nullptr);
 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -867,10 +873,10 @@ void opengl_setup_bloom_textures()
 static bool opengl_init_shadow_framebuffer(int size, GLenum color_format) {
 	mprintf(("Trying to create %dx%d %d-bit shadow framebuffer\n", size, size, color_format == GL_RGBA32F ? 32 : 16));
 
-	glGenFramebuffers(1, &Post_shadow_framebuffer_id);
+	glCreateFramebuffers(1, &Post_shadow_framebuffer_id);
 	GL_state.BindFrameBuffer(Post_shadow_framebuffer_id);
 
-	glGenTextures(1, &Post_shadow_texture_id);
+	glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &Post_shadow_texture_id);
 
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY);
@@ -881,11 +887,20 @@ static bool opengl_init_shadow_framebuffer(int size, GLenum color_format) {
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, color_format, size, size, 4, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+	opengl_init_3d_texture(GL_TEXTURE_2D_ARRAY,
+						   Post_shadow_texture_id,
+						   1,
+						   color_format,
+						   size,
+						   size,
+						   4,
+						   GL_RGBA,
+						   GL_UNSIGNED_INT_8_8_8_8_REV,
+						   nullptr);
 
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, Post_shadow_texture_id, 0);
+	glNamedFramebufferTexture(Post_shadow_framebuffer_id, GL_COLOR_ATTACHMENT0, Post_shadow_texture_id, 0);
 
-	glGenTextures(1, &Post_shadow_depth_texture_id);
+	glCreateTextures(GL_TEXTURE_2D_ARRAY, 1, &Post_shadow_depth_texture_id);
 
 	GL_state.Texture.Enable(Post_shadow_depth_texture_id);
 
@@ -894,11 +909,20 @@ static bool opengl_init_shadow_framebuffer(int size, GLenum color_format) {
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT32, size, size, 4, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	opengl_init_3d_texture(GL_TEXTURE_2D_ARRAY,
+						   Post_shadow_depth_texture_id,
+						   1,
+						   GL_DEPTH_COMPONENT32,
+						   size,
+						   size,
+						   4,
+						   GL_DEPTH_COMPONENT,
+						   GL_FLOAT,
+						   nullptr);
 
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, Post_shadow_depth_texture_id, 0);
+	glNamedFramebufferTexture(Post_shadow_framebuffer_id, GL_DEPTH_ATTACHMENT, Post_shadow_depth_texture_id, 0);
 
-	auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	auto status = glCheckNamedFramebufferStatus(Post_shadow_framebuffer_id, GL_FRAMEBUFFER);
 	if (status == GL_FRAMEBUFFER_COMPLETE) {
 		// Everything is fine
 		mprintf(("Shadow framebuffer created successfully.\n"));

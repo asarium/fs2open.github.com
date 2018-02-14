@@ -58,15 +58,26 @@ void gr_opengl_deferred_lighting_begin()
 
 	// Copy the existing color data into the emissive part of the G-buffer since everything that already existed is
 	// treated as emissive
-	glDrawBuffer(GL_COLOR_ATTACHMENT4);
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glBlitFramebuffer(0, 0, gr_screen.max_w, gr_screen.max_h, 0, 0, gr_screen.max_w, gr_screen.max_h, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+	glNamedFramebufferDrawBuffer(Scene_framebuffer, GL_COLOR_ATTACHMENT4);
+	glNamedFramebufferDrawBuffer(Scene_framebuffer, GL_COLOR_ATTACHMENT0);
+	glBlitNamedFramebuffer(Scene_framebuffer,
+						   Scene_framebuffer,
+						   0,
+						   0,
+						   gr_screen.max_w,
+						   gr_screen.max_h,
+						   0,
+						   0,
+						   gr_screen.max_w,
+						   gr_screen.max_h,
+						   GL_COLOR_BUFFER_BIT,
+						   GL_NEAREST);
 
 	GLenum buffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4 };
-	glDrawBuffers(5, buffers);
+	glNamedFramebufferDrawBuffers(Scene_framebuffer, 5, buffers);
 
 	static const float black[] = { 0, 0, 0, 1.0f };
-	glClearBufferfv(GL_COLOR, 0, black);
+	glClearNamedFramebufferfv(Scene_framebuffer, GL_COLOR, 0, black);
 }
 
 void gr_opengl_deferred_lighting_end()
@@ -77,7 +88,7 @@ void gr_opengl_deferred_lighting_end()
 	GR_DEBUG_SCOPE("Deferred lighting end");
 
 	Deferred_lighting = false;
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	glNamedFramebufferDrawBuffer(Scene_framebuffer, GL_COLOR_ATTACHMENT0);
 
 	GL_state.ColorMask(true, true, true, false);
 }
@@ -107,7 +118,7 @@ void gr_opengl_deferred_lighting_finish()
 	opengl_shader_set_current(gr_opengl_maybe_create_shader(SDR_TYPE_DEFERRED_LIGHTING, 0));
 
 	// Render on top of the emissive buffer texture
-	glDrawBuffer(GL_COLOR_ATTACHMENT4);
+	glNamedFramebufferDrawBuffer(Scene_framebuffer, GL_COLOR_ATTACHMENT4);
 
 	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_color_texture);
 	GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_normal_texture);
@@ -311,7 +322,7 @@ void gr_opengl_deferred_lighting_finish()
 	gr_end_proj_matrix();
 
 	// Now reset back to drawing into the color buffer
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	glNamedFramebufferDrawBuffer(Scene_framebuffer, GL_COLOR_ATTACHMENT0);
 
 	// Transfer the resolved lighting back to the color texture
 	// TODO: Maybe this could be improved so that it doesn't require the copy back operation?
@@ -420,12 +431,11 @@ void gr_opengl_deferred_light_cylinder_init(int segments) // Generate a VBO of a
 
 	glGetError();
 
-	glGenBuffers(1, &deferred_light_cylinder_vbo);
+	glCreateBuffers(1, &deferred_light_cylinder_vbo);
 
 	// make sure we have one
 	if (deferred_light_cylinder_vbo) {
-		glBindBuffer(GL_ARRAY_BUFFER, deferred_light_cylinder_vbo);
-		glBufferData(GL_ARRAY_BUFFER, nVertex * sizeof(float), Vertices, GL_STATIC_DRAW);
+		glNamedBufferData(deferred_light_cylinder_vbo, nVertex * sizeof(float), Vertices, GL_STATIC_DRAW);
 
 		// just in case
 		if ( opengl_check_for_errors() ) {
@@ -434,18 +444,15 @@ void gr_opengl_deferred_light_cylinder_init(int segments) // Generate a VBO of a
 			return;
 		}
 
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-
 		vm_free(Vertices);
 		Vertices = NULL;
 	}
 
-	glGenBuffers(1, &deferred_light_cylinder_ibo);
+	glCreateBuffers(1, &deferred_light_cylinder_ibo);
 
 	// make sure we have one
 	if (deferred_light_cylinder_ibo) {
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, deferred_light_cylinder_ibo);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, nIndex * sizeof(ushort), Indices, GL_STATIC_DRAW);
+		glNamedBufferData(deferred_light_cylinder_ibo, nIndex * sizeof(ushort), Indices, GL_STATIC_DRAW);
 
 		// just in case
 		if ( opengl_check_for_errors() ) {
@@ -453,8 +460,6 @@ void gr_opengl_deferred_light_cylinder_init(int segments) // Generate a VBO of a
 			deferred_light_cylinder_ibo = 0;
 			return;
 		}
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 		vm_free(Indices);
 		Indices = NULL;
@@ -512,12 +517,11 @@ void gr_opengl_deferred_light_sphere_init(int rings, int segments) // Generate a
 
 	glGetError();
 
-	glGenBuffers(1, &deferred_light_sphere_vbo);
+	glCreateBuffers(1, &deferred_light_sphere_vbo);
 
 	// make sure we have one
 	if (deferred_light_sphere_vbo) {
-		glBindBuffer(GL_ARRAY_BUFFER, deferred_light_sphere_vbo);
-		glBufferData(GL_ARRAY_BUFFER, nVertex * sizeof(float), Vertices, GL_STATIC_DRAW);
+		glNamedBufferData(deferred_light_sphere_vbo, nVertex * sizeof(float), Vertices, GL_STATIC_DRAW);
 
 		// just in case
 		if ( opengl_check_for_errors() ) {
@@ -526,18 +530,15 @@ void gr_opengl_deferred_light_sphere_init(int rings, int segments) // Generate a
 			return;
 		}
 
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-
 		vm_free(Vertices);
 		Vertices = NULL;
 	}
 
-	glGenBuffers(1, &deferred_light_sphere_ibo);
+	glCreateBuffers(1, &deferred_light_sphere_ibo);
 
 	// make sure we have one
 	if (deferred_light_sphere_ibo) {
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, deferred_light_sphere_ibo);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, nIndex * sizeof(ushort), Indices, GL_STATIC_DRAW);
+		glNamedBufferData(deferred_light_sphere_ibo, nIndex * sizeof(ushort), Indices, GL_STATIC_DRAW);
 
 		// just in case
 		if ( opengl_check_for_errors() ) {
@@ -545,8 +546,6 @@ void gr_opengl_deferred_light_sphere_init(int rings, int segments) // Generate a
 			deferred_light_sphere_ibo = 0;
 			return;
 		}
-
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 		vm_free(Indices);
 		Indices = NULL;

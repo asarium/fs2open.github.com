@@ -67,6 +67,8 @@ extern GLfloat GL_anisotropy;
 extern bool GL_rendering_to_texture;
 extern GLint GL_max_renderbuffer_size;
 
+int get_num_mipmap_levels(int w, int h);
+
 void opengl_switch_arb(int unit, int state);
 void opengl_tcache_init();
 void opengl_free_texture_slot(int n);
@@ -84,6 +86,26 @@ void gr_opengl_get_bitmap_from_texture(void* data_out, int bitmap_num);
 size_t opengl_export_render_target( int slot, int width, int height, int alpha, int num_mipmaps, ubyte *image_data );
 void opengl_set_texture_target(GLenum target = GL_TEXTURE_2D);
 void opengl_set_texture_face(GLenum face = GL_TEXTURE_2D);
+
+void opengl_init_2d_texture(GLenum target,
+							GLuint texture,
+							GLint levels,
+							GLenum internalFormat,
+							GLsizei width,
+							GLsizei height,
+							GLenum data_format,
+							GLenum data_type,
+							const void* data);
+void opengl_init_3d_texture(GLenum target,
+							GLuint texture,
+							GLint levels,
+							GLenum internalFormat,
+							GLsizei width,
+							GLsizei height,
+							GLsizei depth,
+							GLenum data_format,
+							GLenum data_type,
+							const void* data);
 
 int gr_opengl_tcache_set(int bitmap_handle, int bitmap_type, float *u_scale, float *v_scale, uint32_t *array_index, int stage = 0);
 int gr_opengl_preload(int bitmap_num, int is_aabitmap);

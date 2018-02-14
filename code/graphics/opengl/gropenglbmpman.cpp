@@ -34,20 +34,6 @@ static inline int is_power_of_two(int w, int h)
 	return ( ((w >= GL_min_texture_width) && !(w & (w-1))) && ((h >= GL_min_texture_height) && !(h & (h-1))) );
 }
 
-int get_num_mipmap_levels(int w, int h)
-{
-	int size, levels = 0;
-
-	size = MAX(w, h);
-
-	while (size > 0) {
-		size >>= 1;
-		levels++;
-	}
-
-	return (levels > 1) ? levels : 1;
-}
-
 /**
  * Anything API specific to freeing bm data
  */

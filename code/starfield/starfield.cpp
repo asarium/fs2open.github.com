@@ -2764,6 +2764,8 @@ static void render_environment(int i, vec3d *eye_pos, matrix *new_orient, float 
 	gr_end_proj_matrix();
 }
 
+#include "libs/renderdoc/renderdoc.h"
+
 void stars_setup_environment_mapping(camid cid) {
 	matrix new_orient = IDENTITY_MATRIX;
 
@@ -2805,6 +2807,8 @@ void stars_setup_environment_mapping(camid cid) {
 
 	GR_DEBUG_SCOPE("Environment Mapping");
 	TRACE_SCOPE(tracing::EnvironmentMapping);
+
+	renderdoc::startCapture();
 
 	ENVMAP = gr_screen.envmap_render_target;
 

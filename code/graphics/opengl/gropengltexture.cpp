@@ -55,8 +55,6 @@ extern int Interp_multitex_cloakmap;
 int opengl_free_texture(tcache_slot_opengl *t);
 int opengl_create_texture (int bitmap_handle, int bitmap_type, tcache_slot_opengl *tslot = NULL);
 
-extern int get_num_mipmap_levels(int w, int h);
-
 void opengl_set_additive_tex_env()
 {
 	GL_CHECK_FOR_ERRORS("start of set_additive_tex_env()");
@@ -177,7 +175,6 @@ void opengl_tcache_flush()
 
 extern void opengl_kill_all_render_targets();
 
-void opengl_tex_array_storage(GLenum target, GLint levels, GLenum format, GLint width, GLint height, GLint frames);
 void opengl_tcache_shutdown()
 {
 	opengl_kill_all_render_targets();
@@ -580,7 +577,17 @@ int opengl_texture_set_level(int bitmap_handle,
 				else {
 					dsize = mipmap_h * mipmap_w * byte_mult;
 
-					glTexSubImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, 0, 0, 0, mipmap_w, mipmap_h, glFormat, texFormat, bmp_data + doffset);
+					glTextureSubImage3D(tSlot->texture_id,
+										0,
+										0,
+										0,
+										i,
+										mipmap_w,
+										mipmap_h,
+										1,
+										glFormat,
+										texFormat,
+										bmp_data + doffset);
 
 					// base image is done so now take care of any mipmap levels
 					for (auto j = 1; j < mipmap_levels; j++) {
@@ -598,7 +605,17 @@ int opengl_texture_set_level(int bitmap_handle,
 
 						dsize = mipmap_h * mipmap_w * byte_mult;
 
-						glTexSubImage2D (GL_TEXTURE_CUBE_MAP_POSITIVE_X+i, j, 0, 0, mipmap_w, mipmap_h, glFormat, texFormat, bmp_data + doffset);
+						glTextureSubImage3D(tSlot->texture_id,
+											j,
+											0,
+											0,
+											i,
+											mipmap_w,
+											mipmap_h,
+											1,
+											glFormat,
+											texFormat,
+											bmp_data + doffset);
 					}
 				}
 
@@ -819,43 +836,35 @@ void opengl_determine_bpp_and_flags(int bitmap_handle, int bitmap_type, ubyte& f
 	}
 }
 
-void opengl_tex_array_storage(GLenum target, GLint levels, GLenum format, GLint width, GLint height, GLint frames) {
+void opengl_tex_array_storage(GLenum target,
+							  GLuint texture,
+							  GLint levels,
+							  GLenum format,
+							  GLint width,
+							  GLint height,
+							  GLint frames) {
 	if (target == GL_TEXTURE_CUBE_MAP) {
 		Assertion(frames == 1, "Cube map texture arrays aren't supported yet!");
 
-		if (GLAD_GL_ARB_texture_storage) {
-			// This version has a better way of specifying the texture storage
-
-			if ( levels == 1 ) {
-				// looks like we only have one mipmap for this cube map
-				// allocate additional storage for the mip maps we're going to later generate using glGenerateMipMap
-				levels = get_num_mipmap_levels(width, height);
-			}
-
-			glTexStorage2D(target, levels, format, width, height);
-		} else {
-			for (auto i = 0; i < 6; ++i) {
-				auto mip_width = width;
-				auto mip_height = height;
-				for (auto j = 0; j < levels; j++) {
-					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, j, format, mip_width, mip_height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-								 nullptr);
-					mip_width = std::max(1, (mip_width / 2));
-					mip_height = std::max(1, (mip_height / 2));
-				}
-			}
+		if (levels == 1) {
+			// looks like we only have one mipmap for this cube map
+			// allocate additional storage for the mip maps we're going to later generate using glGenerateMipMap
+			levels = get_num_mipmap_levels(width, height);
 		}
+
+		// A cube map is just a 3D texture with 6 levels (at least if you ask OpenGL)
+		opengl_init_3d_texture(target, texture, levels, format, width, height, 6, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 	} else {
-		if (GLAD_GL_ARB_texture_storage) {
-			// This version has a better way of specifying the texture storage
-			glTexStorage3D(target, levels, format, width, height, frames);
-		} else {
-			for (auto i = 0; i < levels; i++) {
-				glTexImage3D(target, i, format, width, height, frames, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-				width = std::max(1, (width / 2));
-				height = std::max(1, (height / 2));
-			}
-		}
+		opengl_init_3d_texture(target,
+							   texture,
+							   levels,
+							   format,
+							   width,
+							   height,
+							   frames,
+							   GL_RGBA,
+							   GL_UNSIGNED_BYTE,
+							   nullptr);
 	}
 }
 
@@ -940,12 +949,13 @@ int opengl_create_texture(int bitmap_handle, int bitmap_type, tcache_slot_opengl
 		bitmap_type = TCACHE_TYPE_COMPRESSED;
 	}
 
-	// Create the texture array and bind it
-	glGenTextures(1, &tslot->texture_id);
 	tslot->texture_target = GL_TEXTURE_2D_ARRAY;
 	if ( bitmap_type == TCACHE_TYPE_CUBEMAP ) {
 		tslot->texture_target = GL_TEXTURE_CUBE_MAP;
 	}
+
+	// Create the texture array and bind it
+	glCreateTextures(tslot->texture_target, 1, &tslot->texture_id);
 
 	if (tslot->texture_id == 0) {
 		mprintf(("!!OpenGL DEBUG!! t->texture_id == 0\n"));
@@ -986,7 +996,13 @@ int opengl_create_texture(int bitmap_handle, int bitmap_type, tcache_slot_opengl
 	opengl_determine_bpp_and_flags(animation_begin, bitmap_type, bitmap_flags, bits_per_pixel);
 
 	auto intFormat = opengl_get_internal_format(bitmap_handle, bitmap_type, bits_per_pixel);
-	opengl_tex_array_storage(tslot->texture_target, max_levels, intFormat, width, height, num_frames);
+	opengl_tex_array_storage(tslot->texture_target,
+							 tslot->texture_id,
+							 max_levels,
+							 intFormat,
+							 width,
+							 height,
+							 num_frames);
 
 	bool frames_loaded = true;
 	for (int frame = animation_begin; frame < animation_begin + num_frames; ++frame) {
@@ -1202,101 +1218,6 @@ void gr_opengl_set_texture_addressing(int mode)
 	}
 
 	GL_CHECK_FOR_ERRORS("end of set_texture_addressing()");
-}
-
-int opengl_compress_image( ubyte **compressed_data, ubyte *in_data, int width, int height, int alpha, int num_mipmaps )
-{
-	Assert( in_data != NULL );
-
-	if ( !Texture_compression_available ) {
-		return 0;
-	}
-
-	GL_CHECK_FOR_ERRORS("start of compress_image()");
-
-	GLuint tex;
-	GLint compressed = GL_FALSE;
-	GLint compressed_size = 0;
-	ubyte *out_data = NULL;
-	GLint testing = 0;
-	GLint intFormat = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
-	GLenum texFormat = GL_UNSIGNED_BYTE;
-	GLenum glFormat = GL_BGR;
-	int i;
-
-	if (alpha) {
-		intFormat = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-		texFormat = GL_UNSIGNED_INT_8_8_8_8_REV;
-		glFormat = GL_BGRA;
-	}
-
-	glGenTextures(1, &tex);
-
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(tex);
-
-	// a quick proxy test.  this will tell us if it's possible without wasting a lot of time and resources in the attempt
-	glTexImage2D(GL_PROXY_TEXTURE_2D, 0, intFormat, width, height, 0, glFormat, texFormat, in_data);
-
-	glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_COMPRESSED, &compressed);
-	glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &testing);
-
-	if (compressed == GL_TRUE) {
-		glGetTexLevelParameteriv(GL_PROXY_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &compressed);
-	}
-
-	if ( (compressed == GL_FALSE) || (compressed != intFormat) || (testing == 0) ) {
-		GL_state.Texture.Delete(tex);
-		glDeleteTextures(1, &tex);
-		return 0;
-	}
-
-	// use best compression quality
-	glHint(GL_TEXTURE_COMPRESSION_HINT, GL_NICEST);
-
-	// alright, it should work if we are still here, now do it for real
-	glTexImage2D(GL_TEXTURE_2D, 0, intFormat, width, height, 0, glFormat, texFormat, in_data);
-
-	// if we got this far then it should have worked, but check anyway
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_COMPRESSED, &compressed);
-	Assert( compressed != GL_FALSE );
-
-	glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_INTERNAL_FORMAT, &compressed);
-	Assert( compressed == intFormat );
-
-	// for each mipmap level we generate go ahead and figure up the total memory required
-	for (i = 0; i < num_mipmaps; i++) {
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, i, GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &testing);
-		compressed_size += testing;
-	}
-
-	out_data = (ubyte*)vm_malloc(compressed_size * sizeof(ubyte));
-
-	Assert( out_data != NULL );
-
-	memset(out_data, 0, compressed_size * sizeof(ubyte));
-
-	// reset compressed_size and go back through each mipmap level to get both size and the image data itself
-	compressed_size = 0;
-
-	for (i = 0; i < num_mipmaps; i++) {
-		glGetTexLevelParameteriv(GL_TEXTURE_2D, i, GL_TEXTURE_COMPRESSED_IMAGE_SIZE, &testing);
-		glGetCompressedTexImage(GL_TEXTURE_2D, i, out_data + compressed_size);
-		compressed_size += testing;
-	}
-
-	glHint(GL_TEXTURE_COMPRESSION_HINT, GL_DONT_CARE);
-
-	GL_state.Texture.Delete(tex);
-	glDeleteTextures(1, &tex);
-
-	// send the data back out
-	*compressed_data = out_data;
-
-	GL_CHECK_FOR_ERRORS("end of compress_image()");
-
-	return compressed_size;
 }
 
 int opengl_get_texture( GLenum target, GLenum pixel_format, GLenum data_format, int num_mipmaps, int width, int height, int bytes_per_pixel, void* image_data, int offset )
@@ -1582,11 +1503,11 @@ static void opengl_free_fbo_slot(int id) {
 	*fbo = fbo_t();
 }
 
-int opengl_check_framebuffer()
+int opengl_check_framebuffer(GLuint framebuffer)
 {
 	GLenum status;
 
-	status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	status = glCheckNamedFramebufferStatus(framebuffer, GL_FRAMEBUFFER);
 
 	if (status != GL_FRAMEBUFFER_COMPLETE) {
 		char err_txt[100] = { 0 };
@@ -1725,18 +1646,14 @@ int opengl_set_render_target( int slot, int face, int is_static )
 		return 0;
 	}
 
-	if ( !glIsFramebuffer(fbo->framebuffer_id) /*|| !glIsRenderbufferEXT(fbo->renderbuffer_id)*/ ) {
-		Int3();
-		return 0;
-	}
+	Assertion(glIsFramebuffer(fbo->framebuffer_id), "Framebuffer id %d is not a framebuffer!", fbo->framebuffer_id);
 
 //	glBindRenderbuffer(GL_RENDERBUFFER, fbo->renderbuffer_id);
-	GL_state.BindFrameBuffer(fbo->framebuffer_id);
 
 	if (ts->texture_target == GL_TEXTURE_CUBE_MAP) {
 		// For cubemaps we can enable one of the six faces for rendering
 		Assert( (face >= 0) && (face < 6) );
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, ts->texture_id, 0);
+		glNamedFramebufferTextureLayer(fbo->framebuffer_id, GL_COLOR_ATTACHMENT0, ts->texture_id, 0, face);
 	} else {
 		// Check if the face is valid for this case
 		Assert( face <= 0 );
@@ -1750,6 +1667,7 @@ int opengl_set_render_target( int slot, int face, int is_static )
 	// save current fbo for later use
 	render_target = fbo;
 
+	GL_state.BindFrameBuffer(fbo->framebuffer_id);
 	GL_rendering_to_texture = true;
 
 	GL_CHECK_FOR_ERRORS("end of set_render_target()");
@@ -1796,7 +1714,7 @@ int opengl_make_render_target( int handle, int slot, int *w, int *h, int *bpp, i
 	}
 
 	// initialize color texture
-	glGenTextures(1, &ts->texture_id);
+	glCreateTextures(GL_texture_target, 1, &ts->texture_id);
 
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_texture_target);
@@ -1814,7 +1732,6 @@ int opengl_make_render_target( int handle, int slot, int *w, int *h, int *bpp, i
 	glTexParameteri(GL_texture_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 	if (flags & BMP_FLAG_RENDER_TARGET_MIPMAP) {
-		extern int get_num_mipmap_levels(int w, int h);
 		ts->mipmap_levels = get_num_mipmap_levels(*w, *h);
 	} else {
 		ts->mipmap_levels = 1;
@@ -1822,7 +1739,7 @@ int opengl_make_render_target( int handle, int slot, int *w, int *h, int *bpp, i
 
 	// Initialize the texture storage of the framebuffer. Framebuffers always have only a single layer in the texture array
 	// This automatically handles cubemaps correctly
-	opengl_tex_array_storage(GL_state.Texture.GetTarget(), ts->mipmap_levels, GL_RGBA8, *w, *h, 1);
+	opengl_tex_array_storage(GL_state.Texture.GetTarget(), ts->texture_id, ts->mipmap_levels, GL_RGBA8, *w, *h, 1);
 
 	if (flags & BMP_FLAG_RENDER_TARGET_MIPMAP) {
 		glGenerateMipmap(GL_state.Texture.GetTarget());
@@ -1839,19 +1756,13 @@ int opengl_make_render_target( int handle, int slot, int *w, int *h, int *bpp, i
 	glBindRenderbuffer(GL_RENDERBUFFER, 0);
 
 	// frame buffer
-	glGenFramebuffers(1, &new_fbo->framebuffer_id);
-	GL_state.BindFrameBuffer(new_fbo->framebuffer_id);
+	glCreateFramebuffers(1, &new_fbo->framebuffer_id);
 
-	if (flags & BMP_FLAG_CUBEMAP) {
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, ts->texture_id, 0);
-	} else {
-		// Since we use texture arrays for all bitmaps we use a single image array here
-		glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, ts->texture_id, 0, 0);
-	}
+	glNamedFramebufferTextureLayer(new_fbo->framebuffer_id, GL_COLOR_ATTACHMENT0, ts->texture_id, 0, 0);
 
 //	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, new_fbo.renderbuffer_id);
 
-	if ( opengl_check_framebuffer() ) {
+	if ( opengl_check_framebuffer(new_fbo->framebuffer_id) ) {
 		// Oops!!  reset everything and then bail
 		mprintf(("OpenGL: Unable to create FBO!\n"));
 		auto fbo_id = ts->fbo_id;
@@ -1947,6 +1858,91 @@ void gr_opengl_bm_generate_mip_maps(int slot)
 	GL_state.Texture.Enable(ts->texture_id);
 
 	glGenerateMipmap(ts->texture_target);
+}
+int get_num_mipmap_levels(int w, int h) {
+	return (int) floor(log10((float) std::max(w, h)) / log10(2.0));
+}
+void opengl_init_2d_texture(GLenum target,
+							GLuint texture,
+							GLint levels,
+							GLenum internalFormat,
+							GLsizei width,
+							GLsizei height,
+							GLenum data_format,
+							GLenum data_type,
+							const void* data) {
+	if (GLAD_GL_ARB_texture_storage) {
+		glTextureStorage2D(texture, levels, internalFormat, width, height);
+
+		if (data != nullptr) {
+			Assertion(levels == 1, "Multiple levels cannot be initialized using one data pointer!");
+			// Need to upload the data separately
+			glTextureSubImage2D(texture, 0, 0, 0, width, height, data_format, data_type, data);
+		}
+	} else {
+		// There are no DSA functions for this version so we need to bind the texture
+		GL_state.Texture.SetTarget(target);
+		GL_state.Texture.Enable(texture);
+
+		Assertion(data == nullptr || levels == 1, "Multiple levels cannot be initialized using one data pointer!");
+
+		auto mip_width = width;
+		auto mip_height = height;
+		for (auto j = 0; j < levels; j++) {
+			glTexImage2D(target, j, internalFormat, mip_width, mip_height, 0, data_format, data_type, data);
+			mip_width = std::max(1, (mip_width / 2));
+			mip_height = std::max(1, (mip_height / 2));
+		}
+	}
+}
+void opengl_init_3d_texture(GLenum target,
+							GLuint texture,
+							GLint levels,
+							GLenum internalFormat,
+							GLsizei width,
+							GLsizei height,
+							GLsizei depth,
+							GLenum data_format,
+							GLenum data_type,
+							const void* data) {
+	if (GLAD_GL_ARB_texture_storage) {
+		// This version has a better way of specifying the texture storage
+		glTextureStorage3D(texture, levels, internalFormat, width, height, depth);
+
+		if (data != nullptr) {
+			Assertion(levels == 1, "Multiple levels cannot be initialized using one data pointer!");
+			// Need to upload the data separately
+			glTextureSubImage3D(texture, 0, 0, 0, 0, width, height, depth, data_format, data_type, data);
+		}
+	} else {
+		// There are no DSA functions for this version so we need to bind the texture
+		GL_state.Texture.SetTarget(target);
+		GL_state.Texture.Enable(texture);
+
+		// DSA handled cubemaps as 6 frame texture arrays but older OpenGL still handles it as 6 2D textures
+		if (target == GL_TEXTURE_CUBE_MAP) {
+			Assertion(data == nullptr, "Initial data is not supported for cube maps!");
+			Assertion(depth == 6, "Tried to initialize cube map with wrong number of levels!");
+
+			for (auto i = 0; i < 6; ++i) {
+				auto mip_width = width;
+				auto mip_height = height;
+				for (auto j = 0; j < levels; j++) {
+					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, j, internalFormat, mip_width, mip_height, 0, data_format, data_type, data);
+					mip_width = std::max(1, (mip_width / 2));
+					mip_height = std::max(1, (mip_height / 2));
+				}
+			}
+		} else {
+			Assertion(data == nullptr || levels == 1, "Multiple levels cannot be initialized using one data pointer!");
+
+			for (auto i = 0; i < levels; i++) {
+				glTexImage3D(target, i, internalFormat, width, height, depth, 0, data_format, data_type, nullptr);
+				width = std::max(1, (width / 2));
+				height = std::max(1, (height / 2));
+			}
+		}
+	}
 }
 
 //
