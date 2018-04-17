@@ -94,6 +94,8 @@ add_file_folder("Source/UI/Dialogs"
 	src/ui/dialogs/SelectionDialog.h
 	src/ui/dialogs/ShieldSystemDialog.h
 	src/ui/dialogs/ShieldSystemDialog.cpp
+	src/ui/dialogs/ShipEditorDialog.h
+	src/ui/dialogs/ShipEditorDialog.cpp
 	src/ui/dialogs/TeamLoadoutDialog.cpp
 	src/ui/dialogs/TeamLoadoutDialog.h
 	src/ui/dialogs/VoiceActingManager.h
@@ -133,6 +135,7 @@ add_file_folder("UI"
 	ui/ObjectOrientationDialog.ui
 	ui/SelectionDialog.ui
 	ui/ShieldSystemDialog.ui
+	ui/ShipEditorDialog.ui
 	ui/TeamLoadoutDialog.ui
 	ui/VoiceActingManager.ui
     ui/WaypointEditorDialog.ui

@@ -27,6 +27,7 @@
 #include <globalincs/linklist.h>
 #include <ui/dialogs/SelectionDialog.h>
 #include <ui/dialogs/FictionViewerDialog.h>
+#include <ui/dialogs/ShipEditorDialog.h>
 #include <iff_defs/iff_defs.h>
 
 #include "mission/Editor.h"
@@ -1068,6 +1069,10 @@ void FredView::on_actionMission_Objectives_triggered(bool) {
 void FredView::on_actionFiction_Viewer_triggered(bool) {
 	dialogs::FictionViewerDialog dialog(this, _viewport);
 	dialog.exec();
+}
+void FredView::on_actionShips_triggered(bool) {
+	auto diag = new dialogs::ShipEditorDialog(this);
+	diag->show();
 }
 
 } // namespace fred
