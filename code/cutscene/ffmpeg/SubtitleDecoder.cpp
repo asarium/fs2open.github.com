@@ -88,6 +88,8 @@ void SubtitleDecoder::pushSubtitleFrame(AVPacket* packet, AVSubtitle* subtitle) 
 		while(newline_pos != SCP_string::npos) {
 			processed_text.replace(newline_pos, 2, "\n");
 
+			newline_pos = processed_text.find("\n");
+
 			newline_pos = processed_text.find("\\N");
 		}
 	} else {

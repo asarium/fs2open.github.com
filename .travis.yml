@@ -64,29 +64,8 @@ deploy:
 
 matrix:
     include:
-        # note that gcc Debug MUST be 1st for Coverity
         - os: linux
-          env: CONFIGURATION="Debug" CC=gcc-5 CXX=g++-5
-          addons:
-              apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                      - sourceline: 'ppa:beineri/opt-qt571-trusty'
-                  packages:
-                      - *global_deps
-                      - g++-5
-        - os: linux
-          env: CONFIGURATION="Debug" CC=gcc-7 CXX=g++-7
-          addons:
-              apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                      - sourceline: 'ppa:beineri/opt-qt571-trusty'
-                  packages:
-                      - g++-7
-                      - *global_deps
-        - os: linux
-          env: CONFIGURATION="Debug" CC=clang-4.0 CXX=clang++-4.0 CMAKE_OPTIONS="-DENABLE_CLANG_TIDY=ON -DCLANG_TIDY_EXE=/usr/bin/clang-tidy-4.0"
+          env: CONFIGURATION="Debug" CC=clang-4.0 CXX=clang++-4.0 CMAKE_OPTIONS="-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
           addons:
               apt:
                   sources:
@@ -98,56 +77,9 @@ matrix:
                       - clang-4.0
                       - clang-tidy-4.0
                       - libc++-dev
-        - os: osx
-          env: CONFIGURATION="Debug"
-
-        - os: linux
-          env: CONFIGURATION="Release" CC=gcc-5 CXX=g++-5
-          addons:
-              apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                      - sourceline: 'ppa:beineri/opt-qt571-trusty'
-                  packages:
-                      - *global_deps
-                      - g++-5
-        - os: linux
-          env: CONFIGURATION="Release" CC=gcc-7 CXX=g++-7
-          addons:
-              apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                      - sourceline: 'ppa:beineri/opt-qt571-trusty'
-                  packages:
-                      - g++-7
-                      - *global_deps
-        - os: linux
-          env: CONFIGURATION="Release" CC=clang-4.0 CXX=clang++-4.0 CMAKE_OPTIONS="-DENABLE_CLANG_TIDY=ON -DCLANG_TIDY_EXE=/usr/bin/clang-tidy-4.0"
-          addons:
-              apt:
-                  sources:
-                      - ubuntu-toolchain-r-test
-                      - llvm-toolchain-trusty-4.0
-                      - sourceline: 'ppa:beineri/opt-qt571-trusty'
-                  packages:
-                      - *global_deps
-                      - clang-4.0
-                      - clang-tidy-4.0
-                      - libc++-dev
-        - os: osx
-          env: CONFIGURATION="Release"
-
-        - os: linux
-          env: CMAKE_OPTIONS="-DCMAKE_EXPORT_COMPILE_COMMANDS=ON"
-          addons:
-              apt:
-                  sources:
-                      - llvm-toolchain-trusty-4.0
-                  packages:
-                      - clang-format-4.0
-          before_script:
-            - echo # This stage is not needed for this check
-          script: ./ci/travis/clang_format.sh && exit $? # Call script and exit with same code
+          script:
+            - ./ci/travis/script.sh
+            - ./ci/travis/clang_tidy.sh
 before_install:
     # ugly hack; if running a coverity scan abort all except the 1st build
     # see note re gcc compiler above needing to be 1st
