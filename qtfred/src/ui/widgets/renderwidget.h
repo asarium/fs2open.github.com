@@ -3,9 +3,9 @@
 #include <memory>
 #include <unordered_map>
 
-#include <QWindow>
-#include <QWidget>
 #include <mission/FredRenderer.h>
+#include <QWidget>
+#include <QWindow>
 
 #include "osapi/osapi.h"
 
@@ -15,9 +15,9 @@ namespace fred {
 class Editor;
 class RenderWidget;
 
-class RenderWindow: public QWindow {
- Q_OBJECT
- public:
+class RenderWindow : public QWindow {
+	Q_OBJECT
+  public:
 	explicit RenderWindow(RenderWidget* parent = nullptr);
 	~RenderWindow() override;
 
@@ -27,7 +27,7 @@ class RenderWindow: public QWindow {
 
 	void startRendering();
 
- protected:
+  protected:
 	void paintGL();
 
 	bool event(QEvent* evt) override;
@@ -36,15 +36,15 @@ class RenderWindow: public QWindow {
 
 	void exposeEvent(QExposeEvent* event) override;
 
- private:
+  private:
 	RenderWidget* _renderWidget = nullptr;
 
-	Editor* fred = nullptr;
+	Editor* fred            = nullptr;
 	FredRenderer* _renderer = nullptr;
 };
 
-class RenderWidget: public QWidget {
- Q_OBJECT
+class RenderWidget : public QWidget {
+	Q_OBJECT
 
 	RenderWindow* _window = nullptr;
 
@@ -53,7 +53,7 @@ class RenderWidget: public QWidget {
 	std::unique_ptr<QCursor> _rotateCursor;
 
 	std::unordered_map<int, int> qt2fsKeys;
-	Editor* fred = nullptr;
+	Editor* fred              = nullptr;
 	EditorViewport* _viewport = nullptr;
 
 	CursorMode _cursorMode = CursorMode::Selecting;
@@ -63,7 +63,7 @@ class RenderWidget: public QWidget {
 
 	QPoint _lastMouse;
 
- public:
+  public:
 	explicit RenderWidget(QWidget* parent);
 
 	void setSurfaceFormat(const QSurfaceFormat& fmt);
@@ -74,7 +74,13 @@ class RenderWidget: public QWidget {
 	void setCursorMode(CursorMode mode);
 
 	void renderFrame();
- protected:
+
+  signals:
+	void openShipEditor();
+
+	void openWaypointEditor();
+
+  protected:
 	void keyPressEvent(QKeyEvent*) override;
 	void keyReleaseEvent(QKeyEvent*) override;
 

@@ -72,6 +72,10 @@ FredView::FredView(QWidget* parent) : QMainWindow(parent), ui(new Ui::FredView()
 	connect(ui->actionOpen, &QAction::triggered, this, &FredView::openLoadMissionDIalog);
 	connect(ui->actionNew, &QAction::triggered, this, &FredView::newMission);
 
+	connect(ui->centralWidget, &RenderWidget::openShipEditor, this, [this]() { on_actionShips_triggered(false); });
+	connect(ui->centralWidget, &RenderWidget::openWaypointEditor, this,
+	        [this]() { on_actionWaypoint_Paths_triggered(false); });
+
 	connect(fredApp, &FredApplication::onIdle, this, &FredView::updateUI);
 
 	// TODO: Hook this up with the modified state of the mission
@@ -1071,7 +1075,9 @@ void FredView::on_actionFiction_Viewer_triggered(bool) {
 	dialog.exec();
 }
 void FredView::on_actionShips_triggered(bool) {
-	auto diag = new dialogs::ShipEditorDialog(this);
+	auto diag = new dialogs::ShipEditorDialog(this, _viewport);
+	// Since this dialog is modeless it needs to be deleted when it is closed
+	diag->setAttribute(Qt::WA_DeleteOnClose);
 	diag->show();
 }
 

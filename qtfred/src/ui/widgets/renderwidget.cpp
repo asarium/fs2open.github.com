@@ -199,7 +199,26 @@ void RenderWidget::keyReleaseEvent(QKeyEvent* key) {
 	key_mark(qt2fsKeys.at(code), 0, 0);
 }
 void RenderWidget::mouseDoubleClickEvent(QMouseEvent* event) {
-	event->ignore();
+	if (_viewport->Cursor_over != -1) {
+		switch (Objects[_viewport->Cursor_over].type) {
+		case OBJ_SHIP:
+		case OBJ_START:
+			openShipEditor();
+			break;
+
+		case OBJ_WAYPOINT:
+		case OBJ_JUMP_NODE:
+			openWaypointEditor();
+			break;
+		}
+
+	}
+	/* Briefing dialog is not implemented yet
+	else if (Briefing_dialog)
+		Fixed_briefing_size = !Fixed_briefing_size;
+	*/
+
+	event->accept();
 }
 void RenderWidget::mousePressEvent(QMouseEvent* event) {
 	if (event->button() != Qt::LeftButton) {

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "mission/dialogs/ShipEditorDialogModel.h"
+
+#include "ui/FredView.h"
+
 #include <QtWidgets/QDialog>
 
 #include <memory>
@@ -16,11 +20,17 @@ class ShipEditorDialog : public QDialog {
 
  Q_OBJECT
  public:
-	explicit ShipEditorDialog(QWidget* parent = nullptr, const Qt::WindowFlags& f = Qt::WindowFlags());
+	explicit ShipEditorDialog(FredView* parent, EditorViewport* viewport);
 	~ShipEditorDialog() override;
 
+ protected:
+	bool event(QEvent* event) override;
+
  private:
+	void updateUI();
+
 	std::unique_ptr<Ui::ShipEditorDialog> ui;
+	std::unique_ptr<ShipEditorDialogModel> _model;
 };
 
 }
