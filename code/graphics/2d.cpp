@@ -672,6 +672,8 @@ void gr_close()
 		default:
 			Int3();		// Invalid graphics mode
 	}
+	// Make sure the context is cleaned up if the API specific code did not do that
+	gr_screen.context = nullptr;
 
 	bm_close();
 
@@ -785,7 +787,7 @@ static bool gr_init_sub(std::unique_ptr<os::GraphicsOperations>&& graphicsOps, i
 	int res = GR_1024;
 	bool rc = false;
 
-	memset( &gr_screen, 0, sizeof(screen) );
+	gr_screen = {};
 
 	float aspect_ratio = (float)width / (float)height;
 

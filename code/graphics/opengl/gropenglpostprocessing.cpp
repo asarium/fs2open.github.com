@@ -9,6 +9,7 @@
 #include "gropengltnl.h"
 #include "cmdline/cmdline.h"
 #include "def_files/def_files.h"
+#include "graphics/opengl/OpenGLContext.h"
 #include "io/timer.h"
 #include "lighting/lighting.h"
 #include "mod_table/mod_table.h"
@@ -70,8 +71,8 @@ bool Post_in_frame = false;
 static int Post_active_shader_index = -1;
 
 static GLuint Bloom_framebuffer = 0;
-static GLuint Bloom_textures[2] = { 0 };
-static GLuint Bloom_sampler     = 0;
+static std::array<graphics::ImageId, 2> Bloom_textures;
+static graphics::SamplerId Bloom_sampler;
 
 static int Post_texture_width = 0;
 static int Post_texture_height = 0;
@@ -86,9 +87,10 @@ void opengl_post_pass_tonemap()
 	Current_shader->program->Uniforms.setUniformi("tex", 0);
 	Current_shader->program->Uniforms.setUniformf("exposure", 4.0f);
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_ldr_texture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+	                       graphics::opengl::get_gl_texture_handle(Scene_ldr_texture), 0);
 
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_color_texture, Scene_color_sampler);
+	GL_state.Texture.Enable(0, Scene_color_texture, Scene_color_sampler);
 
 	opengl_draw_textured_quad(-1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, Scene_texture_u_scale, Scene_texture_u_scale);
 }
@@ -108,7 +110,8 @@ void opengl_post_pass_bloom()
 		TRACE_SCOPE(tracing::BloomBrightPass);
 
 		GL_state.BindFrameBuffer(Bloom_framebuffer);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Bloom_textures[0], 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+		                       graphics::opengl::get_gl_texture_handle(Bloom_textures[0]), 0);
 
 		// width and height are 1/2 for the bright pass
 		width = Post_texture_width >> 1;
@@ -123,7 +126,7 @@ void opengl_post_pass_bloom()
 
 		Current_shader->program->Uniforms.setUniformi("tex", 0);
 
-		GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_color_texture, Scene_color_sampler);
+		GL_state.Texture.Enable(0, Scene_color_texture, Scene_color_sampler);
 
 		opengl_draw_textured_quad(-1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	}
@@ -131,7 +134,7 @@ void opengl_post_pass_bloom()
 
 	// ------ begin blur pass ------
 
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Bloom_textures[0], Bloom_sampler);
+	GL_state.Texture.Enable(0, Bloom_textures[0], Bloom_sampler);
 
 	glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -140,8 +143,8 @@ void opengl_post_pass_bloom()
 			GR_DEBUG_SCOPE("Bloom iteration step");
 			TRACE_SCOPE(tracing::BloomIterationStep);
 
-			GLuint source_tex = Bloom_textures[pass];
-			GLuint dest_tex = Bloom_textures[1 - pass];
+			auto source_tex = Bloom_textures[pass];
+			auto dest_tex   = Bloom_textures[1 - pass];
 
 			if (pass) {
 				opengl_shader_set_current(gr_opengl_maybe_create_shader(SDR_TYPE_POST_PROCESS_BLUR, SDR_FLAG_BLUR_HORIZONTAL));
@@ -151,7 +154,7 @@ void opengl_post_pass_bloom()
 
 			Current_shader->program->Uniforms.setUniformi("tex", 0);
 
-			GL_state.Texture.Enable(0, GL_TEXTURE_2D, source_tex, Bloom_sampler);
+			GL_state.Texture.Enable(0, source_tex, Bloom_sampler);
 
 			for (int mipmap = 0; mipmap < MAX_MIP_BLUR_LEVELS; ++mipmap) {
 				int bloom_width = width >> mipmap;
@@ -161,7 +164,8 @@ void opengl_post_pass_bloom()
 				Current_shader->program->Uniforms.setUniformi("level", mipmap);
 				Current_shader->program->Uniforms.setUniformf("tapSize", 1.0f);
 
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, dest_tex, mipmap);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+				                       graphics::opengl::get_gl_texture_handle(dest_tex), mipmap);
 
 				glViewport(0, 0, bloom_width, bloom_height);
 
@@ -175,7 +179,8 @@ void opengl_post_pass_bloom()
 		GR_DEBUG_SCOPE("Bloom composite step");
 		TRACE_SCOPE(tracing::BloomCompositeStep);
 
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_color_texture, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+		                       graphics::opengl::get_gl_texture_handle(Scene_color_texture), 0);
 
 		opengl_shader_set_current(gr_opengl_maybe_create_shader(SDR_TYPE_POST_PROCESS_BLOOM_COMP, 0));
 
@@ -183,7 +188,7 @@ void opengl_post_pass_bloom()
 		Current_shader->program->Uniforms.setUniformi("levels", MAX_MIP_BLUR_LEVELS);
 		Current_shader->program->Uniforms.setUniformf("bloom_intensity", Cmdline_bloom_intensity / 100.0f);
 
-		GL_state.Texture.Enable(0, GL_TEXTURE_2D, Bloom_textures[0], Bloom_sampler);
+		GL_state.Texture.Enable(0, Bloom_textures[0], Bloom_sampler);
 
 		GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
 
@@ -232,23 +237,25 @@ void opengl_post_pass_fxaa() {
 	// basic/default uniforms
 	Current_shader->program->Uniforms.setUniformi( "tex", 0 );
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_luminance_texture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+	                       graphics::opengl::get_gl_texture_handle(Scene_luminance_texture), 0);
 
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_ldr_texture, Scene_ldr_sampler);
+	GL_state.Texture.Enable(0, Scene_ldr_texture, Scene_ldr_sampler);
 
 	opengl_draw_textured_quad(-1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, Scene_texture_u_scale, Scene_texture_u_scale);
 
 	// set and configure post shader ..
 	opengl_shader_set_current( gr_opengl_maybe_create_shader(SDR_TYPE_POST_PROCESS_FXAA, 0) );
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_ldr_texture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+	                       graphics::opengl::get_gl_texture_handle(Scene_ldr_texture), 0);
 
 	// basic/default uniforms
 	Current_shader->program->Uniforms.setUniformi( "tex0", 0 );
 	Current_shader->program->Uniforms.setUniformf( "rt_w", static_cast<float>(Post_texture_width));
 	Current_shader->program->Uniforms.setUniformf( "rt_h", static_cast<float>(Post_texture_height));
 
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_luminance_texture, Scene_luminance_sampler);
+	GL_state.Texture.Enable(0, Scene_luminance_texture, Scene_luminance_sampler);
 
 	opengl_draw_textured_quad(-1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, Scene_texture_u_scale, Scene_texture_u_scale);
 
@@ -256,11 +263,6 @@ void opengl_post_pass_fxaa() {
 }
 
 extern GLuint Shadow_map_depth_texture;
-extern GLuint Scene_depth_texture;
-extern GLuint Cockpit_depth_texture;
-extern GLuint Scene_position_texture;
-extern GLuint Scene_normal_texture;
-extern GLuint Scene_specular_texture;
 extern bool stars_sun_has_glare(int index);
 extern float Sun_spot;
 void opengl_post_lightshafts()
@@ -300,8 +302,8 @@ void opengl_post_lightshafts()
 				Current_shader->program->Uniforms.setUniformf("intensity", Sun_spot * ls_intensity);
 				Current_shader->program->Uniforms.setUniformf("cp_intensity", Sun_spot * ls_cpintensity);
 
-				GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_depth_texture, Scene_depth_sampler);
-				GL_state.Texture.Enable(1, GL_TEXTURE_2D, Cockpit_depth_texture, Cockpit_depth_sampler);
+				GL_state.Texture.Enable(0, Scene_depth_texture, Scene_depth_sampler);
+				GL_state.Texture.Enable(1, Cockpit_depth_texture, Cockpit_depth_sampler);
 				GL_state.Blend(GL_TRUE);
 				GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
 
@@ -391,8 +393,8 @@ void gr_opengl_post_process_end()
 	// now render it to the screen ...
 	GL_state.PopFramebufferState();
 	//GL_state.Texture.Enable(Scene_color_texture);
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_ldr_texture, Scene_ldr_sampler);
-	GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_depth_texture, Scene_depth_sampler);
+	GL_state.Texture.Enable(0, Scene_ldr_texture, Scene_ldr_sampler);
+	GL_state.Texture.Enable(1, Scene_depth_texture, Scene_depth_sampler);
 
 	opengl_draw_textured_quad(-1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, Scene_texture_u_scale, Scene_texture_u_scale);
 
@@ -528,13 +530,13 @@ void gr_opengl_post_process_set_defaults()
 	Post_active_shader_index = -1;
 }
 
-extern GLuint Cockpit_depth_texture;
 void gr_opengl_post_process_save_zbuffer()
 {
 	GR_DEBUG_SCOPE("Save z-Buffer");
 	if (Post_initialized)
 	{
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, Cockpit_depth_texture, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+		                       graphics::opengl::get_gl_texture_handle(Cockpit_depth_texture), 0);
 		gr_zbuffer_clear(TRUE);
 		zbuffer_saved = true;
 	}
@@ -550,7 +552,8 @@ void gr_opengl_post_process_restore_zbuffer()
 	GR_DEBUG_SCOPE("Restore z-Buffer");
 
 	if (zbuffer_saved) {
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, Scene_depth_texture, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+		                       graphics::opengl::get_gl_texture_handle(Scene_depth_texture), 0);
 
 		zbuffer_saved = false;
 	}
@@ -804,27 +807,26 @@ bool opengl_post_init_shaders()
 
 void opengl_setup_bloom_textures()
 {
+	using namespace graphics;
+
 	// two more framebuffers, one each for the two different sized bloom textures
 	glGenFramebuffers(1, &Bloom_framebuffer);
 
-	// need to generate textures for bloom too
-	glGenTextures(2, Bloom_textures);
-
 	// half size
-	int width = Post_texture_width >> 1;
+	int width  = Post_texture_width >> 1;
 	int height = Post_texture_height >> 1;
 
-	for (int tex = 0; tex < 2; tex++) {
-		GL_state.Texture.SetActiveUnit(0);
-		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-		GL_state.Texture.Enable(Bloom_textures[tex]);
+	// need to generate textures for bloom too
+	for (auto& tex : Bloom_textures) {
+		tex = gr_context->createImage(ImageType::Type2D, ImageFormat::R16G16B16A16F, width, height, 1,
+		                              MAX_MIP_BLUR_LEVELS);
 
-		opengl_init_2d_texture(GL_TEXTURE_2D, Bloom_textures[tex], MAX_MIP_BLUR_LEVELS, GL_RGBA16F, width, height);
-
-		glGenerateMipmap(GL_TEXTURE_2D);
+		gr_context->imageGenerateMipmaps(tex);
 	}
-	Bloom_sampler = opengl_get_sampler(
-	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR));
+
+	Bloom_sampler =
+	    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Linear,
+	                                         WrapMode::ClampToEdge, WrapMode::ClampToEdge, WrapMode::ClampToEdge));
 
 	GL_state.BindFrameBuffer(0);
 }
@@ -863,14 +865,11 @@ static bool opengl_post_init_framebuffer()
 
 void opengl_post_process_shutdown_bloom()
 {
-	if ( Bloom_textures[0] ) {
-		glDeleteTextures(1, &Bloom_textures[0]);
-		Bloom_textures[0] = 0;
-	}
-
-	if ( Bloom_textures[1] ) {
-		glDeleteTextures(1, &Bloom_textures[1]);
-		Bloom_textures[1] = 0;
+	for (auto& tex : Bloom_textures) {
+		if (tex.isValid()) {
+			gr_context->deleteImage(tex);
+			tex = graphics::ImageId::invalid();
+		}
 	}
 
 	if ( Bloom_framebuffer > 0 ) {

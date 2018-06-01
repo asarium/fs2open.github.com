@@ -14,6 +14,7 @@
 #include "gropengl.h"
 #include "gropengltnl.h"
 #include "globalincs/pstypes.h"
+#include "graphics/DeviceContext.h"
 
 #define BMPMAN_INTERNAL
 #include "bmpman/bm_internal.h"
@@ -22,10 +23,9 @@
 
 class tcache_slot_opengl : public gr_bitmap_info {
   public:
-	GLuint texture_id     = 0;
-	GLuint sampler_id     = 0;
-	GLenum texture_target = GL_TEXTURE_2D;
-	GLSamplerProperties sampling_props;
+	graphics::ImageId texture_id   = graphics::ImageId::invalid();
+	graphics::SamplerId sampler_id = graphics::SamplerId::invalid();
+	graphics::SamplerParameters sampling_props;
 	float u_scale        = 1.0f;
 	float v_scale        = 1.0f;
 	int bitmap_handle    = -1;
@@ -71,13 +71,6 @@ void gr_opengl_get_bitmap_from_texture(void* data_out, int bitmap_num);
 size_t opengl_export_render_target( int slot, int width, int height, int alpha, int num_mipmaps, ubyte *image_data );
 void opengl_set_texture_target(GLenum target = GL_TEXTURE_2D);
 void opengl_set_texture_face(GLenum face = GL_TEXTURE_2D);
-
-void opengl_init_2d_texture(GLenum target, GLuint texture, GLint levels, GLenum internalFormat, GLsizei width,
-                            GLsizei height, GLenum data_format = GL_RGBA, GLenum data_type = GL_UNSIGNED_BYTE,
-                            const void* data = nullptr);
-void opengl_init_3d_texture(GLenum target, GLuint texture, GLint levels, GLenum internalFormat, GLsizei width,
-                            GLsizei height, GLsizei depth, GLenum data_format = GL_RGBA,
-                            GLenum data_type = GL_UNSIGNED_BYTE, const void* data = nullptr);
 
 int gr_opengl_tcache_set(int bitmap_handle, int bitmap_type, float *u_scale, float *v_scale, uint32_t *array_index, int stage = 0);
 int gr_opengl_preload(int bitmap_num, int is_aabitmap);

@@ -350,6 +350,8 @@ add_file_folder("Graphics"
 	graphics/2d.h
 	graphics/decal_draw_list.cpp
 	graphics/decal_draw_list.h
+	graphics/DeviceContext.cpp
+	graphics/DeviceContext.h
 	graphics/grbatch.cpp
 	graphics/grbatch.h
 	graphics/grinternal.h
@@ -387,6 +389,7 @@ add_file_folder("Graphics\\\\OpenGLGr\\\\OpenGL CPPs"
 	graphics/opengl/gropenglsync.cpp
 	graphics/opengl/gropengltexture.cpp
 	graphics/opengl/gropengltnl.cpp
+	graphics/opengl/OpenGLContext.cpp
 	graphics/opengl/ShaderProgram.cpp
 )
 
@@ -403,6 +406,7 @@ add_file_folder("Graphics\\\\OpenGLGr\\\\OpenGL Headers"
 	graphics/opengl/gropenglsync.h
 	graphics/opengl/gropengltexture.h
 	graphics/opengl/gropengltnl.h
+	graphics/opengl/OpenGLContext.h
 	graphics/opengl/ShaderProgram.h
 )
 
@@ -1274,6 +1278,7 @@ add_file_folder("Utils"
 	utils/encoding.cpp
     utils/encoding.h
     utils/event.h
+    utils/hash.h
 	utils/HeapAllocator.cpp
 	utils/HeapAllocator.h
 	utils/id.h

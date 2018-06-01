@@ -7,16 +7,17 @@
  *
 */
 
-
+#include "graphics/opengl/gropenglshader.h"
+#include "ShaderProgram.h"
 #include "cfile/cfile.h"
 #include "cmdline/cmdline.h"
 #include "def_files/def_files.h"
 #include "graphics/2d.h"
-#include "graphics/matrix.h"
 #include "graphics/grinternal.h"
+#include "graphics/matrix.h"
+#include "graphics/opengl/OpenGLContext.h"
 #include "graphics/opengl/gropengldraw.h"
 #include "graphics/opengl/gropenglpostprocessing.h"
-#include "graphics/opengl/gropenglshader.h"
 #include "graphics/opengl/gropenglstate.h"
 #include "graphics/opengl/gropengltexture.h"
 #include "graphics/opengl/gropengltnl.h"
@@ -24,15 +25,14 @@
 #include "math/vecmat.h"
 #include "mod_table/mod_table.h"
 #include "render/3d.h"
-#include "ShaderProgram.h"
 
 #include <md5.h>
 #include <jansson.h>
 
 SCP_vector<opengl_shader_t> GL_shader;
 
-GLuint Framebuffer_fallback_texture_id = 0;
-GLuint Framebuffer_fallback_sampler_id = 0;
+graphics::ImageId Framebuffer_fallback_texture_id;
+graphics::SamplerId Framebuffer_fallback_sampler_id;
 
 SCP_vector<opengl_vert_attrib> GL_vertex_attrib_info =
 	{
@@ -921,15 +921,15 @@ static void opengl_purge_old_shader_cache()
  */
 void opengl_shader_init()
 {
-	glGenTextures(1,&Framebuffer_fallback_texture_id);
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(Framebuffer_fallback_texture_id);
+	using namespace graphics;
+
 	Framebuffer_fallback_sampler_id = opengl_get_sampler(
-	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
+	    graphics::SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest, WrapMode::ClampToEdge,
+	                                WrapMode::ClampToEdge, WrapMode::ClampToEdge));
+	Framebuffer_fallback_texture_id = gr_context->createImage(ImageType::Type2D, ImageFormat::R8G8B8A8, 1, 1, 1, 1);
 	GLuint pixels[4] = {0,0,0,0};
-	opengl_init_2d_texture(GL_TEXTURE_2D, Framebuffer_fallback_texture_id, 1, GL_RGBA8, 1, 1, GL_BGRA,
-	                       GL_UNSIGNED_INT_8_8_8_8_REV, &pixels);
+	gr_context->imageUpdateSubData(Framebuffer_fallback_texture_id, 0, 0, 0, 0, 1, 1, 1, DataFormat::A8R8G8B8,
+	                               sizeof(pixels), pixels);
 
 	GL_shader.clear();
 

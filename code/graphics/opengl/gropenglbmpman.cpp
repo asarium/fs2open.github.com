@@ -83,9 +83,6 @@ void gr_opengl_bm_page_in_start()
 	opengl_preload_init();
 }
 
-extern bool opengl_texture_slot_valid(int n, int handle);
-
-
 void gr_opengl_bm_save_render_target(int handle)
 {
 	if ( Cmdline_no_fbo ) {

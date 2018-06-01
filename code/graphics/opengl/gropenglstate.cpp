@@ -7,10 +7,10 @@
  *
 */
 
-
+#include "gropenglstate.h"
 #include "gropenglshader.h"
 #include "graphics/material.h"
-#include "gropenglstate.h"
+#include "graphics/opengl/OpenGLContext.h"
 #include "math/vecmat.h"
 
 extern GLfloat GL_max_anisotropy;
@@ -108,6 +108,19 @@ void opengl_texture_state::BindSampler(GLuint sampler_id)
 		glBindSampler(active_texture_unit, sampler_id);
 		units[active_texture_unit].sampler_id = sampler_id;
 	}
+}
+
+void opengl_texture_state::Enable(GLuint unit, graphics::ImageId tex_id, graphics::SamplerId sampler_id)
+{
+	Assertion(unit < num_texture_units, "Invalid texture unit value!");
+
+	GLenum tex_target;
+	GLuint gl_tex_id;
+	std::tie(tex_target, gl_tex_id) = graphics::opengl::get_gl_texture_values(tex_id);
+
+	GLuint gl_sampler = graphics::opengl::get_gl_sampler(sampler_id);
+
+	Enable(unit, tex_target, gl_tex_id, gl_sampler);
 }
 
 void opengl_texture_state::Enable(GLuint unit, GLenum tex_target, GLuint tex_id, GLuint sampler_id)

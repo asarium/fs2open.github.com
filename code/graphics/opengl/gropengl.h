@@ -12,9 +12,11 @@
 #ifndef _GROPENGL_H
 #define _GROPENGL_H
 
-#include <glad/glad.h>
 #include "globalincs/pstypes.h"
+#include "graphics/2d.h"
+#include "graphics/DeviceContext.h"
 #include "graphics/grinternal.h"
+#include <glad/glad.h>
 
 const ubyte GL_zero_3ub[3] = { 0, 0, 0 };
 
@@ -39,6 +41,20 @@ void opengl_set_object_label(GLenum type, GLuint handle, const SCP_string& name)
 #else
 // Remove this definition
 inline void opengl_set_object_label(GLenum, GLuint, const SCP_string&) {}
+#endif
+
+#if !defined(NDEBUG) || defined(FS_OPENGL_DEBUG) || defined(DOXYGEN)
+template <typename T>
+void gr_set_object_label(T handle, const SCP_string& name)
+{
+	gr_context->setObjectLabel(handle, name);
+}
+#else
+// Remove this definition
+template <typename T>
+inline void gr_set_object_label(T, const SCP_string&)
+{
+}
 #endif
 
 uint opengl_data_type_size(GLenum data_type);

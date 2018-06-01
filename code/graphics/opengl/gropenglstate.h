@@ -62,11 +62,11 @@ class opengl_texture_state
 	     * you need to call SetActiveUnit!
 	     *
 	     * @param unit The texture unit to use
-	     * @param tex_target The texture target of the texture id
 	     * @param tex_id The ID of the texture to enable
 	     * @param sampler_id The ID of the sampler object to use with the specified texture
 	     */
-	    void Enable(GLuint unit, GLenum tex_target, GLuint tex_id, GLuint sampler_id);
+	    void Enable(GLuint unit, graphics::ImageId tex_id, graphics::SamplerId sampler_id);
+	    void Enable(GLuint unit, GLenum tex_target, GLuint tex_id, GLuint sampler_id = 0);
 	    void Delete(GLuint tex_id);
 		
 		inline GLenum GetTarget();

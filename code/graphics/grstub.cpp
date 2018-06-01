@@ -7,6 +7,7 @@
 #include "globalincs/systemvars.h"
 #include "graphics/2d.h"
 #include "graphics/grinternal.h"
+#include "graphics/DeviceContext.h"
 #include "jpgutils/jpgutils.h"
 #include "model/model.h"
 #include "graphics/material.h"
@@ -17,6 +18,30 @@
 #define BMPMAN_INTERNAL
 #include "bmpman/bm_internal.h"
 
+class StubDevice : public graphics::DeviceContext {
+ public:
+	~StubDevice() override = default;
+
+	graphics::ImageId createImage(graphics::ImageType /*type*/, graphics::ImageFormat /*format*/, uint32_t /*width*/,
+	                              uint32_t /*height*/, uint32_t /*depth*/, uint32_t /*num_mipmaps*/) override
+	{
+		return graphics::ImageId::invalid();
+	}
+	void deleteImage(graphics::ImageId /*image*/) override {}
+	void imageUpdateSubData(graphics::ImageId /*image*/, uint32_t /*mipmap_level*/, uint32_t /*x*/, uint32_t /*y*/,
+	                        uint32_t /*z*/, uint32_t /*width*/, uint32_t /*height*/, uint32_t /*depth*/,
+	                        graphics::DataFormat /*data_format*/, size_t /*data_size*/, const void* /*data*/) override
+	{
+	}
+	void imageGenerateMipmaps(graphics::ImageId /*image*/) override {}
+	graphics::SamplerId createSampler(const graphics::SamplerParameters& /*params*/) override
+	{
+		return graphics::SamplerId::invalid();
+	}
+	void deleteSampler(graphics::SamplerId /*sampler*/) override {}
+	void setObjectLabel(graphics::ImageId /*handle*/, const SCP_string& /*name*/) override {}
+	void setObjectLabel(graphics::SamplerId /*handle*/, const SCP_string& /*name*/) override {}
+};
 
 uint gr_stub_lock()
 {
@@ -521,6 +546,8 @@ bool gr_stub_init()
 	};
 
 	gr_screen.gf_bind_uniform_buffer = [](uniform_block_type, size_t, size_t, int) {};
+
+	gr_screen.context.reset(new StubDevice());
 
 	return true;
 }

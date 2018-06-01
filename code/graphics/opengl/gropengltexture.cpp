@@ -12,6 +12,8 @@
 #endif
 
 #define BMPMAN_INTERNAL
+
+#include "OpenGLContext.h"
 #include "gropenglstate.h"
 #include "gropengltexture.h"
 #include "gropengltnl.h"
@@ -40,7 +42,7 @@ GLfloat GL_max_anisotropy = -1.0f;
 int GL_mipmap_filter = 0;
 GLenum GL_texture_target = GL_TEXTURE_2D;
 GLenum GL_texture_face = GL_TEXTURE_2D;
-GLenum GL_texture_addressing = GL_REPEAT;
+graphics::WrapMode GL_texture_addressing = graphics::WrapMode::Repeat;
 bool GL_rendering_to_texture = false;
 GLint GL_max_renderbuffer_size = 0;
 
@@ -193,32 +195,9 @@ void opengl_free_texture_slot(bitmap_slot* slot)
 	opengl_free_texture(tcache_slot);
 }
 
-/**
- * Determine if a bitmap is in API memory, so that we can just reuse it rather
- * that having to load it from disk again
- */
-bool opengl_texture_slot_valid(int handle)
-{
-	auto t = bm_get_gr_info<tcache_slot_opengl>(handle);
-
-	if (t->bitmap_handle < 0) {
-		return false;
-	}
-
-	if (t->bitmap_handle != handle) {
-		return false;
-	}
-
-	if ( !glIsTexture(t->texture_id) ) {
-		return false;
-	}
-
-	return true;
-}
-
 int opengl_free_texture(tcache_slot_opengl *t)
 {
-	if (!t->texture_id) {
+	if (!t->texture_id.isValid()) {
 		// No texture here anymore
 		return 1;
 	}
@@ -267,11 +246,8 @@ int opengl_free_texture(tcache_slot_opengl *t)
 		Assertion(t->fbo_id >= 0, "Found texture slot with invalid bitmap number which wasn't an FBO!");
 	}
 
-	GR_DEBUG_SCOPE("Delete texture");
-
 	// ok, now we know its legal to free everything safely
-	GL_state.Texture.Delete(t->texture_id);
-	glDeleteTextures (1, &t->texture_id);
+	gr_context->deleteImage(t->texture_id);
 
 	// Finally, reset the data of this slot
 	t->reset();
@@ -286,7 +262,7 @@ int opengl_free_texture(tcache_slot_opengl *t)
 // tex_h == height of final texture
 static int opengl_texture_set_level(int bitmap_handle, int bitmap_type, int bmap_w, int bmap_h, int tex_w, int tex_h,
                                     ubyte* data, tcache_slot_opengl* tSlot, int base_level, int mipmap_levels,
-                                    bool resize, GLenum intFormat)
+                                    bool resize)
 {
 	GR_DEBUG_SCOPE("Upload single frame");
 
@@ -313,33 +289,19 @@ static int opengl_texture_set_level(int bitmap_handle, int bitmap_type, int bmap
 	// set the byte per pixel multiplier
 	auto byte_mult = (tSlot->bpp >> 3);
 
-	GLenum texFormat = GL_UNSIGNED_SHORT_1_5_5_5_REV;
-	GLenum glFormat  = GL_BGRA;
-	// GL_BGRA_EXT is *much* faster with some hardware/drivers
+	auto data_format = graphics::DataFormat::A1R5G5B5;
 	if (byte_mult == 4) {
-		texFormat = GL_UNSIGNED_INT_8_8_8_8_REV;
-		intFormat = (gr_screen.bits_per_pixel == 32) ? GL_RGBA8 : GL_RGB5_A1;
-		glFormat  = GL_BGRA;
+		data_format = graphics::DataFormat::A8R8G8B8;
 	} else if (byte_mult == 3) {
-		texFormat = GL_UNSIGNED_BYTE;
-		intFormat = (gr_screen.bits_per_pixel == 32) ? GL_RGB8 : GL_RGB5;
-		glFormat  = GL_BGR;
+		data_format = graphics::DataFormat::B8G8R8;
 	} else if (byte_mult == 2) {
-		texFormat = GL_UNSIGNED_SHORT_1_5_5_5_REV;
-		intFormat = GL_RGB5_A1;
-		glFormat  = GL_BGRA;
+		data_format = graphics::DataFormat::A1R5G5B5;
 	} else if (byte_mult == 1) {
 		Assertion(bitmap_type == TCACHE_TYPE_AABITMAP,
 		          "Invalid type for bitmap: %s BMPMAN handle: %d. Type expected was 0, we got %d instead.\nThis can be "
 		          "caused by using texture compression on a non-power-of-2 texture.\n",
 		          bm_get_filename(bitmap_handle), bitmap_handle, bitmap_type);
-		texFormat = GL_UNSIGNED_BYTE;
-		intFormat = GL_RED;
-		glFormat  = GL_RED;
-	} else {
-		texFormat = GL_UNSIGNED_SHORT_1_5_5_5_REV;
-		intFormat = GL_RGBA;
-		glFormat  = GL_BGRA;
+		data_format = graphics::DataFormat::R8;
 	}
 
 	// check for compressed image types
@@ -347,25 +309,21 @@ static int opengl_texture_set_level(int bitmap_handle, int bitmap_type, int bmap
 	switch (bm_is_compressed(bitmap_handle)) {
 	case DDS_DXT1:
 	case DDS_CUBEMAP_DXT1:
-		intFormat  = GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+		data_format = graphics::DataFormat::RGB_S3TC_DXT1;
 		block_size = 8;
 		break;
 
 	case DDS_DXT3:
 	case DDS_CUBEMAP_DXT3:
-		intFormat  = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+		data_format = graphics::DataFormat::RGBA_S3TC_DXT3;
 		block_size = 16;
 		break;
 
 	case DDS_DXT5:
 	case DDS_CUBEMAP_DXT5:
-		intFormat  = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+		data_format = graphics::DataFormat::RGBA_S3TC_DXT5;
 		block_size = 16;
 		break;
-	}
-
-	if (bitmap_type == TCACHE_TYPE_CUBEMAP) {
-		tSlot->texture_target = GL_TEXTURE_CUBE_MAP;
 	}
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -384,8 +342,8 @@ static int opengl_texture_set_level(int bitmap_handle, int bitmap_type, int bmap
 				dsize = ((mipmap_h + 3) / 4) * ((mipmap_w + 3) / 4) * block_size;
 
 				if (i >= base_level) {
-					glCompressedTexSubImage3D(tSlot->texture_target, i - base_level, 0, 0, tSlot->array_index, mipmap_w,
-					                          mipmap_h, 1, intFormat, dsize, bmp_data + doffset);
+					gr_context->imageUpdateSubData(tSlot->texture_id, i - base_level, 0, 0, tSlot->array_index,
+					                               mipmap_w, mipmap_h, 1, data_format, dsize, bmp_data + doffset);
 				}
 
 				// adjust the data offset for the next block
@@ -412,7 +370,8 @@ static int opengl_texture_set_level(int bitmap_handle, int bitmap_type, int bmap
 	}
 
 	case TCACHE_TYPE_AABITMAP: {
-		texmem  = (ubyte*)vm_malloc(tex_w * tex_h * byte_mult);
+		auto size = tex_w * tex_h * byte_mult;
+		texmem    = (ubyte*)vm_malloc(size);
 		texmemp = texmem;
 
 		Assert(texmem != nullptr);
@@ -447,10 +406,8 @@ static int opengl_texture_set_level(int bitmap_handle, int bitmap_type, int bmap
 			}
 		}
 
-		GLenum aa_format = GL_RED;
-
-		glTexSubImage3D(tSlot->texture_target, 0, 0, 0, tSlot->array_index, tex_w, tex_h, 1, aa_format,
-		                GL_UNSIGNED_BYTE, texmem);
+		gr_context->imageUpdateSubData(tSlot->texture_id, 0, 0, 0, tSlot->array_index, tex_w, tex_h, 1,
+		                               graphics::DataFormat::R8, size, texmem);
 
 		if (texmem != nullptr) {
 			vm_free(texmem);
@@ -461,8 +418,9 @@ static int opengl_texture_set_level(int bitmap_handle, int bitmap_type, int bmap
 
 	case TCACHE_TYPE_INTERFACE: {
 		// if we aren't resizing then we can just use bmp_data directly
+		auto size = tex_w * tex_h * byte_mult;
 		if (resize) {
-			texmem  = (ubyte*)vm_malloc(tex_w * tex_h * byte_mult);
+			texmem  = (ubyte*)vm_malloc(size);
 			texmemp = texmem;
 
 			Assert(texmem != nullptr);
@@ -482,8 +440,8 @@ static int opengl_texture_set_level(int bitmap_handle, int bitmap_type, int bmap
 			}
 		}
 
-		glTexSubImage3D(tSlot->texture_target, 0, 0, 0, tSlot->array_index, tex_w, tex_h, 1, glFormat, texFormat,
-		                (resize) ? texmem : bmp_data);
+		gr_context->imageUpdateSubData(tSlot->texture_id, 0, 0, 0, tSlot->array_index, tex_w, tex_h, 1, data_format,
+		                               size, (resize) ? texmem : bmp_data);
 
 		if (texmem != nullptr) {
 			vm_free(texmem);
@@ -514,8 +472,8 @@ static int opengl_texture_set_level(int bitmap_handle, int bitmap_type, int bmap
 
 					if (level >= base_level) {
 						// We skipped ahead to the base level so we can start uploading frames now
-						glCompressedTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, level - base_level, 0, 0,
-						                          mipmap_w, mipmap_h, intFormat, dsize, bmp_data + doffset);
+						gr_context->imageUpdateSubData(tSlot->texture_id, level - base_level, 0, 0, i, mipmap_w,
+						                               mipmap_h, 1, data_format, dsize, bmp_data + doffset);
 					}
 
 					// adjust the data offset for the next block
@@ -539,8 +497,8 @@ static int opengl_texture_set_level(int bitmap_handle, int bitmap_type, int bmap
 					dsize = mipmap_h * mipmap_w * byte_mult;
 
 					if (level >= base_level) {
-						glTexSubImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, level - base_level, 0, 0, mipmap_w,
-						                mipmap_h, glFormat, texFormat, bmp_data + doffset);
+						gr_context->imageUpdateSubData(tSlot->texture_id, level - base_level, 0, 0, i, mipmap_w,
+						                               mipmap_h, 1, data_format, dsize, bmp_data + doffset);
 					}
 
 					// base image is done so now take care of any mipmap levels
@@ -608,8 +566,9 @@ static int opengl_texture_set_level(int bitmap_handle, int bitmap_type, int bmap
 			dsize = mipmap_h * mipmap_w * byte_mult;
 
 			if (i >= base_level) {
-				glTexSubImage3D(tSlot->texture_target, i - base_level, 0, 0, tSlot->array_index, mipmap_w, mipmap_h, 1,
-				                glFormat, texFormat, (texmem != nullptr) ? texmem : bmp_data + doffset);
+				gr_context->imageUpdateSubData(tSlot->texture_id, i - base_level, 0, 0, tSlot->array_index, mipmap_w,
+				                               mipmap_h, 1, data_format, dsize,
+				                               (texmem != nullptr) ? texmem : bmp_data + doffset);
 			}
 
 			// adjust the data offset for the next block
@@ -648,7 +607,7 @@ static int opengl_texture_set_level(int bitmap_handle, int bitmap_type, int bmap
 	return ret_val;
 }
 
-static GLenum opengl_get_internal_format(int handle, int bitmap_type, int bpp) {
+static graphics::ImageFormat opengl_get_internal_format(int handle, int bitmap_type, int bpp) {
 
 	// set the byte per pixel multiplier
 	auto byte_mult = (bpp >> 3);
@@ -657,32 +616,32 @@ static GLenum opengl_get_internal_format(int handle, int bitmap_type, int bpp) {
 	switch ( bm_is_compressed(handle) ) {
 		case DDS_DXT1:
 		case DDS_CUBEMAP_DXT1:
-			return GL_COMPRESSED_RGB_S3TC_DXT1_EXT;
+			return graphics::ImageFormat::S3tcRgbDxt1;
 
 		case DDS_DXT3:
 		case DDS_CUBEMAP_DXT3:
-			return GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
+			return graphics::ImageFormat::S3tcRgbaDxt3;
 			break;
 
 		case DDS_DXT5:
 		case DDS_CUBEMAP_DXT5:
-			return GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+			return graphics::ImageFormat::S3tcRgbaDxt5;
 		default:
 			// Not compressed
 			break;
 	}
 
 	if (byte_mult == 4) {
-		return (gr_screen.bits_per_pixel == 32) ? GL_RGBA8 : GL_RGB5_A1;
+		return (gr_screen.bits_per_pixel == 32) ? graphics::ImageFormat::R8G8B8A8 : graphics::ImageFormat::R5G5B5A1;
 	} else if (byte_mult == 3) {
-		return (gr_screen.bits_per_pixel == 32) ? GL_RGB8 : GL_RGB5;
+		return (gr_screen.bits_per_pixel == 32) ? graphics::ImageFormat::R8G8B8 : graphics::ImageFormat::R5G5B5;
 	} else if (byte_mult == 2) {
-		return GL_RGB5_A1;
+		return graphics::ImageFormat::R5G5B5A1;
 	} else if (byte_mult == 1) {
 		Assertion( bitmap_type == TCACHE_TYPE_AABITMAP, "Invalid type for bitmap: %s BMPMAN handle: %d. Type expected was 0, we got %d instead.\nThis can be caused by using texture compression on a non-power-of-2 texture.\n", bm_get_filename(handle), handle, bitmap_type );
-		return GL_R8;
+		return graphics::ImageFormat::R8;
 	} else {
-		return GL_RGBA8;
+		return graphics::ImageFormat::R8G8B8A8;
 	}
 }
 
@@ -782,10 +741,9 @@ int opengl_create_texture(int bitmap_handle, int bitmap_type, tcache_slot_opengl
 	if (start_slot->bitmap_handle != -1) {
 		Assertion(start_slot->bitmap_handle != animation_begin, "opengl_create_texture was called for the same bitmap again!");
 
-		if (start_slot->texture_id != 0) {
+		if (start_slot->texture_id.isValid()) {
 			// Delete the previous texture that was stored in this slot
-			GL_state.Texture.Delete(start_slot->texture_id);
-			glDeleteTextures(1, &start_slot->texture_id);
+			gr_context->deleteImage(start_slot->texture_id);
 
 			start_slot->reset();
 		}
@@ -841,61 +799,58 @@ int opengl_create_texture(int bitmap_handle, int bitmap_type, tcache_slot_opengl
 		bitmap_type = TCACHE_TYPE_COMPRESSED;
 	}
 
-	// Create the texture array and bind it
-	glGenTextures(1, &tslot->texture_id);
-	tslot->texture_target = GL_TEXTURE_2D_ARRAY;
-	if ( bitmap_type == TCACHE_TYPE_CUBEMAP ) {
-		tslot->texture_target = GL_TEXTURE_CUBE_MAP;
-	}
-
-	if (tslot->texture_id == 0) {
-		mprintf(("!!OpenGL DEBUG!! t->texture_id == 0\n"));
-		tslot->reset();
-		return 0;
-	}
-
 	// This is very important! All bitmaps are bound as texture arrays even if they only contain a single image. This
 	// simplifies shader handling since they only ever work with texture arrays instead of having to introduce another
 	// compile time flag for every single sampler
-	GL_state.Texture.SetTarget(tslot->texture_target);
-	GL_state.Texture.Enable(tslot->texture_id);
-
-	opengl_set_object_label(GL_TEXTURE, tslot->texture_id, bm_get_filename(bitmap_handle));
-
-	auto mipmap_levels               = max_levels - base_level;
-	tslot->sampling_props.min_filter = GL_LINEAR;
-	tslot->sampling_props.mag_filter = GL_LINEAR;
-	// Needed in case we need to allocate more mipmaps than are in the texture file
-	auto allocated_mipmap_levels = mipmap_levels;
-	if (mipmap_levels > 1) {
-		tslot->sampling_props.min_filter = (GL_mipmap_filter) ? GL_LINEAR_MIPMAP_LINEAR : GL_LINEAR_MIPMAP_NEAREST;
-
-		if ( GLAD_GL_EXT_texture_filter_anisotropic ) {
-			tslot->sampling_props.max_anisotropy = GL_anisotropy;
-		}
-	} else if (mipmap_levels == 1 && bitmap_type == TCACHE_TYPE_CUBEMAP) {
-		Assertion(num_frames == 1, "Cube map arrays are not supported yet!");
-		// For cubemaps without mipmaps, we will generate them later so we need to make sure that enough space is
-		// allocated for the generated mipmaps
-		allocated_mipmap_levels = get_num_mipmap_levels(width, height);
-
-		tslot->sampling_props.min_filter = GL_LINEAR_MIPMAP_LINEAR;
-	}
-
-	tslot->sampler_id = opengl_get_sampler(tslot->sampling_props);
 
 	ubyte bitmap_flags;
 	int bits_per_pixel;
 	opengl_determine_bpp_and_flags(animation_begin, bitmap_type, bitmap_flags, bits_per_pixel);
 
 	auto intFormat = opengl_get_internal_format(bitmap_handle, bitmap_type, bits_per_pixel);
-	if (tslot->texture_target == GL_TEXTURE_CUBE_MAP) {
-		opengl_init_2d_texture(tslot->texture_target, tslot->texture_id, allocated_mipmap_levels, intFormat, width,
-		                       height);
-	} else {
-		opengl_init_3d_texture(tslot->texture_target, tslot->texture_id, allocated_mipmap_levels, intFormat, width,
-		                       height, num_frames);
+
+	graphics::SamplerParameters sampling_params;
+
+	sampling_params.magFilter = graphics::FilterType::Linear;
+	sampling_params.minFilter = graphics::FilterType::Linear;
+
+	auto mipmap_levels = max_levels - base_level;
+	// Needed in case we need to allocate more mipmaps than are in the texture file
+	auto allocated_mipmap_levels = mipmap_levels;
+	if (mipmap_levels > 1) {
+		sampling_params.mipmapMode = (GL_mipmap_filter) ? graphics::MipmapMode::Linear : graphics::MipmapMode::Nearest;
+		sampling_params.anisotropyEnable = GL_anisotropy > 1.0f;
+		sampling_params.maxAnisotropy = GL_anisotropy;
+	} else if (mipmap_levels == 1 && bitmap_type == TCACHE_TYPE_CUBEMAP) {
+		Assertion(num_frames == 1, "Cube map arrays are not supported yet!");
+		// For cubemaps without mipmaps, we will generate them later so we need to make sure that enough space is
+		// allocated for the generated mipmaps
+		allocated_mipmap_levels = get_num_mipmap_levels(width, height);
+
+		sampling_params.mipmapMode = graphics::MipmapMode::Linear;
 	}
+
+	sampling_params.addressModeU = graphics::WrapMode::ClampToEdge;
+	sampling_params.addressModeV = graphics::WrapMode::ClampToEdge;
+	sampling_params.addressModeW = graphics::WrapMode::ClampToEdge;
+
+	// Create the texture array and bind it
+	auto image_type = graphics::ImageType::Type2DArray;
+	if (bitmap_type == TCACHE_TYPE_CUBEMAP) {
+		image_type = graphics::ImageType::TypeCubeMap;
+	}
+	tslot->texture_id =
+	    gr_context->createImage(image_type, intFormat, width, height, num_frames, allocated_mipmap_levels);
+	tslot->sampling_props = sampling_params;
+	tslot->sampler_id     = opengl_get_sampler(tslot->sampling_props);
+
+	if (!tslot->texture_id.isValid()) {
+		mprintf(("!!OpenGL DEBUG!! t->texture_id == 0\n"));
+		tslot->reset();
+		return 0;
+	}
+
+	gr_set_object_label(tslot->texture_id, bm_get_filename(bitmap_handle));
 
 	bool frames_loaded = true;
 	for (int frame = animation_begin; frame < animation_begin + num_frames; ++frame) {
@@ -934,7 +889,7 @@ int opengl_create_texture(int bitmap_handle, int bitmap_type, tcache_slot_opengl
 
 		// call the helper
 		int ret_val   = opengl_texture_set_level(frame, bitmap_type, bmp->w, bmp->h, width, height, (ubyte*)bmp->data,
-                                               frame_slot, base_level, mipmap_levels, resize, intFormat);
+                                               frame_slot, base_level, mipmap_levels, resize);
 		frames_loaded = frames_loaded && ret_val;
 
 		// unlock the bitmap
@@ -946,7 +901,7 @@ int opengl_create_texture(int bitmap_handle, int bitmap_type, tcache_slot_opengl
 		// generate mip maps for cube maps so we can get glossy reflections; necessary for gloss maps and
 		// physically-based lighting OGL_EXT_FRAMEBUFFER_OBJECT required to use glGenerateMipmap()
 
-		glGenerateMipmap(tslot->texture_target);
+		gr_context->imageGenerateMipmaps(tslot->texture_id);
 	}
 
 	// if we successfully sent the texture to API memory then go ahead and dump
@@ -977,27 +932,25 @@ int gr_opengl_tcache_set_internal(int bitmap_handle, int bitmap_type, float *u_s
 
 	if (!bm_is_render_target(bitmap_handle) && t->bitmap_handle < 0)
 	{
-		GL_state.Texture.SetActiveUnit(tex_unit);
-
 		ret_val = opengl_create_texture( bitmap_handle, bitmap_type, t );
 	}
 
 	// everything went ok
-	if (ret_val && t->texture_id) {
+	if (ret_val && t->texture_id.isValid()) {
 		*u_scale = t->u_scale;
 		*v_scale = t->v_scale;
 		*array_index = t->array_index;
 
-		if (t->sampling_props.wrap_s != GL_texture_addressing && (bitmap_type != TCACHE_TYPE_AABITMAP) &&
+		if (t->sampling_props.addressModeU != GL_texture_addressing && (bitmap_type != TCACHE_TYPE_AABITMAP) &&
 		    (bitmap_type != TCACHE_TYPE_INTERFACE) && (bitmap_type != TCACHE_TYPE_CUBEMAP)) {
-			t->sampling_props.wrap_s = GL_texture_addressing;
-			t->sampling_props.wrap_r = GL_texture_addressing;
-			t->sampling_props.wrap_t = GL_texture_addressing;
+			t->sampling_props.addressModeU = GL_texture_addressing;
+			t->sampling_props.addressModeV = GL_texture_addressing;
+			t->sampling_props.addressModeW = GL_texture_addressing;
 
 			t->sampler_id = opengl_get_sampler(t->sampling_props);
 		}
 
-		GL_state.Texture.Enable(tex_unit, t->texture_target, t->texture_id, t->sampler_id);
+		GL_state.Texture.Enable(tex_unit, t->texture_id, t->sampler_id);
 	}
 	// gah
 	else {
@@ -1075,15 +1028,15 @@ void gr_opengl_set_texture_addressing(int mode)
 
 	switch (mode) {
 		case TMAP_ADDRESS_CLAMP:
-			GL_texture_addressing = GL_CLAMP_TO_EDGE;
+			GL_texture_addressing = graphics::WrapMode::ClampToEdge;
 			break;
 
 		case TMAP_ADDRESS_WRAP:
-			GL_texture_addressing = GL_REPEAT;
+			GL_texture_addressing = graphics::WrapMode::Repeat;
 			break;
 
 		case TMAP_ADDRESS_MIRROR: {
-			GL_texture_addressing = GL_MIRRORED_REPEAT;
+			GL_texture_addressing = graphics::WrapMode::MirroredRepeat;
 			break;
 		}
 
@@ -1151,10 +1104,14 @@ void gr_opengl_get_bitmap_from_texture(void* data_out, int bitmap_num)
 	auto slice_size = ts->w * ts->h * bytes_per_pixel;
 	std::unique_ptr<std::uint8_t[]> buffer(new std::uint8_t[num_frames * slice_size]);
 
-	Assertion(ts->texture_target == GL_TEXTURE_2D_ARRAY, "Unexpected texture target encountered!");
+	GLenum target;
+	GLuint tex_name;
+	std::tie(target, tex_name) = graphics::opengl::get_gl_texture_values(ts->texture_id);
+
+	Assertion(target == GL_TEXTURE_2D_ARRAY, "Unexpected texture target encountered!");
 
 	// Copy the entire texture level into the bitmap
-	glGetTexImage(ts->texture_target, 0, pixel_format, data_format, buffer.get());
+	glGetTexImage(target, 0, pixel_format, data_format, buffer.get());
 
 	auto buffer_offset = array_index * slice_size;
 	memcpy(data_out, buffer.get() + buffer_offset, slice_size);
@@ -1188,8 +1145,8 @@ size_t opengl_export_render_target( int slot, int width, int height, int alpha, 
 		return 0;
 	}
 
-	if (!ts->texture_target) {
-		mprintf(("OpenGL ERROR: Tried to export a texture for which I don't know the texture target!\n"));
+	if (!ts->texture_id.isValid()) {
+		mprintf(("OpenGL ERROR: Tried to export a texture for which I don't have a texture ID!\n"));
 		return 0;
 	}
 
@@ -1198,7 +1155,11 @@ size_t opengl_export_render_target( int slot, int width, int height, int alpha, 
 		return 0;
 	}
 
-	if ( (ts->texture_target != GL_TEXTURE_2D) && (ts->texture_target != GL_TEXTURE_CUBE_MAP) ) {
+	GLenum target;
+	GLuint tex_id;
+	std::tie(target, tex_id) = graphics::opengl::get_gl_texture_values(ts->texture_id);
+
+	if ((target != GL_TEXTURE_2D) && (target != GL_TEXTURE_CUBE_MAP)) {
 		mprintf(("OpenGL ERROR: Only 2D textures and cube maps can be exported!\n"));
 		return 0;
 	}
@@ -1213,14 +1174,15 @@ size_t opengl_export_render_target( int slot, int width, int height, int alpha, 
 	int m_height = height;
 	int m_bpp = (alpha) ? 4 : 3;
 	int m_offset = 0;
-	GLenum target = (ts->texture_target == GL_TEXTURE_CUBE_MAP) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : GL_TEXTURE_2D;
 
-	if (ts->texture_target == GL_TEXTURE_CUBE_MAP)
+	if (target == GL_TEXTURE_CUBE_MAP)
 		faces = 6;
 
+	target = (target == GL_TEXTURE_CUBE_MAP) ? GL_TEXTURE_CUBE_MAP_POSITIVE_X : target;
+
 	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(ts->texture_target);
-	GL_state.Texture.Enable(ts->texture_id);
+	GL_state.Texture.SetTarget(target);
+	GL_state.Texture.Enable(tex_id);
 
 	for (int i = 0; i < faces; i++) {
 		m_offset = opengl_get_texture(
@@ -1243,28 +1205,25 @@ size_t opengl_export_render_target( int slot, int width, int height, int alpha, 
 
 void gr_opengl_update_texture(int bitmap_handle, int bpp, const ubyte* data, int width, int height)
 {
-	GLenum texFormat, glFormat;
 	auto t = bm_get_gr_info<tcache_slot_opengl>(bitmap_handle);
-	if(!t->texture_id)
+	if (!t->texture_id.isValid())
 		return;
 	int byte_mult = (bpp >> 3);
+
 	int true_byte_mult = (t->bpp >> 3);
 	ubyte* texmem = NULL;
-	// GL_BGRA_EXT is *much* faster with some hardware/drivers
+
+	auto data_format = graphics::DataFormat::A1R5G5B5;
 	if (true_byte_mult == 4) {
-		texFormat = GL_UNSIGNED_INT_8_8_8_8_REV;
-		glFormat = GL_BGRA;
+		data_format = graphics::DataFormat::A8R8G8B8;
 	} else if (true_byte_mult == 3) {
-		texFormat = GL_UNSIGNED_BYTE;
-		glFormat = GL_BGR;
-	} else {
-		texFormat = GL_UNSIGNED_SHORT_1_5_5_5_REV;
-		glFormat = GL_BGRA;
+		data_format = graphics::DataFormat::B8G8R8;
 	}
+
+	auto size = width * height * byte_mult;
 	if (byte_mult == 1) {
-		texFormat = GL_UNSIGNED_BYTE;
-		glFormat = GL_RED;
-		texmem = (ubyte *) vm_malloc (width*height*byte_mult);
+		data_format    = graphics::DataFormat::R8;
+		texmem         = (ubyte*)vm_malloc(size);
 		ubyte* texmemp = texmem;
 
 		Assert( texmem != NULL );
@@ -1298,13 +1257,9 @@ void gr_opengl_update_texture(int bitmap_handle, int bpp, const ubyte* data, int
 			}
 		}
 	}
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(t->texture_target);
-	GL_state.Texture.Enable(t->texture_id);
-
-	glTexSubImage3D(t->texture_target, 0, 0, 0, t->array_index, width, height, 1, glFormat, texFormat, (texmem)?texmem:data);
+	gr_context->imageUpdateSubData(t->texture_id, 0, 0, 0, t->array_index, width, height, 1, data_format, size,
+	                               (texmem) ? texmem : data);
 
 	if (texmem != NULL)
 		vm_free(texmem);
@@ -1495,7 +1450,7 @@ int opengl_set_render_target( int slot, int face, int is_static )
 	ts = bm_get_gr_info<tcache_slot_opengl>(slot);
 	Assert( ts != NULL );
 
-	if (!ts->texture_id) {
+	if (!ts->texture_id.isValid()) {
 		Int3();
 		return 0;
 	}
@@ -1515,10 +1470,14 @@ int opengl_set_render_target( int slot, int face, int is_static )
 //	glBindRenderbuffer(GL_RENDERBUFFER, fbo->renderbuffer_id);
 	GL_state.BindFrameBuffer(fbo->framebuffer_id);
 
-	if (ts->texture_target == GL_TEXTURE_CUBE_MAP) {
+	GLenum target;
+	GLuint tex_id;
+	std::tie(target, tex_id) = graphics::opengl::get_gl_texture_values(ts->texture_id);
+
+	if (target == GL_TEXTURE_CUBE_MAP) {
 		// For cubemaps we can enable one of the six faces for rendering
 		Assert( (face >= 0) && (face < 6) );
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, ts->texture_id, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, tex_id, 0);
 	} else {
 		// Check if the face is valid for this case
 		Assert( face <= 0 );
@@ -1566,31 +1525,24 @@ int opengl_make_render_target( int handle, int *w, int *h, int *bpp, int *mm_lvl
 	fbo_t* new_fbo = opengl_get_free_fbo();
 	ts->fbo_id = new_fbo->fbo_id;
 
-	bool is_cubemap = false;
+	graphics::ImageType type;
 	if (flags & BMP_FLAG_CUBEMAP) {
-		opengl_set_texture_target( GL_TEXTURE_CUBE_MAP );
-		is_cubemap = true;
+		type = graphics::ImageType::TypeCubeMap;
 	} else {
-		opengl_set_texture_target( GL_TEXTURE_2D_ARRAY );
-		is_cubemap = false;
+		type = graphics::ImageType::Type2DArray;
 	}
 
-	// initialize color texture
-	glGenTextures(1, &ts->texture_id);
-
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_texture_target);
-	GL_state.Texture.Enable(ts->texture_id);
-
-	GLSamplerProperties sampler_props;
-	sampler_props.min_filter = GL_LINEAR;
-	sampler_props.mag_filter = GL_LINEAR;
+	graphics::SamplerParameters sampler_props;
+	sampler_props.minFilter = graphics::FilterType::Linear;
+	sampler_props.magFilter = graphics::FilterType::Linear;
 
 	if (flags & BMP_FLAG_RENDER_TARGET_MIPMAP) {
-		sampler_props.min_filter = GL_LINEAR_MIPMAP_LINEAR;
+		sampler_props.mipmapMode = graphics::MipmapMode::Linear;
 	}
 
 	ts->sampler_id = opengl_get_sampler(sampler_props);
+
+	// initialize color texture
 
 	if (flags & BMP_FLAG_RENDER_TARGET_MIPMAP) {
 		extern int get_num_mipmap_levels(int w, int h);
@@ -1599,18 +1551,17 @@ int opengl_make_render_target( int handle, int *w, int *h, int *bpp, int *mm_lvl
 		ts->mipmap_levels = 1;
 	}
 
-	// Initialize the texture storage of the framebuffer. Framebuffers always have only a single layer in the texture array
-	if (is_cubemap) {
-		opengl_init_2d_texture(GL_texture_target, ts->texture_id, ts->mipmap_levels, GL_RGBA8, *w, *h);
-	} else {
-		opengl_init_3d_texture(GL_texture_target, ts->texture_id, ts->mipmap_levels, GL_RGBA8, *w, *h, 1);
-	}
+	// Initialize the texture storage of the framebuffer. Framebuffers always have only a single layer in the texture
+	// array. This automatically handles cubemaps correctly
+	ts->texture_id = gr_context->createImage(type, graphics::ImageFormat::R8G8B8A8, *w, *h, 1, ts->mipmap_levels);
+
+	GLenum gl_target;
+	GLenum tex_id;
+	std::tie(gl_target, tex_id) = graphics::opengl::get_gl_texture_values(ts->texture_id);
 
 	if (flags & BMP_FLAG_RENDER_TARGET_MIPMAP) {
-		glGenerateMipmap(GL_state.Texture.GetTarget());
+		gr_context->imageGenerateMipmaps(ts->texture_id);
 	}
-
-	GL_state.Texture.Enable(0);
 
 	// render buffer
 //	glGenRenderbuffers(1, &new_fbo.renderbuffer_id);
@@ -1623,10 +1574,10 @@ int opengl_make_render_target( int handle, int *w, int *h, int *bpp, int *mm_lvl
 	GL_state.BindFrameBuffer(new_fbo->framebuffer_id);
 
 	if (flags & BMP_FLAG_CUBEMAP) {
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, ts->texture_id, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X, tex_id, 0);
 	} else {
 		// Since we use texture arrays for all bitmaps we use a single image array here
-		glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, ts->texture_id, 0, 0);
+		glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, tex_id, 0, 0);
 	}
 
 //	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, new_fbo.renderbuffer_id);
@@ -1638,8 +1589,7 @@ int opengl_make_render_target( int handle, int *w, int *h, int *bpp, int *mm_lvl
 
 		GL_state.BindFrameBuffer(0);
 
-		GL_state.Texture.Delete(ts->texture_id);
-		glDeleteTextures(1, &ts->texture_id);
+		gr_context->deleteImage(ts->texture_id);
 		ts->reset();
 
 		glDeleteFramebuffers(1, &new_fbo->framebuffer_id);
@@ -1656,7 +1606,6 @@ int opengl_make_render_target( int handle, int *w, int *h, int *bpp, int *mm_lvl
 	ts->w = (ushort)*w;
 	ts->h = (ushort)*h;
 	ts->bpp = 24;
-	ts->texture_target = GL_state.Texture.GetTarget();
 	ts->bitmap_handle = -1;//handle;
 	ts->u_scale = 1.0f;
 	ts->v_scale = 1.0f;
@@ -1713,88 +1662,9 @@ GLuint opengl_get_rtt_framebuffer()
 
 void gr_opengl_bm_generate_mip_maps(int handle)
 {
-	tcache_slot_opengl *ts = NULL;
+	auto ts = bm_get_gr_info<tcache_slot_opengl>(handle);
 
-	ts = bm_get_gr_info<tcache_slot_opengl>(handle);
-
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(ts->texture_target);
-	GL_state.Texture.Enable(ts->texture_id);
-
-	glGenerateMipmap(ts->texture_target);
-}
-
-void opengl_init_2d_texture(GLenum target, GLuint texture, GLint levels, GLenum internalFormat, GLsizei width,
-                            GLsizei height, GLenum data_format, GLenum data_type, const void* data)
-{
-	GL_state.Texture.SetTarget(target);
-	GL_state.Texture.Enable(texture);
-
-	if (GLAD_GL_ARB_texture_storage) {
-		glTexStorage2D(target, levels, internalFormat, width, height);
-
-		if (data != nullptr) {
-			Assertion(levels == 1, "Multiple levels cannot be initialized using one data pointer!");
-			// Need to upload the data separately
-			glTexSubImage2D(target, 0, 0, 0, width, height, data_format, data_type, data);
-		}
-	} else {
-		Assertion(data == nullptr || levels == 1, "Multiple levels cannot be initialized using one data pointer!");
-
-		if (target == GL_TEXTURE_CUBE_MAP) {
-			Assertion(data == nullptr, "Initial data is not supported for cube maps!");
-
-			// glTexStorage2D automatically handles all cubemap faces but that is not the case for glTexImage2D
-			for (auto i = 0; i < 6; ++i) {
-				auto mip_width  = width;
-				auto mip_height = height;
-				for (auto j = 0; j < levels; j++) {
-					glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, j, internalFormat, mip_width, mip_height, 0,
-					             data_format, data_type, data);
-					mip_width  = std::max(1, (mip_width / 2));
-					mip_height = std::max(1, (mip_height / 2));
-				}
-			}
-		} else {
-			auto mip_width  = width;
-			auto mip_height = height;
-			for (auto j = 0; j < levels; j++) {
-				glTexImage2D(target, j, internalFormat, mip_width, mip_height, 0, data_format, data_type, data);
-				mip_width  = std::max(1, (mip_width / 2));
-				mip_height = std::max(1, (mip_height / 2));
-			}
-
-			glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, levels);
-		}
-	}
-}
-void opengl_init_3d_texture(GLenum target, GLuint texture, GLint levels, GLenum internalFormat, GLsizei width,
-                            GLsizei height, GLsizei depth, GLenum data_format, GLenum data_type, const void* data)
-{
-	GL_state.Texture.SetTarget(target);
-	GL_state.Texture.Enable(texture);
-
-	if (GLAD_GL_ARB_texture_storage) {
-		// This version has a better way of specifying the texture storage
-		glTexStorage3D(target, levels, internalFormat, width, height, depth);
-
-		if (data != nullptr) {
-			Assertion(levels == 1, "Multiple levels cannot be initialized using one data pointer!");
-			// Need to upload the data separately
-			glTexSubImage3D(target, 0, 0, 0, 0, width, height, depth, data_format, data_type, data);
-		}
-	} else {
-		Assertion(data == nullptr || levels == 1, "Multiple levels cannot be initialized using one data pointer!");
-		Assertion(target == GL_TEXTURE_2D_ARRAY, "Only 2D texture arrays are supported here!");
-
-		for (auto i = 0; i < levels; i++) {
-			glTexImage3D(target, i, internalFormat, width, height, depth, 0, data_format, data_type, nullptr);
-			width  = std::max(1, (width / 2));
-			height = std::max(1, (height / 2));
-		}
-
-		glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, levels);
-	}
+	gr_context->imageGenerateMipmaps(ts->texture_id);
 }
 
 //

@@ -24,6 +24,8 @@
 
 // Forward definition
 namespace graphics {
+class DeviceContext;
+
 namespace util {
 class UniformBuffer;
 class GPUMemoryHeap;
@@ -649,6 +651,8 @@ typedef struct screen {
 
 	float line_width;
 
+	std::unique_ptr<graphics::DeviceContext> context;
+
 	//switch onscreen, offscreen
 	void (*gf_flip)();
 
@@ -884,6 +888,8 @@ extern io::mouse::Cursor* Web_cursor;
 
 // Called by OS when application gets/looses focus
 extern void gr_activate(int active);
+
+#define gr_context (gr_screen.context)
 
 #define GR_CALL(x)			(*x)
 

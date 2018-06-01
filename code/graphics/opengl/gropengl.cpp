@@ -12,6 +12,7 @@
 #include "graphics/2d.h"
 #include "graphics/matrix.h"
 #include "graphics/paths/PathRenderer.h"
+#include "graphics/opengl/OpenGLContext.h"
 #include "gropengl.h"
 #include "gropenglbmpman.h"
 #include "gropengldraw.h"
@@ -379,6 +380,8 @@ void gr_opengl_shutdown()
 		vm_free(GL_original_gamma_ramp);
 		GL_original_gamma_ramp = NULL;
 	}
+
+	gr_screen.context = nullptr;
 
 	graphic_operations->makeOpenGLContextCurrent(nullptr, nullptr);
 	GL_context = nullptr;
@@ -1064,6 +1067,8 @@ int opengl_init_display_device()
 		SDL_GetWindowGammaRamp( os::getSDLMainWindow(), GL_original_gamma_ramp, (GL_original_gamma_ramp+256),
 								(GL_original_gamma_ramp+512) );
 	}
+
+	gr_screen.context.reset(new graphics::opengl::OpenGLContext());
 
 	return 0;
 }

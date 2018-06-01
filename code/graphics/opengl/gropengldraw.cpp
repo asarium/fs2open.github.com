@@ -7,52 +7,53 @@
  *
 */
 
-#include "globalincs/pstypes.h"
-#include "cmdline/cmdline.h"
-#include "freespace.h"
-#include "graphics/matrix.h"
-#include "gropengl.h"
 #include "gropengldraw.h"
+#include "ShaderProgram.h"
+#include "freespace.h"
+#include "gropengl.h"
+#include "gropengldeferred.h"
 #include "gropenglpostprocessing.h"
 #include "gropenglshader.h"
 #include "gropengltexture.h"
-#include "gropengldeferred.h"
 #include "gropengltnl.h"
-#include "graphics/paths/PathRenderer.h"
+#include "cmdline/cmdline.h"
+#include "globalincs/pstypes.h"
 #include "graphics/light.h"
-#include "tracing/tracing.h"
+#include "graphics/matrix.h"
+#include "graphics/opengl/OpenGLContext.h"
+#include "graphics/paths/PathRenderer.h"
 #include "render/3d.h"
-#include "ShaderProgram.h"
+#include "tracing/tracing.h"
 
 #include <algorithm>
 
 GLuint Scene_framebuffer = 0;
 
-GLuint Scene_ldr_texture       = 0;
-GLuint Scene_color_texture     = 0;
-GLuint Scene_position_texture  = 0;
-GLuint Scene_normal_texture    = 0;
-GLuint Scene_specular_texture  = 0;
-GLuint Scene_emissive_texture  = 0;
-GLuint Scene_luminance_texture = 0;
-GLuint Scene_effect_texture    = 0;
-GLuint Scene_depth_texture     = 0;
-GLuint Cockpit_depth_texture   = 0;
+graphics::ImageId Scene_ldr_texture;
+graphics::ImageId Scene_color_texture;
+graphics::ImageId Scene_position_texture;
+graphics::ImageId Scene_normal_texture;
+graphics::ImageId Scene_specular_texture;
+graphics::ImageId Scene_emissive_texture;
+graphics::ImageId Scene_luminance_texture;
+graphics::ImageId Scene_effect_texture;
+graphics::ImageId Scene_depth_texture;
+graphics::ImageId Cockpit_depth_texture;
 
-GLuint Scene_ldr_sampler       = 0;
-GLuint Scene_color_sampler     = 0;
-GLuint Scene_position_sampler  = 0;
-GLuint Scene_normal_sampler    = 0;
-GLuint Scene_specular_sampler  = 0;
-GLuint Scene_emissive_sampler  = 0;
-GLuint Scene_luminance_sampler = 0;
-GLuint Scene_effect_sampler    = 0;
-GLuint Scene_depth_sampler     = 0;
-GLuint Cockpit_depth_sampler   = 0;
+graphics::SamplerId Scene_ldr_sampler;
+graphics::SamplerId Scene_color_sampler;
+graphics::SamplerId Scene_position_sampler;
+graphics::SamplerId Scene_normal_sampler;
+graphics::SamplerId Scene_specular_sampler;
+graphics::SamplerId Scene_emissive_sampler;
+graphics::SamplerId Scene_luminance_sampler;
+graphics::SamplerId Scene_effect_sampler;
+graphics::SamplerId Scene_depth_sampler;
+graphics::SamplerId Cockpit_depth_sampler;
 
 GLuint Distortion_framebuffer = 0;
-GLuint Distortion_sampler     = 0;
-GLuint Distortion_texture[2];
+graphics::SamplerId Distortion_sampler;
+std::array<graphics::ImageId, 2> Distortion_texture;
 int Distortion_switch = 0;
 
 int Scene_texture_initialized;
@@ -97,6 +98,9 @@ void gr_opengl_sphere(material* material_def, float  /*rad*/)
 extern int opengl_check_framebuffer();
 void opengl_setup_scene_textures()
 {
+	using namespace graphics;
+	using namespace graphics::opengl;
+
 	Scene_texture_initialized = 0;
 
 	if ( Cmdline_no_fbo ) {
@@ -104,10 +108,10 @@ void opengl_setup_scene_textures()
 		Cmdline_softparticles = 0;
 		Cmdline_fb_explosions = 0;
 
-		Scene_ldr_texture = 0;
-		Scene_color_texture = 0;
-		Scene_effect_texture = 0;
-		Scene_depth_texture = 0;
+		Scene_ldr_texture    = ImageId::invalid();
+		Scene_color_texture  = ImageId::invalid();
+		Scene_effect_texture = ImageId::invalid();
+		Scene_depth_texture  = ImageId::invalid();
 		return;
 	}
 
@@ -131,151 +135,122 @@ void opengl_setup_scene_textures()
 	// setup main render texture
 
 	// setup low dynamic range color texture
-	glGenTextures(1, &Scene_ldr_texture);
+	Scene_ldr_texture = gr_context->createImage(ImageType::Type2D, ImageFormat::R8G8B8A8, Scene_texture_width,
+	                                            Scene_texture_height, 1, 1);
+	gr_set_object_label(Scene_ldr_texture, "Scene LDR texture");
 
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(Scene_ldr_texture);
-	Scene_ldr_sampler = opengl_get_sampler(
-	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
-
-	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_ldr_texture, 1, GL_RGBA8, Scene_texture_width, Scene_texture_height);
-	opengl_set_object_label(GL_TEXTURE, Scene_ldr_texture, "Scene LDR texture");
+	Scene_ldr_sampler =
+	    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest,
+	                                         WrapMode::ClampToEdge, WrapMode::ClampToEdge, WrapMode::ClampToEdge));
 
 	// setup high dynamic range color texture
-	glGenTextures(1, &Scene_color_texture);
+	Scene_color_texture = gr_context->createImage(ImageType::Type2D, ImageFormat::R16G16B16A16F, Scene_texture_width,
+	                                              Scene_texture_height, 1, 1);
+	gr_set_object_label(Scene_color_texture, "Scene color texture");
 
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(Scene_color_texture);
-	Scene_color_sampler = opengl_get_sampler(
-	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
+	Scene_color_sampler =
+	    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest,
+	                                         WrapMode::ClampToEdge, WrapMode::ClampToEdge, WrapMode::ClampToEdge));
 
-	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_color_texture, 1, GL_RGBA16F, Scene_texture_width,
-	                       Scene_texture_height);
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_color_texture, 0);
-	opengl_set_object_label(GL_TEXTURE, Scene_color_texture, "Scene color texture");
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+	                       get_gl_texture_handle(Scene_color_texture), 0);
 
 	// setup position render texture
-	glGenTextures(1, &Scene_position_texture);
+	Scene_position_texture = gr_context->createImage(ImageType::Type2D, ImageFormat::R16G16B16A16F, Scene_texture_width,
+	                                                 Scene_texture_height, 1, 1);
+	gr_set_object_label(Scene_position_texture, "Scene Position texture");
 
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(Scene_position_texture);
-	Scene_position_sampler = opengl_get_sampler(
-	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
+	Scene_position_sampler =
+	    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest,
+	                                         WrapMode::ClampToEdge, WrapMode::ClampToEdge, WrapMode::ClampToEdge));
 
-	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_position_texture, 1, GL_RGBA16F, Scene_texture_width,
-	                       Scene_texture_height);
-	opengl_set_object_label(GL_TEXTURE, Scene_position_texture, "Scene Position texture");
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, Scene_position_texture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+	                       get_gl_texture_handle(Scene_position_texture), 0);
 
 	// setup normal render texture
-	glGenTextures(1, &Scene_normal_texture);
+	Scene_normal_texture = gr_context->createImage(ImageType::Type2D, ImageFormat::R16G16B16A16F, Scene_texture_width,
+	                                               Scene_texture_height, 1, 1);
+	gr_set_object_label(Scene_normal_texture, "Scene Normal texture");
 
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(Scene_normal_texture);
-	Scene_normal_sampler = opengl_get_sampler(
-	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
+	Scene_normal_sampler =
+	    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest,
+	                                         WrapMode::ClampToEdge, WrapMode::ClampToEdge, WrapMode::ClampToEdge));
 
-	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_normal_texture, 1, GL_RGBA16F, Scene_texture_width,
-	                       Scene_texture_height);
-	opengl_set_object_label(GL_TEXTURE, Scene_normal_texture, "Scene Normal texture");
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, Scene_normal_texture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
+	                       get_gl_texture_handle(Scene_normal_texture), 0);
 
 	// setup specular render texture
-	glGenTextures(1, &Scene_specular_texture);
+	Scene_specular_texture = gr_context->createImage(ImageType::Type2D, ImageFormat::R16G16B16A16F, Scene_texture_width,
+	                                                 Scene_texture_height, 1, 1);
+	gr_set_object_label(Scene_specular_texture, "Scene Specular texture");
 
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(Scene_specular_texture);
-	Scene_specular_sampler = opengl_get_sampler(
-	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
+	Scene_specular_sampler =
+	    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest,
+	                                         WrapMode::ClampToEdge, WrapMode::ClampToEdge, WrapMode::ClampToEdge));
 
-	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_specular_texture, 1, GL_RGBA8, Scene_texture_width,
-	                       Scene_texture_height);
-	opengl_set_object_label(GL_TEXTURE, Scene_specular_texture, "Scene Specular texture");
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, Scene_specular_texture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D,
+	                       get_gl_texture_handle(Scene_specular_texture), 0);
 
 	// setup emissive render texture
-	glGenTextures(1, &Scene_emissive_texture);
+	Scene_emissive_texture = gr_context->createImage(ImageType::Type2D, ImageFormat::R16G16B16A16F, Scene_texture_width,
+	                                                 Scene_texture_height, 1, 1);
+	gr_set_object_label(Scene_emissive_texture, "Scene Emissive texture");
 
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(Scene_emissive_texture);
-	Scene_emissive_sampler = opengl_get_sampler(
-	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
+	Scene_emissive_sampler =
+	    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest,
+	                                         WrapMode::ClampToEdge, WrapMode::ClampToEdge, WrapMode::ClampToEdge));
 
-	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_emissive_texture, 1, GL_RGBA16F, Scene_texture_width,
-	                       Scene_texture_height);
-	opengl_set_object_label(GL_TEXTURE, Scene_emissive_texture, "Scene Emissive texture");
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, Scene_emissive_texture, 0);
-
-	//Set up luminance texture (used as input for FXAA)
-	// also used as a light accumulation buffer during the deferred pass
-	glGenTextures(1, &Scene_luminance_texture);
-
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(Scene_luminance_texture);
-	Scene_luminance_sampler = opengl_get_sampler(
-	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
-
-	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_luminance_texture, 1, GL_RGBA16F, Scene_texture_width,
-	                       Scene_texture_height);
-	opengl_set_object_label(GL_TEXTURE, Scene_luminance_texture, "Scene Luminance texture");
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D,
+	                       get_gl_texture_handle(Scene_emissive_texture), 0);
 
 	// setup effect texture
-	glGenTextures(1, &Scene_effect_texture);
+	Scene_effect_texture = gr_context->createImage(ImageType::Type2D, ImageFormat::R16G16B16A16F, Scene_texture_width,
+	                                               Scene_texture_height, 1, 1);
+	gr_set_object_label(Scene_effect_texture, "Scene Effect texture");
 
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(Scene_effect_texture);
-	Scene_effect_sampler = opengl_get_sampler(
-	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
+	Scene_effect_sampler =
+	    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest,
+	                                         WrapMode::ClampToEdge, WrapMode::ClampToEdge, WrapMode::ClampToEdge));
 
-	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_effect_texture, 1, GL_RGBA16F, Scene_texture_width,
-	                       Scene_texture_height);
-	opengl_set_object_label(GL_TEXTURE, Scene_effect_texture, "Scene Effect texture");
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D,
+	                       get_gl_texture_handle(Scene_effect_texture), 0);
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, Scene_effect_texture, 0);
+	// Set up luminance texture (used as input for FXAA)
+	// also used as a light accumulation buffer during the deferred pass
+	Scene_luminance_texture = gr_context->createImage(ImageType::Type2D, ImageFormat::R16G16B16A16F,
+	                                                  Scene_texture_width, Scene_texture_height, 1, 1);
+	gr_set_object_label(Scene_luminance_texture, "Scene Luminance texture");
+
+	Scene_luminance_sampler =
+	    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest,
+	                                         WrapMode::ClampToEdge, WrapMode::ClampToEdge, WrapMode::ClampToEdge));
 
 	// setup cockpit depth texture
-	glGenTextures(1, &Cockpit_depth_texture);
+	Cockpit_depth_texture = gr_context->createImage(ImageType::Type2D, ImageFormat::DepthComponent24,
+	                                                Scene_texture_width, Scene_texture_height, 1, 1);
+	gr_set_object_label(Cockpit_depth_texture, "Cockpit depth texture");
 
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(Cockpit_depth_texture);
-	Cockpit_depth_sampler = opengl_get_sampler(
-	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_NEAREST, GL_NEAREST));
+	Cockpit_depth_sampler =
+	    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest,
+	                                         WrapMode::ClampToEdge, WrapMode::ClampToEdge, WrapMode::ClampToEdge));
 
-	opengl_init_2d_texture(GL_TEXTURE_2D, Cockpit_depth_texture, 1, GL_DEPTH_COMPONENT24, Scene_texture_width,
-	                       Scene_texture_height);
-	opengl_set_object_label(GL_TEXTURE, Cockpit_depth_texture, "Cockpit depth texture");
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+	                       get_gl_texture_handle(Cockpit_depth_texture), 0);
 
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, Cockpit_depth_texture, 0);
 	gr_zbuffer_set(GR_ZBUFF_FULL);
 	glClear(GL_DEPTH_BUFFER_BIT);
 
 	// setup main depth texture
-	glGenTextures(1, &Scene_depth_texture);
+	Scene_depth_texture = gr_context->createImage(ImageType::Type2D, ImageFormat::DepthComponent24, Scene_texture_width,
+	                                              Scene_texture_height, 1, 1);
+	gr_set_object_label(Scene_depth_texture, "Scene depth texture");
 
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(Scene_depth_texture);
-	Scene_depth_sampler = opengl_get_sampler(
-	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_NEAREST, GL_NEAREST));
+	Scene_depth_sampler =
+	    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest,
+	                                         WrapMode::ClampToEdge, WrapMode::ClampToEdge, WrapMode::ClampToEdge));
 
-	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_depth_texture, 1, GL_DEPTH_COMPONENT24, Scene_texture_width,
-	                       Scene_texture_height);
-	opengl_set_object_label(GL_TEXTURE, Scene_depth_texture, "Scene depth texture");
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, Scene_depth_texture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+	                       get_gl_texture_handle(Scene_depth_texture), 0);
 
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
 
@@ -284,29 +259,29 @@ void opengl_setup_scene_textures()
 		glDeleteFramebuffers(1, &Scene_framebuffer);
 		Scene_framebuffer = 0;
 
-		glDeleteTextures(1, &Scene_color_texture);
-		Scene_color_texture = 0;
+		gr_context->deleteImage(Scene_color_texture);
+		Scene_color_texture = ImageId::invalid();
 
-		glDeleteTextures(1, &Scene_position_texture);
-		Scene_position_texture = 0;
+		gr_context->deleteImage(Scene_position_texture);
+		Scene_position_texture = ImageId::invalid();
 
-		glDeleteTextures(1, &Scene_normal_texture);
-		Scene_normal_texture = 0;
+		gr_context->deleteImage(Scene_normal_texture);
+		Scene_normal_texture = ImageId::invalid();
 
-		glDeleteTextures(1, &Scene_specular_texture);
-		Scene_specular_texture = 0;
+		gr_context->deleteImage(Scene_specular_texture);
+		Scene_specular_texture = ImageId::invalid();
 
-		glDeleteTextures(1, &Scene_emissive_texture);
-		Scene_emissive_texture = 0;
+		gr_context->deleteImage(Scene_emissive_texture);
+		Scene_emissive_texture = ImageId::invalid();
 
-		glDeleteTextures(1, &Scene_effect_texture);
-		Scene_effect_texture = 0;
+		gr_context->deleteImage(Scene_effect_texture);
+		Scene_effect_texture = ImageId::invalid();
 
-		glDeleteTextures(1, &Scene_depth_texture);
-		Scene_depth_texture = 0;
+		gr_context->deleteImage(Scene_depth_texture);
+		Scene_depth_texture = ImageId::invalid();
 
-		glDeleteTextures(1, &Scene_luminance_texture);
-		Scene_luminance_texture = 0;
+		gr_context->deleteImage(Scene_luminance_texture);
+		Scene_luminance_texture = ImageId::invalid();
 
 		//glDeleteTextures(1, &Scene_fxaa_output_texture);
 		//Scene_fxaa_output_texture = 0;
@@ -322,19 +297,15 @@ void opengl_setup_scene_textures()
         glGenFramebuffers(1, &Distortion_framebuffer);
 		GL_state.BindFrameBuffer(Distortion_framebuffer);
 
-        glGenTextures(2, Distortion_texture);
-
 		for (auto& tex : Distortion_texture) {
-			GL_state.Texture.SetActiveUnit(0);
-			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-			GL_state.Texture.Enable(tex);
-
-			opengl_init_2d_texture(GL_TEXTURE_2D, tex, 1, GL_RGBA8, 32, 32);
+			tex = gr_context->createImage(ImageType::Type2D, ImageFormat::R8G8B8A8, 32, 32, 1, 1);
 		}
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Distortion_texture[0], 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+		                       get_gl_texture_handle(Distortion_texture[0]), 0);
 
 		Distortion_sampler =
-		    opengl_get_sampler(GLSamplerProperties(GL_REPEAT, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR));
+		    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest,
+		                                         WrapMode::Repeat, WrapMode::Repeat, WrapMode::Repeat));
 	}
 
 	if ( opengl_check_framebuffer() ) {
@@ -342,15 +313,17 @@ void opengl_setup_scene_textures()
 		glDeleteFramebuffers(1, &Distortion_framebuffer);
 		Distortion_framebuffer = 0;
 
-		glDeleteTextures(2, Distortion_texture);
-		Distortion_texture[0] = 0;
-		Distortion_texture[1] = 0;
+		for (auto& tex : Distortion_texture) {
+			gr_context->deleteImage(tex);
+			tex = ImageId::invalid();
+		}
+
 		return;
 	}
 
 	if ( opengl_check_for_errors("post_init_framebuffer()") ) {
-		Scene_color_texture = 0;
-		Scene_depth_texture = 0;
+		Scene_color_texture = ImageId::invalid();
+		Scene_depth_texture = ImageId::invalid();
 
 		Cmdline_postprocess = 0;
 		Cmdline_softparticles = 0;
@@ -369,49 +342,50 @@ void opengl_scene_texture_shutdown()
 		return;
 	}
 
-	if ( Scene_color_texture ) {
-		glDeleteTextures(1, &Scene_color_texture);
-		Scene_color_texture = 0;
+	if (Scene_color_texture.isValid()) {
+		gr_context->deleteImage(Scene_color_texture);
+		Scene_color_texture = graphics::ImageId::invalid();
 	}
 
-	if ( Scene_position_texture ) {
-		glDeleteTextures(1, &Scene_position_texture);
-		Scene_position_texture = 0;
+	if (Scene_position_texture.isValid()) {
+		gr_context->deleteImage(Scene_position_texture);
+		Scene_position_texture = graphics::ImageId::invalid();
 	}
 
-	if ( Scene_normal_texture ) {
-		glDeleteTextures(1, &Scene_normal_texture);
-		Scene_normal_texture = 0;
+	if (Scene_normal_texture.isValid()) {
+		gr_context->deleteImage(Scene_normal_texture);
+		Scene_normal_texture = graphics::ImageId::invalid();
 	}
 
-	if ( Scene_specular_texture ) {
-		glDeleteTextures(1, &Scene_specular_texture);
-		Scene_specular_texture = 0;
+	if (Scene_specular_texture.isValid()) {
+		gr_context->deleteImage(Scene_specular_texture);
+		Scene_specular_texture = graphics::ImageId::invalid();
 	}
 
-	if (Scene_emissive_texture) {
-		glDeleteTextures(1, &Scene_emissive_texture);
-		Scene_emissive_texture = 0;
+	if (Scene_emissive_texture.isValid()) {
+		gr_context->deleteImage(Scene_emissive_texture);
+		Scene_emissive_texture = graphics::ImageId::invalid();
 	}
 
-	if ( Scene_effect_texture ) {
-		glDeleteTextures(1, &Scene_effect_texture);
-		Scene_effect_texture = 0;
+	if (Scene_effect_texture.isValid()) {
+		gr_context->deleteImage(Scene_effect_texture);
+		Scene_effect_texture = graphics::ImageId::invalid();
 	}
 
-	if ( Scene_depth_texture ) {
-		glDeleteTextures(1, &Scene_depth_texture);
-		Scene_depth_texture = 0;
+	if (Scene_depth_texture.isValid()) {
+		gr_context->deleteImage(Scene_depth_texture);
+		Scene_depth_texture = graphics::ImageId::invalid();
 	}
 
-	if ( Scene_framebuffer ) {
+	if (Scene_framebuffer) {
 		glDeleteFramebuffers(1, &Scene_framebuffer);
 		Scene_framebuffer = 0;
 	}
 
-	glDeleteTextures(2, Distortion_texture);
-	Distortion_texture[0] = 0;
-	Distortion_texture[1] = 0;
+	for (auto& tex : Distortion_texture) {
+		gr_context->deleteImage(tex);
+		tex = graphics::ImageId::invalid();
+	}
 
 	if ( Distortion_framebuffer ) {
 		glDeleteFramebuffers(1, &Distortion_framebuffer);
@@ -506,7 +480,7 @@ void gr_opengl_scene_texture_end()
 
 		GL_state.PopFramebufferState();
 
-		GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_color_texture, Scene_color_sampler);
+		GL_state.Texture.Enable(0, Scene_color_texture, Scene_color_sampler);
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -614,11 +588,12 @@ void gr_opengl_update_distortion()
 
 	GL_state.PushFramebufferState();
 	GL_state.BindFrameBuffer(Distortion_framebuffer);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Distortion_texture[!Distortion_switch], 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+	                       graphics::opengl::get_gl_texture_handle(Distortion_texture[!Distortion_switch]), 0);
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
 	glViewport(0,0,32,32);
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Distortion_texture[Distortion_switch], Distortion_sampler);
+	GL_state.Texture.Enable(0, Distortion_texture[Distortion_switch], Distortion_sampler);
 	glClearColor(0.5f, 0.5f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 

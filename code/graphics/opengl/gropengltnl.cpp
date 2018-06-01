@@ -28,6 +28,7 @@
 #include "graphics/light.h"
 #include "graphics/material.h"
 #include "graphics/matrix.h"
+#include "graphics/opengl/OpenGLContext.h"
 #include "graphics/shadows.h"
 #include "lighting/lighting.h"
 #include "math/vecmat.h"
@@ -59,9 +60,9 @@ size_t GL_vertex_data_in = 0;
 GLint GL_max_elements_vertices = 4096;
 GLint GL_max_elements_indices = 4096;
 
-GLuint Shadow_map_texture = 0;
-GLuint Shadow_map_sampler       = 0;
-GLuint Shadow_map_depth_texture = 0;
+graphics::ImageId Shadow_map_texture;
+graphics::ImageId Shadow_map_depth_texture;
+graphics::SamplerId Shadow_map_sampler;
 GLuint shadow_fbo = 0;
 bool Rendering_to_shadow_map = false;
 
@@ -100,26 +101,30 @@ static SCP_vector<opengl_buffer_object> GL_buffer_objects;
 static int GL_vertex_buffers_in_use = 0;
 
 namespace std {
-template <> struct hash<GLSamplerProperties> {
-	std::size_t operator()(const GLSamplerProperties& data) const
+template <>
+struct hash<graphics::SamplerParameters> {
+	std::size_t operator()(const graphics::SamplerParameters& data) const
 	{
 		size_t seed = 0;
 
-		boost::hash_combine(seed, data.wrap_s);
-		boost::hash_combine(seed, data.wrap_t);
-		boost::hash_combine(seed, data.wrap_r);
+		boost::hash_combine(seed, data.minFilter);
+		boost::hash_combine(seed, data.magFilter);
 
-		boost::hash_combine(seed, data.min_filter);
-		boost::hash_combine(seed, data.mag_filter);
+		boost::hash_combine(seed, data.mipmapMode);
 
-		boost::hash_combine(seed, data.max_anisotropy);
+		boost::hash_combine(seed, data.addressModeU);
+		boost::hash_combine(seed, data.addressModeV);
+		boost::hash_combine(seed, data.addressModeW);
+
+		boost::hash_combine(seed, data.anisotropyEnable);
+		boost::hash_combine(seed, data.maxAnisotropy);
 
 		return seed;
 	}
 };
 } // namespace std
 
-static SCP_unordered_map<GLSamplerProperties, GLuint> GL_sampler_objects;
+static SCP_unordered_map<graphics::SamplerParameters, graphics::SamplerId> GL_sampler_objects;
 
 static GLenum convertBufferType(BufferType type) {
 	switch (type) {
@@ -438,6 +443,9 @@ void opengl_destroy_all_buffers()
 
 void opengl_tnl_init()
 {
+	using namespace graphics;
+	using namespace graphics::opengl;
+
 	Transform_buffer_handle = opengl_create_texture_buffer_object();
 
 	if(Cmdline_shadow_quality)
@@ -446,29 +454,22 @@ void opengl_tnl_init()
 		glGenFramebuffers(1, &shadow_fbo);
 		GL_state.BindFrameBuffer(shadow_fbo);
 
-		glGenTextures(1, &Shadow_map_depth_texture);
-		GL_state.Texture.SetActiveUnit(0);
-		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY);
-		GL_state.Texture.Enable(Shadow_map_depth_texture);
-		opengl_set_object_label(GL_TEXTURE, Shadow_map_depth_texture, "Scene shadow depth map");
-
 		int size = (Cmdline_shadow_quality == 2 ? 1024 : 512);
-		opengl_init_3d_texture(GL_TEXTURE_2D_ARRAY, Shadow_map_depth_texture, 1, GL_DEPTH_COMPONENT32, size, size, 4);
+		Shadow_map_depth_texture =
+		    gr_context->createImage(ImageType::Type2DArray, ImageFormat::DepthComponent32, size, size, 4, 1);
+		gr_set_object_label(Shadow_map_depth_texture, "Scene shadow depth map");
 
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, Shadow_map_depth_texture, 0);
+		glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, get_gl_texture_handle(Shadow_map_depth_texture), 0);
 
-		glGenTextures(1, &Shadow_map_texture);
-		GL_state.Texture.SetActiveUnit(0);
-		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY);
-		GL_state.Texture.Enable(Shadow_map_texture);
-		opengl_set_object_label(GL_TEXTURE, Shadow_map_texture, "Scene shadow map");
+		Shadow_map_texture =
+		    gr_context->createImage(ImageType::Type2DArray, ImageFormat::R16G16B16A16F, size, size, 4, 1);
+		gr_set_object_label(Shadow_map_texture, "Scene shadow map");
 
-		opengl_init_3d_texture(GL_TEXTURE_2D_ARRAY, Shadow_map_texture, 1, GL_RGB32F, size, size, 4);
+		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, get_gl_texture_handle(Shadow_map_texture), 0);
 
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, Shadow_map_texture, 0);
-
-		Shadow_map_sampler = opengl_get_sampler(
-		    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
+		Shadow_map_sampler =
+		    opengl_get_sampler(SamplerParameters(FilterType::Linear, FilterType::Linear, MipmapMode::Nearest,
+		                                         WrapMode::ClampToEdge, WrapMode::ClampToEdge, WrapMode::ClampToEdge));
 
 		GL_state.BindFrameBuffer(0);
 
@@ -487,20 +488,20 @@ void opengl_tnl_shutdown()
 
 	gr_opengl_deferred_shutdown();
 
-	if ( Shadow_map_depth_texture ) {
-		glDeleteTextures(1, &Shadow_map_depth_texture);
-		Shadow_map_depth_texture = 0;
+	if (Shadow_map_depth_texture.isValid()) {
+		gr_context->deleteImage(Shadow_map_depth_texture);
+		Shadow_map_depth_texture = graphics::ImageId::invalid();
 	}
 
-	if ( Shadow_map_texture ) {
-		glDeleteTextures(1, &Shadow_map_texture);
-		Shadow_map_texture = 0;
+	if (Shadow_map_texture.isValid()) {
+		gr_context->deleteImage(Shadow_map_texture);
+		Shadow_map_texture = graphics::ImageId::invalid();
 	}
 
 	opengl_destroy_all_buffers();
 
 	for (auto& sampler_entry : GL_sampler_objects) {
-		glDeleteSamplers(1, &sampler_entry.second);
+		gr_context->deleteSampler(sampler_entry.second);
 	}
 	GL_sampler_objects.clear();
 }
@@ -568,12 +569,12 @@ void gr_opengl_render_model(model_material* material_info, indexed_vertex_source
 }
 
 extern bool Scene_framebuffer_in_frame;
-extern GLuint Framebuffer_fallback_texture_id;
-extern GLuint Framebuffer_fallback_sampler_id;
-extern GLuint Scene_depth_texture;
-extern GLuint Scene_position_texture;
-extern GLuint Distortion_texture[2];
-extern GLuint Distortion_sampler;
+extern graphics::ImageId Framebuffer_fallback_texture_id;
+extern graphics::SamplerId Framebuffer_fallback_sampler_id;
+extern graphics::ImageId Scene_depth_texture;
+extern graphics::ImageId Scene_position_texture;
+extern std::array<graphics::ImageId, 2> Distortion_texture;
+extern graphics::SamplerId Distortion_sampler;
 extern int Distortion_switch;
 void opengl_create_perspective_projection_matrix(matrix4 *out, float left, float right, float bottom, float top, float near_dist, float far_dist)
 {
@@ -839,7 +840,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	if ( Current_shader->flags & SDR_FLAG_MODEL_SHADOWS ) {
 		Current_shader->program->Uniforms.setUniformi("shadow_map", render_pass);
 
-		GL_state.Texture.Enable(render_pass, GL_TEXTURE_2D_ARRAY, Shadow_map_texture, Shadow_map_sampler);
+		GL_state.Texture.Enable(render_pass, Shadow_map_texture, Shadow_map_sampler);
 
 		++render_pass; // bump!
 	}
@@ -848,11 +849,10 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		Current_shader->program->Uniforms.setUniformi("sFramebuffer", render_pass);
 
 		if ( Scene_framebuffer_in_frame ) {
-			GL_state.Texture.Enable(render_pass, GL_TEXTURE_2D, Scene_effect_texture, Scene_effect_sampler);
+			GL_state.Texture.Enable(render_pass, Scene_effect_texture, Scene_effect_sampler);
 			glDrawBuffer(GL_COLOR_ATTACHMENT0);
 		} else {
-			GL_state.Texture.Enable(render_pass, GL_TEXTURE_2D, Framebuffer_fallback_texture_id,
-			                        Framebuffer_fallback_sampler_id);
+			GL_state.Texture.Enable(render_pass, Framebuffer_fallback_texture_id, Framebuffer_fallback_sampler_id);
 		}
 
 		++render_pass;
@@ -894,13 +894,13 @@ void opengl_tnl_set_material_particle(particle_material * material_info)
 	}
 
 	if ( !Cmdline_no_deferred_lighting ) {
-		Assert(Scene_position_texture != 0);
+		Assert(Scene_position_texture.isValid());
 
-		GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_position_texture, Scene_position_sampler);
+		GL_state.Texture.Enable(1, Scene_position_texture, Scene_position_sampler);
 	} else {
-		Assert(Scene_depth_texture != 0);
+		Assert(Scene_depth_texture.isValid());
 
-		GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_depth_texture, Scene_depth_sampler);
+		GL_state.Texture.Enable(1, Scene_depth_texture, Scene_depth_sampler);
 	}
 }
 void opengl_tnl_set_material_batched(batched_bitmap_material* material_info) {
@@ -932,24 +932,24 @@ void opengl_tnl_set_material_distortion(distortion_material* material_info)
 	Current_shader->program->Uniforms.setUniformf("farZ", Max_draw_distance);
 	Current_shader->program->Uniforms.setUniformi("frameBuffer", 2);
 
-	GL_state.Texture.Enable(2, GL_TEXTURE_2D, Scene_effect_texture, Scene_effect_sampler);
+	GL_state.Texture.Enable(2, Scene_effect_texture, Scene_effect_sampler);
 
 	Current_shader->program->Uniforms.setUniformi("distMap", 3);
 
 	if(material_info->get_thruster_rendering()) {
-		GL_state.Texture.Enable(3, GL_TEXTURE_2D, Distortion_texture[!Distortion_switch], Distortion_sampler);
+		GL_state.Texture.Enable(3, Distortion_texture[!Distortion_switch], Distortion_sampler);
 
 		Current_shader->program->Uniforms.setUniformf("use_offset", 1.0f);
 	} else {
 		// Disable this texture unit
-		GL_state.Texture.Enable(3, GL_TEXTURE_2D, 0, 0);
+		GL_state.Texture.Enable(3, graphics::ImageId::invalid(), graphics::SamplerId::invalid());
 
 		Current_shader->program->Uniforms.setUniformf("use_offset", 0.0f);
 	}
 
-	Assert(Scene_depth_texture != 0);
+	Assert(Scene_depth_texture.isValid());
 
-	GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_depth_texture, Scene_depth_sampler);
+	GL_state.Texture.Enable(1, Scene_depth_texture, Scene_depth_sampler);
 }
 
 void opengl_tnl_set_material_movie(movie_material* material_info) {
@@ -1012,11 +1012,11 @@ void opengl_tnl_set_material_decal(decal_material* material_info) {
 		Current_shader->program->Uniforms.setUniformi("normalMap", 2);
 	}
 
-	GL_state.Texture.Enable(3, GL_TEXTURE_2D, Scene_depth_texture, Scene_depth_sampler);
+	GL_state.Texture.Enable(3, Scene_depth_texture, Scene_depth_sampler);
 	Current_shader->program->Uniforms.setUniformi("gDepthBuffer", 3);
 
 	if (Current_shader->flags & SDR_FLAG_DECAL_USE_NORMAL_MAP) {
-		GL_state.Texture.Enable(4, GL_TEXTURE_2D, Scene_normal_texture, Scene_normal_sampler);
+		GL_state.Texture.Enable(4, Scene_normal_texture, Scene_normal_sampler);
 		Current_shader->program->Uniforms.setUniformi("gNormalBuffer", 4);
 	}
 }
@@ -1115,7 +1115,7 @@ void opengl_bind_vertex_layout(vertex_layout &layout, GLuint vertexBuffer, GLuin
 	GL_state.Array.BindElementBuffer(indexBuffer);
 }
 
-GLuint opengl_get_sampler(const GLSamplerProperties& props)
+graphics::SamplerId opengl_get_sampler(const graphics::SamplerParameters& props)
 {
 	auto iter = GL_sampler_objects.find(props);
 
@@ -1124,36 +1124,7 @@ GLuint opengl_get_sampler(const GLSamplerProperties& props)
 		return iter->second;
 	}
 
-	GLuint sampler;
-	glGenSamplers(1, &sampler);
-
-	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, props.wrap_s);
-	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, props.wrap_r);
-	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, props.wrap_t);
-
-	glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, props.min_filter);
-	glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, props.mag_filter);
-
-	if (GLAD_GL_EXT_texture_filter_anisotropic) {
-		glSamplerParameterf(sampler, GL_TEXTURE_MAX_ANISOTROPY_EXT, props.max_anisotropy);
-	}
-
+	auto sampler = gr_context->createSampler(props);
 	GL_sampler_objects.emplace(props, sampler);
 	return sampler;
-}
-
-bool operator==(const GLSamplerProperties& lhs, const GLSamplerProperties& rhs)
-{
-	return lhs.wrap_s == rhs.wrap_s && lhs.wrap_t == rhs.wrap_t && lhs.wrap_r == rhs.wrap_r &&
-	       lhs.min_filter == rhs.min_filter && lhs.mag_filter == rhs.mag_filter &&
-
-	       lhs.max_anisotropy == rhs.max_anisotropy;
-}
-
-bool operator!=(const GLSamplerProperties& lhs, const GLSamplerProperties& rhs) { return !(rhs == lhs); }
-GLSamplerProperties::GLSamplerProperties(GLenum wrap_s_in, GLenum wrap_t_in, GLenum wrap_r_in, GLenum min_filter_in,
-                                         GLenum mag_filter_in, GLfloat max_anisotropy_in)
-    : wrap_s(wrap_s_in), wrap_t(wrap_t_in), wrap_r(wrap_r_in), min_filter(min_filter_in), mag_filter(mag_filter_in),
-      max_anisotropy(max_anisotropy_in)
-{
 }

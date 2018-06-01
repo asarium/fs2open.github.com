@@ -19,27 +19,27 @@
 
 extern GLuint Scene_framebuffer;
 
-extern GLuint Scene_ldr_texture;
-extern GLuint Scene_color_texture;
-extern GLuint Scene_position_texture;
-extern GLuint Scene_normal_texture;
-extern GLuint Scene_specular_texture;
-extern GLuint Scene_emissive_texture;
-extern GLuint Scene_luminance_texture;
-extern GLuint Scene_effect_texture;
-extern GLuint Scene_depth_texture;
-extern GLuint Cockpit_depth_texture;
+extern graphics::ImageId Scene_ldr_texture;
+extern graphics::ImageId Scene_color_texture;
+extern graphics::ImageId Scene_position_texture;
+extern graphics::ImageId Scene_normal_texture;
+extern graphics::ImageId Scene_specular_texture;
+extern graphics::ImageId Scene_emissive_texture;
+extern graphics::ImageId Scene_luminance_texture;
+extern graphics::ImageId Scene_effect_texture;
+extern graphics::ImageId Scene_depth_texture;
+extern graphics::ImageId Cockpit_depth_texture;
 
-extern GLuint Scene_ldr_sampler;
-extern GLuint Scene_color_sampler;
-extern GLuint Scene_position_sampler;
-extern GLuint Scene_normal_sampler;
-extern GLuint Scene_specular_sampler;
-extern GLuint Scene_emissive_sampler;
-extern GLuint Scene_luminance_sampler;
-extern GLuint Scene_effect_sampler;
-extern GLuint Scene_depth_sampler;
-extern GLuint Cockpit_depth_sampler;
+extern graphics::SamplerId Scene_ldr_sampler;
+extern graphics::SamplerId Scene_color_sampler;
+extern graphics::SamplerId Scene_position_sampler;
+extern graphics::SamplerId Scene_normal_sampler;
+extern graphics::SamplerId Scene_specular_sampler;
+extern graphics::SamplerId Scene_emissive_sampler;
+extern graphics::SamplerId Scene_luminance_sampler;
+extern graphics::SamplerId Scene_effect_sampler;
+extern graphics::SamplerId Scene_depth_sampler;
+extern graphics::SamplerId Cockpit_depth_sampler;
 
 void gr_opengl_update_distortion();
 
