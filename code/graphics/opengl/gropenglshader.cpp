@@ -32,6 +32,7 @@
 SCP_vector<opengl_shader_t> GL_shader;
 
 GLuint Framebuffer_fallback_texture_id = 0;
+GLuint Framebuffer_fallback_sampler_id = 0;
 
 SCP_vector<opengl_vert_attrib> GL_vertex_attrib_info =
 	{
@@ -924,14 +925,11 @@ void opengl_shader_init()
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Framebuffer_fallback_texture_id);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	Framebuffer_fallback_sampler_id = opengl_get_sampler(
+	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
 	GLuint pixels[4] = {0,0,0,0};
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 1, 1, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, &pixels);
+	opengl_init_2d_texture(GL_TEXTURE_2D, Framebuffer_fallback_texture_id, 1, GL_RGBA8, 1, 1, GL_BGRA,
+	                       GL_UNSIGNED_INT_8_8_8_8_REV, &pixels);
 
 	GL_shader.clear();
 

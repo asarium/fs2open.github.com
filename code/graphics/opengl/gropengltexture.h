@@ -11,8 +11,9 @@
 #ifndef _GROPENGLTEXTURE_H
 #define _GROPENGLTEXTURE_H
 
-#include "globalincs/pstypes.h"
 #include "gropengl.h"
+#include "gropengltnl.h"
+#include "globalincs/pstypes.h"
 
 #define BMPMAN_INTERNAL
 #include "bmpman/bm_internal.h"
@@ -20,43 +21,25 @@
 #include <glad/glad.h>
 
 class tcache_slot_opengl : public gr_bitmap_info {
- public:
-	GLuint texture_id;
-	GLenum texture_target;
-	GLenum wrap_mode;
-	float u_scale, v_scale;
-	int	bitmap_handle;
-	int	size;
-	ushort w, h;
-	int bpp;
-	int mipmap_levels;
-	uint32_t array_index;
-	bool used;
+  public:
+	GLuint texture_id     = 0;
+	GLuint sampler_id     = 0;
+	GLenum texture_target = GL_TEXTURE_2D;
+	GLSamplerProperties sampling_props;
+	float u_scale        = 1.0f;
+	float v_scale        = 1.0f;
+	int bitmap_handle    = -1;
+	int size             = 0;
+	ushort w             = 0;
+	ushort h             = 0;
+	int bpp              = 0;
+	int mipmap_levels    = 0;
+	uint32_t array_index = 0;
+	bool used            = false;
 
-	int fbo_id;
+	int fbo_id = -1;
 
-	tcache_slot_opengl()
-	{
-		this->reset();
-	}
-
-	void reset()
-	{
-		texture_id = 0;
-		texture_target = GL_TEXTURE_2D;
-		wrap_mode = GL_REPEAT;
-		u_scale = 1.0f;
-		v_scale = 1.0f;
-		bitmap_handle = -1;
-		size = 0;
-		w = 0;
-		h = 0;
-		bpp = 0;
-		mipmap_levels = 0;
-		array_index = 0;
-		used = false;
-		fbo_id = -1;
-	}
+	void reset() { *this = tcache_slot_opengl(); }
 };
 
 extern int GL_min_texture_width;
@@ -88,6 +71,13 @@ void gr_opengl_get_bitmap_from_texture(void* data_out, int bitmap_num);
 size_t opengl_export_render_target( int slot, int width, int height, int alpha, int num_mipmaps, ubyte *image_data );
 void opengl_set_texture_target(GLenum target = GL_TEXTURE_2D);
 void opengl_set_texture_face(GLenum face = GL_TEXTURE_2D);
+
+void opengl_init_2d_texture(GLenum target, GLuint texture, GLint levels, GLenum internalFormat, GLsizei width,
+                            GLsizei height, GLenum data_format = GL_RGBA, GLenum data_type = GL_UNSIGNED_BYTE,
+                            const void* data = nullptr);
+void opengl_init_3d_texture(GLenum target, GLuint texture, GLint levels, GLenum internalFormat, GLsizei width,
+                            GLsizei height, GLsizei depth, GLenum data_format = GL_RGBA,
+                            GLenum data_type = GL_UNSIGNED_BYTE, const void* data = nullptr);
 
 int gr_opengl_tcache_set(int bitmap_handle, int bitmap_type, float *u_scale, float *v_scale, uint32_t *array_index, int stage = 0);
 int gr_opengl_preload(int bitmap_num, int is_aabitmap);

@@ -26,20 +26,32 @@
 
 #include <algorithm>
 
-GLuint Scene_framebuffer;
-GLuint Scene_ldr_texture;
-GLuint Scene_color_texture;
-GLuint Scene_position_texture;
-GLuint Scene_normal_texture;
-GLuint Scene_specular_texture;
-GLuint Scene_emissive_texture;
-GLuint Scene_luminance_texture;
-GLuint Scene_effect_texture;
-GLuint Scene_depth_texture;
-GLuint Cockpit_depth_texture;
-GLuint Scene_stencil_buffer;
+GLuint Scene_framebuffer = 0;
+
+GLuint Scene_ldr_texture       = 0;
+GLuint Scene_color_texture     = 0;
+GLuint Scene_position_texture  = 0;
+GLuint Scene_normal_texture    = 0;
+GLuint Scene_specular_texture  = 0;
+GLuint Scene_emissive_texture  = 0;
+GLuint Scene_luminance_texture = 0;
+GLuint Scene_effect_texture    = 0;
+GLuint Scene_depth_texture     = 0;
+GLuint Cockpit_depth_texture   = 0;
+
+GLuint Scene_ldr_sampler       = 0;
+GLuint Scene_color_sampler     = 0;
+GLuint Scene_position_sampler  = 0;
+GLuint Scene_normal_sampler    = 0;
+GLuint Scene_specular_sampler  = 0;
+GLuint Scene_emissive_sampler  = 0;
+GLuint Scene_luminance_sampler = 0;
+GLuint Scene_effect_sampler    = 0;
+GLuint Scene_depth_sampler     = 0;
+GLuint Cockpit_depth_sampler   = 0;
 
 GLuint Distortion_framebuffer = 0;
+GLuint Distortion_sampler     = 0;
 GLuint Distortion_texture[2];
 int Distortion_switch = 0;
 
@@ -118,39 +130,32 @@ void opengl_setup_scene_textures()
 
 	// setup main render texture
 
-	// setup high dynamic range color texture
-	glGenTextures(1, &Scene_color_texture);
-
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-	GL_state.Texture.Enable(Scene_color_texture);
-
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_color_texture, 0);
-	opengl_set_object_label(GL_TEXTURE, Scene_color_texture, "Scene color texture");
-
 	// setup low dynamic range color texture
 	glGenTextures(1, &Scene_ldr_texture);
 
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_ldr_texture);
+	Scene_ldr_sampler = opengl_get_sampler(
+	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_ldr_texture, 1, GL_RGBA8, Scene_texture_width, Scene_texture_height);
 	opengl_set_object_label(GL_TEXTURE, Scene_ldr_texture, "Scene LDR texture");
+
+	// setup high dynamic range color texture
+	glGenTextures(1, &Scene_color_texture);
+
+	GL_state.Texture.SetActiveUnit(0);
+	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+	GL_state.Texture.Enable(Scene_color_texture);
+	Scene_color_sampler = opengl_get_sampler(
+	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
+
+	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_color_texture, 1, GL_RGBA16F, Scene_texture_width,
+	                       Scene_texture_height);
+
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_color_texture, 0);
+	opengl_set_object_label(GL_TEXTURE, Scene_color_texture, "Scene color texture");
 
 	// setup position render texture
 	glGenTextures(1, &Scene_position_texture);
@@ -158,14 +163,11 @@ void opengl_setup_scene_textures()
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_position_texture);
+	Scene_position_sampler = opengl_get_sampler(
+	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_position_texture, 1, GL_RGBA16F, Scene_texture_width,
+	                       Scene_texture_height);
 	opengl_set_object_label(GL_TEXTURE, Scene_position_texture, "Scene Position texture");
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, Scene_position_texture, 0);
@@ -176,14 +178,11 @@ void opengl_setup_scene_textures()
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_normal_texture);
+	Scene_normal_sampler = opengl_get_sampler(
+	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_normal_texture, 1, GL_RGBA16F, Scene_texture_width,
+	                       Scene_texture_height);
 	opengl_set_object_label(GL_TEXTURE, Scene_normal_texture, "Scene Normal texture");
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, Scene_normal_texture, 0);
@@ -194,14 +193,11 @@ void opengl_setup_scene_textures()
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_specular_texture);
+	Scene_specular_sampler = opengl_get_sampler(
+	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_specular_texture, 1, GL_RGBA8, Scene_texture_width,
+	                       Scene_texture_height);
 	opengl_set_object_label(GL_TEXTURE, Scene_specular_texture, "Scene Specular texture");
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, Scene_specular_texture, 0);
@@ -212,14 +208,11 @@ void opengl_setup_scene_textures()
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_emissive_texture);
+	Scene_emissive_sampler = opengl_get_sampler(
+	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_emissive_texture, 1, GL_RGBA16F, Scene_texture_width,
+	                       Scene_texture_height);
 	opengl_set_object_label(GL_TEXTURE, Scene_emissive_texture, "Scene Emissive texture");
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D, Scene_emissive_texture, 0);
@@ -231,14 +224,11 @@ void opengl_setup_scene_textures()
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_luminance_texture);
+	Scene_luminance_sampler = opengl_get_sampler(
+	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_luminance_texture, 1, GL_RGBA16F, Scene_texture_width,
+	                       Scene_texture_height);
 	opengl_set_object_label(GL_TEXTURE, Scene_luminance_texture, "Scene Luminance texture");
 
 	// setup effect texture
@@ -247,14 +237,11 @@ void opengl_setup_scene_textures()
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_effect_texture);
+	Scene_effect_sampler = opengl_get_sampler(
+	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR, GL_LINEAR));
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, Scene_texture_width, Scene_texture_height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_effect_texture, 1, GL_RGBA16F, Scene_texture_width,
+	                       Scene_texture_height);
 	opengl_set_object_label(GL_TEXTURE, Scene_effect_texture, "Scene Effect texture");
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D, Scene_effect_texture, 0);
@@ -265,15 +252,11 @@ void opengl_setup_scene_textures()
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Cockpit_depth_texture);
+	Cockpit_depth_sampler = opengl_get_sampler(
+	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_NEAREST, GL_NEAREST));
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, Scene_texture_width, Scene_texture_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	opengl_init_2d_texture(GL_TEXTURE_2D, Cockpit_depth_texture, 1, GL_DEPTH_COMPONENT24, Scene_texture_width,
+	                       Scene_texture_height);
 	opengl_set_object_label(GL_TEXTURE, Cockpit_depth_texture, "Cockpit depth texture");
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, Cockpit_depth_texture, 0);
@@ -286,23 +269,13 @@ void opengl_setup_scene_textures()
 	GL_state.Texture.SetActiveUnit(0);
 	GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 	GL_state.Texture.Enable(Scene_depth_texture);
+	Scene_depth_sampler = opengl_get_sampler(
+	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_NEAREST, GL_NEAREST));
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
-
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, Scene_texture_width, Scene_texture_height, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	opengl_init_2d_texture(GL_TEXTURE_2D, Scene_depth_texture, 1, GL_DEPTH_COMPONENT24, Scene_texture_width,
+	                       Scene_texture_height);
 	opengl_set_object_label(GL_TEXTURE, Scene_depth_texture, "Scene depth texture");
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, Scene_depth_texture, 0);
-
-	//setup main stencil buffer
-	glGenRenderbuffers(1, &Scene_stencil_buffer);
-    glBindRenderbuffer(GL_RENDERBUFFER, Scene_stencil_buffer);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, Scene_texture_width, Scene_texture_height);
-	//glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, Scene_stencil_buffer);
 
 	glReadBuffer(GL_COLOR_ATTACHMENT0);
 
@@ -351,31 +324,18 @@ void opengl_setup_scene_textures()
 
         glGenTextures(2, Distortion_texture);
 
-        GL_state.Texture.SetActiveUnit(0);
-        GL_state.Texture.SetTarget(GL_TEXTURE_2D);
-        GL_state.Texture.Enable(Distortion_texture[0]);
+		for (auto& tex : Distortion_texture) {
+			GL_state.Texture.SetActiveUnit(0);
+			GL_state.Texture.SetTarget(GL_TEXTURE_2D);
+			GL_state.Texture.Enable(tex);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+			opengl_init_2d_texture(GL_TEXTURE_2D, tex, 1, GL_RGBA8, 32, 32);
+		}
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Distortion_texture[0], 0);
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 32, 32, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-
-        GL_state.Texture.Enable(Distortion_texture[1]);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_REPEAT);
-
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 32, 32, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Distortion_texture[0], 0);
-    }
-
+		Distortion_sampler =
+		    opengl_get_sampler(GLSamplerProperties(GL_REPEAT, GL_REPEAT, GL_REPEAT, GL_LINEAR, GL_LINEAR));
+	}
 
 	if ( opengl_check_framebuffer() ) {
 		GL_state.BindFrameBuffer(0);
@@ -546,7 +506,7 @@ void gr_opengl_scene_texture_end()
 
 		GL_state.PopFramebufferState();
 
-		GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_color_texture);
+		GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_color_texture, Scene_color_sampler);
 
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -658,7 +618,7 @@ void gr_opengl_update_distortion()
 	glDrawBuffer(GL_COLOR_ATTACHMENT0);
 
 	glViewport(0,0,32,32);
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Distortion_texture[Distortion_switch]);
+	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Distortion_texture[Distortion_switch], Distortion_sampler);
 	glClearColor(0.5f, 0.5f, 0.0f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
 

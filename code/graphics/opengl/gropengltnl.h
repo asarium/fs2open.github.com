@@ -13,9 +13,9 @@
 #ifndef _GROPENGLTNL_H
 #define _GROPENGLTNL_H
 
-
-#include "globalincs/pstypes.h"
 #include "gropengl.h"
+#include "gropenglshader.h"
+#include "globalincs/pstypes.h"
 #include "graphics/shadows.h"
 #include "model/model.h"
 
@@ -34,6 +34,7 @@ extern float shadow_fardist;
 extern bool Rendering_to_shadow_map;
 
 extern GLuint Shadow_map_texture;
+extern GLuint Shadow_map_sampler;
 
 struct opengl_vertex_bind {
 	vertex_format_data::vertex_format format;
@@ -80,5 +81,25 @@ void opengl_tnl_set_model_material(model_material *material_info);
 void gr_opengl_set_viewport(int x, int y, int width, int height);
 
 void opengl_bind_vertex_layout(vertex_layout &layout, GLuint vertexBuffer, GLuint indexBuffer, size_t base_offset = 0);
+
+struct GLSamplerProperties {
+	GLenum wrap_s = GL_CLAMP_TO_EDGE;
+	GLenum wrap_t = GL_CLAMP_TO_EDGE;
+	GLenum wrap_r = GL_CLAMP_TO_EDGE;
+
+	GLenum min_filter = GL_NEAREST;
+	GLenum mag_filter = GL_NEAREST;
+
+	GLfloat max_anisotropy = 1.0f;
+
+	GLSamplerProperties(GLenum wrap_s = GL_CLAMP_TO_EDGE, GLenum wrap_t = GL_CLAMP_TO_EDGE,
+	                    GLenum wrap_r = GL_CLAMP_TO_EDGE, GLenum min_filter = GL_NEAREST,
+	                    GLenum mag_filter = GL_NEAREST, GLfloat max_anisotropy = 1.0f);
+
+	friend bool operator==(const GLSamplerProperties& lhs, const GLSamplerProperties& rhs);
+	friend bool operator!=(const GLSamplerProperties& lhs, const GLSamplerProperties& rhs);
+};
+
+GLuint opengl_get_sampler(const GLSamplerProperties& props);
 
 #endif //_GROPENGLTNL_H
