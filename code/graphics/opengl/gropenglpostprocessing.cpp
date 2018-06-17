@@ -1,12 +1,14 @@
 
-#include "cmdline/cmdline.h"
+#include "gropenglpostprocessing.h"
+#include "ShaderProgram.h"
 #include "freespace.h"
-#include "def_files/def_files.h"
 #include "gropengl.h"
 #include "gropengldraw.h"
-#include "gropenglpostprocessing.h"
 #include "gropenglshader.h"
 #include "gropenglstate.h"
+#include "gropengltnl.h"
+#include "cmdline/cmdline.h"
+#include "def_files/def_files.h"
 #include "io/timer.h"
 #include "lighting/lighting.h"
 #include "mod_table/mod_table.h"
@@ -14,8 +16,6 @@
 #include "parse/parselo.h"
 #include "ship/ship.h"
 #include "tracing/tracing.h"
-#include "ShaderProgram.h"
-
 
 extern bool PostProcessing_override;
 extern int opengl_check_framebuffer();
@@ -71,11 +71,7 @@ static int Post_active_shader_index = -1;
 
 static GLuint Bloom_framebuffer = 0;
 static GLuint Bloom_textures[2] = { 0 };
-
-static GLuint Post_framebuffer_id[2] = { 0 };
-static GLuint Post_shadow_framebuffer_id = 0;
-static GLuint Post_shadow_texture_id = 0;
-static GLuint Post_shadow_depth_texture_id = 0;
+static GLuint Bloom_sampler     = 0;
 
 static int Post_texture_width = 0;
 static int Post_texture_height = 0;
@@ -92,7 +88,7 @@ void opengl_post_pass_tonemap()
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_ldr_texture, 0);
 
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_color_texture);
+	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_color_texture, Scene_color_sampler);
 
 	opengl_draw_textured_quad(-1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, Scene_texture_u_scale, Scene_texture_u_scale);
 }
@@ -127,7 +123,7 @@ void opengl_post_pass_bloom()
 
 		Current_shader->program->Uniforms.setUniformi("tex", 0);
 
-		GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_color_texture);
+		GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_color_texture, Scene_color_sampler);
 
 		opengl_draw_textured_quad(-1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f);
 	}
@@ -135,7 +131,7 @@ void opengl_post_pass_bloom()
 
 	// ------ begin blur pass ------
 
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Bloom_textures[0]);
+	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Bloom_textures[0], Bloom_sampler);
 
 	glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -155,7 +151,7 @@ void opengl_post_pass_bloom()
 
 			Current_shader->program->Uniforms.setUniformi("tex", 0);
 
-			GL_state.Texture.Enable(0, GL_TEXTURE_2D, source_tex);
+			GL_state.Texture.Enable(0, GL_TEXTURE_2D, source_tex, Bloom_sampler);
 
 			for (int mipmap = 0; mipmap < MAX_MIP_BLUR_LEVELS; ++mipmap) {
 				int bloom_width = width >> mipmap;
@@ -187,7 +183,7 @@ void opengl_post_pass_bloom()
 		Current_shader->program->Uniforms.setUniformi("levels", MAX_MIP_BLUR_LEVELS);
 		Current_shader->program->Uniforms.setUniformf("bloom_intensity", Cmdline_bloom_intensity / 100.0f);
 
-		GL_state.Texture.Enable(0, GL_TEXTURE_2D, Bloom_textures[0]);
+		GL_state.Texture.Enable(0, GL_TEXTURE_2D, Bloom_textures[0], Bloom_sampler);
 
 		GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
 
@@ -202,31 +198,6 @@ void opengl_post_pass_bloom()
 
 	// reset viewport, scissor test and exit
 	GL_state.ScissorTest(scissor_test);
-}
-
-void gr_opengl_post_process_begin()
-{
-	if ( !Post_initialized ) {
-		return;
-	}
-
-	if (Post_in_frame) {
-		return;
-	}
-
-	if (PostProcessing_override) {
-		return;
-	}
-
-	GL_state.PushFramebufferState();
-	GL_state.BindFrameBuffer(Post_framebuffer_id[0]);
-
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
-
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	Post_in_frame = true;
 }
 
 void recompile_fxaa_shader() {
@@ -263,7 +234,7 @@ void opengl_post_pass_fxaa() {
 
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, Scene_luminance_texture, 0);
 
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_ldr_texture);
+	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_ldr_texture, Scene_ldr_sampler);
 
 	opengl_draw_textured_quad(-1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, Scene_texture_u_scale, Scene_texture_u_scale);
 
@@ -277,7 +248,7 @@ void opengl_post_pass_fxaa() {
 	Current_shader->program->Uniforms.setUniformf( "rt_w", static_cast<float>(Post_texture_width));
 	Current_shader->program->Uniforms.setUniformf( "rt_h", static_cast<float>(Post_texture_height));
 
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_luminance_texture);
+	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_luminance_texture, Scene_luminance_sampler);
 
 	opengl_draw_textured_quad(-1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, Scene_texture_u_scale, Scene_texture_u_scale);
 
@@ -329,8 +300,8 @@ void opengl_post_lightshafts()
 				Current_shader->program->Uniforms.setUniformf("intensity", Sun_spot * ls_intensity);
 				Current_shader->program->Uniforms.setUniformf("cp_intensity", Sun_spot * ls_cpintensity);
 
-				GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_depth_texture);
-				GL_state.Texture.Enable(1, GL_TEXTURE_2D, Cockpit_depth_texture);
+				GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_depth_texture, Scene_depth_sampler);
+				GL_state.Texture.Enable(1, GL_TEXTURE_2D, Cockpit_depth_texture, Cockpit_depth_sampler);
 				GL_state.Blend(GL_TRUE);
 				GL_state.SetAlphaBlendMode(ALPHA_BLEND_ADDITIVE);
 
@@ -420,9 +391,8 @@ void gr_opengl_post_process_end()
 	// now render it to the screen ...
 	GL_state.PopFramebufferState();
 	//GL_state.Texture.Enable(Scene_color_texture);
-	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_ldr_texture);
-
-	GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_depth_texture);
+	GL_state.Texture.Enable(0, GL_TEXTURE_2D, Scene_ldr_texture, Scene_ldr_sampler);
+	GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_depth_texture, Scene_depth_sampler);
 
 	opengl_draw_textured_quad(-1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, Scene_texture_u_scale, Scene_texture_u_scale);
 
@@ -849,7 +819,7 @@ void opengl_setup_bloom_textures()
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D);
 		GL_state.Texture.Enable(Bloom_textures[tex]);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, width, height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
+		opengl_init_2d_texture(GL_TEXTURE_2D, Bloom_textures[tex], MAX_MIP_BLUR_LEVELS, GL_RGBA16F, width, height);
 
 		glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -858,80 +828,11 @@ void opengl_setup_bloom_textures()
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, MAX_MIP_BLUR_LEVELS-1);
 	}
+	Bloom_sampler = opengl_get_sampler(
+	    GLSamplerProperties(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE, GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR));
 
 	GL_state.BindFrameBuffer(0);
-}
-
-static bool opengl_init_shadow_framebuffer(int size, GLenum color_format) {
-	mprintf(("Trying to create %dx%d %d-bit shadow framebuffer\n", size, size, color_format == GL_RGBA32F ? 32 : 16));
-
-	glGenFramebuffers(1, &Post_shadow_framebuffer_id);
-	GL_state.BindFrameBuffer(Post_shadow_framebuffer_id);
-
-	glGenTextures(1, &Post_shadow_texture_id);
-
-	GL_state.Texture.SetActiveUnit(0);
-	GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY);
-	GL_state.Texture.Enable(Post_shadow_texture_id);
-
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, color_format, size, size, 4, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8_REV, NULL);
-
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, Post_shadow_texture_id, 0);
-
-	glGenTextures(1, &Post_shadow_depth_texture_id);
-
-	GL_state.Texture.Enable(Post_shadow_depth_texture_id);
-
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT32, size, size, 4, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, Post_shadow_depth_texture_id, 0);
-
-	auto status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-	if (status == GL_FRAMEBUFFER_COMPLETE) {
-		// Everything is fine
-		mprintf(("Shadow framebuffer created successfully.\n"));
-		return true;
-	}
-
-	// Clean up resources
-	glDeleteTextures(1, &Post_shadow_texture_id);
-	glDeleteTextures(1, &Post_shadow_depth_texture_id);
-	glDeleteFramebuffers(1, &Post_shadow_framebuffer_id);
-
-	Post_shadow_texture_id = 0;
-	Post_shadow_depth_texture_id = 0;
-	Post_shadow_framebuffer_id = 0;
-
-	const char* error;
-	switch (status) {
-	case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-		error = "Incomplete framebuffer attachment";
-		break;
-	case GL_FRAMEBUFFER_INCOMPLETE_MISSING_ATTACHMENT:
-		error = "Framebuffer is missing an attachment";
-		break;
-	case GL_FRAMEBUFFER_UNSUPPORTED:
-		error = "Framebuffer configuration is unsupported";
-		break;
-	default:
-		error = "Unknown framebuffer status";
-		break;
-	}
-
-	mprintf(("Failed to create framebuffer: %s\n", error));
-	return false;
 }
 
 // generate and test the framebuffer and textures that we are going to use
@@ -952,17 +853,6 @@ static bool opengl_post_init_framebuffer()
 	}
 
 	opengl_setup_bloom_textures();
-
-	if ( Cmdline_shadow_quality ) {
-		int size = (Cmdline_shadow_quality == 2 ? 1024 : 512);
-
-		if (!opengl_init_shadow_framebuffer(size, GL_RGBA32F)) {
-			if (!opengl_init_shadow_framebuffer(size, GL_RGBA16F)) {
-				mprintf(("Failed to create either 32 or 16-bit color shadow framebuffer. Disabling shadow support.\n"));
-				Cmdline_shadow_quality = 0;
-			}
-		}
-	}
 
 	GL_state.BindFrameBuffer(0);
 
@@ -1038,16 +928,6 @@ void opengl_post_process_shutdown()
 {
 	if ( !Post_initialized ) {
 		return;
-	}
-
-	if (Post_framebuffer_id[0]) {
-		glDeleteFramebuffers(1, &Post_framebuffer_id[0]);
-		Post_framebuffer_id[0] = 0;
-
-		if (Post_framebuffer_id[1]) {
-			glDeleteFramebuffers(1, &Post_framebuffer_id[1]);
-			Post_framebuffer_id[1] = 0;
-		}
 	}
 
 	Post_effects.clear();

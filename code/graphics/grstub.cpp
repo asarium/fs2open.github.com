@@ -157,10 +157,6 @@ void gr_stub_set_tex_env_scale(float  /*scale*/)
 {
 }
 
-void gr_stub_set_texture_addressing(int  /*mode*/)
-{
-}
-
 void gr_stub_stuff_fog_coord(vertex * /*v*/)
 {
 }
@@ -212,10 +208,6 @@ void gr_stub_post_process_save_zbuffer()
 }
 
 void gr_stub_post_process_blur_shadow_map()
-{
-}
-
-void gr_stub_post_process_begin()
 {
 }
 
@@ -461,7 +453,6 @@ bool gr_stub_init()
 	gr_screen.gf_pop_texture_matrix			= gr_stub_pop_texture_matrix;
 	gr_screen.gf_translate_texture_matrix	= gr_stub_translate_texture_matrix;
 
-	gr_screen.gf_set_texture_addressing	= gr_stub_set_texture_addressing;
 	gr_screen.gf_zbias					= gr_stub_zbias_stub;
 	gr_screen.gf_set_fill_mode			= gr_set_fill_mode_stub;
 
@@ -475,7 +466,6 @@ bool gr_stub_init()
 	gr_screen.gf_post_process_set_effect	= gr_stub_post_process_set_effect;
 	gr_screen.gf_post_process_set_defaults	= gr_stub_post_process_set_defaults;
 
-	gr_screen.gf_post_process_begin		= gr_stub_post_process_begin;
 	gr_screen.gf_post_process_end		= gr_stub_post_process_end;
 	gr_screen.gf_post_process_save_zbuffer	= gr_stub_post_process_save_zbuffer;
 	gr_screen.gf_post_process_restore_zbuffer = [](){};

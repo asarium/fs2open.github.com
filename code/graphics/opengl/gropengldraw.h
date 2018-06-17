@@ -18,6 +18,7 @@
 #include <glad/glad.h>
 
 extern GLuint Scene_framebuffer;
+
 extern GLuint Scene_ldr_texture;
 extern GLuint Scene_color_texture;
 extern GLuint Scene_position_texture;
@@ -28,7 +29,17 @@ extern GLuint Scene_luminance_texture;
 extern GLuint Scene_effect_texture;
 extern GLuint Scene_depth_texture;
 extern GLuint Cockpit_depth_texture;
-extern GLuint Scene_stencil_buffer;
+
+extern GLuint Scene_ldr_sampler;
+extern GLuint Scene_color_sampler;
+extern GLuint Scene_position_sampler;
+extern GLuint Scene_normal_sampler;
+extern GLuint Scene_specular_sampler;
+extern GLuint Scene_emissive_sampler;
+extern GLuint Scene_luminance_sampler;
+extern GLuint Scene_effect_sampler;
+extern GLuint Scene_depth_sampler;
+extern GLuint Cockpit_depth_sampler;
 
 void gr_opengl_update_distortion();
 
@@ -68,11 +79,6 @@ void gr_opengl_start_decal_pass();
 void gr_opengl_stop_decal_pass();
 
 extern int Scene_texture_initialized;
-
-extern GLuint Scene_color_texture;
-extern GLuint Scene_ldr_texture;
-extern GLuint Scene_luminance_texture;
-extern GLuint Scene_effect_texture;
 
 extern int Scene_texture_width;
 extern int Scene_texture_height;

@@ -722,8 +722,6 @@ typedef struct screen {
 	void (*gf_push_texture_matrix)(int unit);
 	void (*gf_pop_texture_matrix)(int unit);
 
-	void (*gf_set_texture_addressing)(int);
-
 	int (*gf_create_buffer)(BufferType type, BufferUsageHint usage);
 	void (*gf_delete_buffer)(int handle);
 
@@ -735,7 +733,6 @@ typedef struct screen {
 	void (*gf_post_process_set_effect)(const char*, int, const vec3d*);
 	void (*gf_post_process_set_defaults)();
 
-	void (*gf_post_process_begin)();
 	void (*gf_post_process_end)();
 	void (*gf_post_process_save_zbuffer)();
 	void (*gf_post_process_restore_zbuffer)();
@@ -955,8 +952,6 @@ __inline int gr_bm_set_render_target(int n, int face = -1)
 	return (*gr_screen.gf_bm_set_render_target)(n, face);
 }
 
-#define gr_set_texture_addressing					 GR_CALL(gr_screen.gf_set_texture_addressing)
-
 inline int gr_create_buffer(BufferType type, BufferUsageHint usage)
 {
 	return (*gr_screen.gf_create_buffer)(type, usage);
@@ -973,7 +968,6 @@ inline int gr_create_buffer(BufferType type, BufferUsageHint usage)
 
 #define gr_post_process_set_effect		GR_CALL(gr_screen.gf_post_process_set_effect)
 #define gr_post_process_set_defaults	GR_CALL(gr_screen.gf_post_process_set_defaults)
-#define gr_post_process_begin			GR_CALL(gr_screen.gf_post_process_begin)
 #define gr_post_process_end				GR_CALL(gr_screen.gf_post_process_end)
 #define gr_post_process_save_zbuffer	GR_CALL(gr_screen.gf_post_process_save_zbuffer)
 inline void gr_post_process_restore_zbuffer() {

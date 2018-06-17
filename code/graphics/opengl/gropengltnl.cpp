@@ -12,28 +12,29 @@
 #include <windows.h>
 #endif
 
+#include "ShaderProgram.h"
+#include "gropengldeferred.h"
+#include "gropengldraw.h"
+#include "gropenglshader.h"
+#include "gropenglstate.h"
+#include "gropengltexture.h"
+#include "gropengltnl.h"
 #include "cmdline/cmdline.h"
 #include "def_files/def_files.h"
 #include "globalincs/alphacolors.h"
 #include "globalincs/systemvars.h"
 #include "graphics/2d.h"
-#include "graphics/matrix.h"
 #include "graphics/grinternal.h"
-#include "gropengldraw.h"
-#include "gropenglshader.h"
-#include "gropenglstate.h"
-#include "gropengltexture.h"
-#include "gropengldeferred.h"
-#include "gropengltnl.h"
+#include "graphics/light.h"
+#include "graphics/material.h"
+#include "graphics/matrix.h"
+#include "graphics/shadows.h"
 #include "lighting/lighting.h"
 #include "math/vecmat.h"
-#include "render/3d.h"
-#include "weapon/trails.h"
 #include "particle/particle.h"
-#include "graphics/shadows.h"
-#include "graphics/material.h"
-#include "graphics/light.h"
-#include "ShaderProgram.h"
+#include "render/3d.h"
+#include "utils/boost/hash_combine.h"
+#include "weapon/trails.h"
 
 extern int GLOWMAP;
 extern int CLOAKMAP;
@@ -59,6 +60,7 @@ GLint GL_max_elements_vertices = 4096;
 GLint GL_max_elements_indices = 4096;
 
 GLuint Shadow_map_texture = 0;
+GLuint Shadow_map_sampler       = 0;
 GLuint Shadow_map_depth_texture = 0;
 GLuint shadow_fbo = 0;
 bool Rendering_to_shadow_map = false;
@@ -96,6 +98,31 @@ struct opengl_buffer_object {
 
 static SCP_vector<opengl_buffer_object> GL_buffer_objects;
 static int GL_vertex_buffers_in_use = 0;
+
+namespace std {
+template <> struct hash<GLSamplerProperties> {
+	std::size_t operator()(const GLSamplerProperties& data) const
+	{
+		size_t seed = 0;
+
+		boost::hash_combine(seed, data.wrap_s);
+		boost::hash_combine(seed, data.wrap_t);
+		boost::hash_combine(seed, data.wrap_r);
+
+		boost::hash_combine(seed, data.min_filter);
+		boost::hash_combine(seed, data.mag_filter);
+
+		boost::hash_combine(seed, data.compare_mode);
+		boost::hash_combine(seed, data.compare_func);
+
+		boost::hash_combine(seed, data.max_anisotropy);
+
+		return seed;
+	}
+};
+} // namespace std
+
+static SCP_unordered_map<GLSamplerProperties, GLuint> GL_sampler_objects;
 
 static GLenum convertBufferType(BufferType type) {
 	switch (type) {
@@ -423,35 +450,17 @@ void opengl_tnl_init()
 		GL_state.BindFrameBuffer(shadow_fbo);
 
 		glGenTextures(1, &Shadow_map_depth_texture);
-
 		GL_state.Texture.SetActiveUnit(0);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY);
 		GL_state.Texture.Enable(Shadow_map_depth_texture);
 		opengl_set_object_label(GL_TEXTURE, Shadow_map_depth_texture, "Scene shadow depth map");
 
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-// 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-		//glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_COMPARE_MODE_ARB, GL_COMPARE_REF_DEPTH_TO_TEXTURE_EXT);
-		//glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_COMPARE_FUNC_ARB, GL_LEQUAL);
-		//glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_DEPTH_TEXTURE_MODE_ARB, GL_INTENSITY);
 		int size = (Cmdline_shadow_quality == 2 ? 1024 : 512);
-		glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT32, size, size, 4, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-		//glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, size, size, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		opengl_init_3d_texture(GL_TEXTURE_2D_ARRAY, Shadow_map_depth_texture, 1, GL_DEPTH_COMPONENT32, size, size, 4);
 
 		glFramebufferTexture(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, Shadow_map_depth_texture, 0);
-		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, Shadow_map_depth_texture, 0);
 
 		glGenTextures(1, &Shadow_map_texture);
-
 		GL_state.Texture.SetActiveUnit(0);
 		GL_state.Texture.SetTarget(GL_TEXTURE_2D_ARRAY);
 		GL_state.Texture.Enable(Shadow_map_texture);
@@ -501,6 +510,11 @@ void opengl_tnl_shutdown()
 	}
 
 	opengl_destroy_all_buffers();
+
+	for (auto& sampler_entry : GL_sampler_objects) {
+		glDeleteSamplers(1, &sampler_entry.second);
+	}
+	GL_sampler_objects.clear();
 }
 
 void opengl_render_model_program(model_material* material_info, indexed_vertex_source *vert_source, vertex_buffer* bufferp, buffer_data *datap)
@@ -567,9 +581,11 @@ void gr_opengl_render_model(model_material* material_info, indexed_vertex_source
 
 extern bool Scene_framebuffer_in_frame;
 extern GLuint Framebuffer_fallback_texture_id;
+extern GLuint Framebuffer_fallback_sampler_id;
 extern GLuint Scene_depth_texture;
 extern GLuint Scene_position_texture;
 extern GLuint Distortion_texture[2];
+extern GLuint Distortion_sampler;
 extern int Distortion_switch;
 void opengl_create_perspective_projection_matrix(matrix4 *out, float left, float right, float bottom, float top, float near_dist, float far_dist)
 {
@@ -683,7 +699,7 @@ void opengl_tnl_set_material(material* material_info, bool set_base_map, bool se
 
 	gr_set_fill_mode(material_info->get_fill_mode());
 
-	gr_set_texture_addressing(material_info->get_texture_addressing());
+	gr_opengl_set_texture_addressing(material_info->get_texture_addressing());
 
 	if (set_clipping) {
 		// Only set the clipping state if explicitly requested by the caller to avoid unnecessary state changes
@@ -843,7 +859,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 	if ( Current_shader->flags & SDR_FLAG_MODEL_SHADOWS ) {
 		Current_shader->program->Uniforms.setUniformi("shadow_map", render_pass);
 
-		GL_state.Texture.Enable(render_pass, GL_TEXTURE_2D_ARRAY, Shadow_map_texture);
+		GL_state.Texture.Enable(render_pass, GL_TEXTURE_2D_ARRAY, Shadow_map_texture, Shadow_map_sampler);
 
 		++render_pass; // bump!
 	}
@@ -852,10 +868,11 @@ void opengl_tnl_set_model_material(model_material *material_info)
 		Current_shader->program->Uniforms.setUniformi("sFramebuffer", render_pass);
 
 		if ( Scene_framebuffer_in_frame ) {
-			GL_state.Texture.Enable(render_pass, GL_TEXTURE_2D, Scene_effect_texture);
+			GL_state.Texture.Enable(render_pass, GL_TEXTURE_2D, Scene_effect_texture, Scene_effect_sampler);
 			glDrawBuffer(GL_COLOR_ATTACHMENT0);
 		} else {
-			GL_state.Texture.Enable(render_pass, GL_TEXTURE_2D, Framebuffer_fallback_texture_id);
+			GL_state.Texture.Enable(render_pass, GL_TEXTURE_2D, Framebuffer_fallback_texture_id,
+			                        Framebuffer_fallback_sampler_id);
 		}
 
 		++render_pass;
@@ -863,7 +880,7 @@ void opengl_tnl_set_model_material(model_material *material_info)
 
 	if ( Current_shader->flags & SDR_FLAG_MODEL_TRANSFORM ) {
 		Current_shader->program->Uniforms.setUniformi("transform_tex", render_pass);
-		GL_state.Texture.Enable(render_pass, GL_TEXTURE_BUFFER, opengl_get_transform_buffer_texture());
+		GL_state.Texture.Enable(render_pass, GL_TEXTURE_BUFFER, opengl_get_transform_buffer_texture(), 0);
 
 		++render_pass;
 	}
@@ -899,11 +916,11 @@ void opengl_tnl_set_material_particle(particle_material * material_info)
 	if ( !Cmdline_no_deferred_lighting ) {
 		Assert(Scene_position_texture != 0);
 
-		GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_position_texture);
+		GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_position_texture, Scene_position_sampler);
 	} else {
 		Assert(Scene_depth_texture != 0);
 
-		GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_depth_texture);
+		GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_depth_texture, Scene_depth_sampler);
 	}
 }
 void opengl_tnl_set_material_batched(batched_bitmap_material* material_info) {
@@ -935,24 +952,24 @@ void opengl_tnl_set_material_distortion(distortion_material* material_info)
 	Current_shader->program->Uniforms.setUniformf("farZ", Max_draw_distance);
 	Current_shader->program->Uniforms.setUniformi("frameBuffer", 2);
 
-	GL_state.Texture.Enable(2, GL_TEXTURE_2D, Scene_effect_texture);
+	GL_state.Texture.Enable(2, GL_TEXTURE_2D, Scene_effect_texture, Scene_effect_sampler);
 
 	Current_shader->program->Uniforms.setUniformi("distMap", 3);
 
 	if(material_info->get_thruster_rendering()) {
-		GL_state.Texture.Enable(3, GL_TEXTURE_2D, Distortion_texture[!Distortion_switch]);
+		GL_state.Texture.Enable(3, GL_TEXTURE_2D, Distortion_texture[!Distortion_switch], Distortion_sampler);
 
 		Current_shader->program->Uniforms.setUniformf("use_offset", 1.0f);
 	} else {
 		// Disable this texture unit
-		GL_state.Texture.Enable(3, GL_TEXTURE_2D, 0);
+		GL_state.Texture.Enable(3, GL_TEXTURE_2D, 0, 0);
 
 		Current_shader->program->Uniforms.setUniformf("use_offset", 0.0f);
 	}
 
 	Assert(Scene_depth_texture != 0);
 
-	GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_depth_texture);
+	GL_state.Texture.Enable(1, GL_TEXTURE_2D, Scene_depth_texture, Scene_depth_sampler);
 }
 
 void opengl_tnl_set_material_movie(movie_material* material_info) {
@@ -1015,11 +1032,11 @@ void opengl_tnl_set_material_decal(decal_material* material_info) {
 		Current_shader->program->Uniforms.setUniformi("normalMap", 2);
 	}
 
-	GL_state.Texture.Enable(3, GL_TEXTURE_2D, Scene_depth_texture);
+	GL_state.Texture.Enable(3, GL_TEXTURE_2D, Scene_depth_texture, Scene_depth_sampler);
 	Current_shader->program->Uniforms.setUniformi("gDepthBuffer", 3);
 
 	if (Current_shader->flags & SDR_FLAG_DECAL_USE_NORMAL_MAP) {
-		GL_state.Texture.Enable(4, GL_TEXTURE_2D, Scene_normal_texture);
+		GL_state.Texture.Enable(4, GL_TEXTURE_2D, Scene_normal_texture, Scene_normal_sampler);
 		Current_shader->program->Uniforms.setUniformi("gNormalBuffer", 4);
 	}
 }
@@ -1116,4 +1133,51 @@ void opengl_bind_vertex_layout(vertex_layout &layout, GLuint vertexBuffer, GLuin
 									static_cast<GLintptr>(base_offset),
 									static_cast<GLsizei>(layout.get_vertex_stride()));
 	GL_state.Array.BindElementBuffer(indexBuffer);
+}
+
+GLuint opengl_get_sampler(const GLSamplerProperties& props)
+{
+	auto iter = GL_sampler_objects.find(props);
+
+	if (iter != GL_sampler_objects.end()) {
+		// Sampler with same properties already exists
+		return iter->second;
+	}
+
+	GLuint sampler;
+	glGenSamplers(1, &sampler);
+
+	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, props.wrap_s);
+	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, props.wrap_r);
+	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, props.wrap_t);
+
+	glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, props.min_filter);
+	glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, props.mag_filter);
+
+	glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, props.compare_mode);
+	glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, props.compare_func);
+
+	if (GLAD_GL_EXT_texture_filter_anisotropic) {
+		glSamplerParameterf(sampler, GL_TEXTURE_MAX_ANISOTROPY_EXT, props.max_anisotropy);
+	}
+
+	GL_sampler_objects.emplace(props, sampler);
+	return sampler;
+}
+
+bool operator==(const GLSamplerProperties& lhs, const GLSamplerProperties& rhs)
+{
+	return lhs.wrap_s == rhs.wrap_s && lhs.wrap_t == rhs.wrap_t && lhs.wrap_r == rhs.wrap_r &&
+	       lhs.min_filter == rhs.min_filter && lhs.mag_filter == rhs.mag_filter &&
+	       lhs.compare_mode == rhs.compare_mode && lhs.compare_func == rhs.compare_func &&
+	       lhs.max_anisotropy == rhs.max_anisotropy;
+}
+
+bool operator!=(const GLSamplerProperties& lhs, const GLSamplerProperties& rhs) { return !(rhs == lhs); }
+GLSamplerProperties::GLSamplerProperties(GLenum wrap_s_in, GLenum wrap_t_in, GLenum wrap_r_in, GLenum min_filter_in,
+                                         GLenum mag_filter_in, GLenum compare_mode_in, GLenum compare_func_in,
+                                         GLfloat max_anisotropy_in)
+    : wrap_s(wrap_s_in), wrap_t(wrap_t_in), wrap_r(wrap_r_in), min_filter(min_filter_in), mag_filter(mag_filter_in),
+      compare_mode(compare_mode_in), compare_func(compare_func_in), max_anisotropy(max_anisotropy_in)
+{
 }

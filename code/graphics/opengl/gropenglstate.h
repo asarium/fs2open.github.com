@@ -27,6 +27,7 @@ struct opengl_texture_unit {
 
 	GLenum texture_target;
 	GLuint texture_id;
+	GLuint sampler_id;
 };
 
 class opengl_texture_state
@@ -50,21 +51,23 @@ class opengl_texture_state
 		void SetTarget(GLenum tex_target);
 		void SetActiveUnit(GLuint id = 0);
 		void Enable(GLuint tex_id = 0);
-		/**
-		 * @brief Directly enables a texture on the specified unit
-		 *
-		 * This is a more efficient version of the standard activeTexture -> Enable since it does not cause an
-		 * OpenGL call if the texture is already set correctly
-		 *
-		 * @warning This may not actually set the active texture unit to the specified value! If you require that then
-		 * you need to call SetActiveUnit!
-		 *
-		 * @param unit The texture unit to use
-		 * @param tex_target The texture target of the texture id
-		 * @param tex_id The ID of the texture to enable
-		 */
-		void Enable(GLuint unit, GLenum tex_target, GLuint tex_id);
-		void Delete(GLuint tex_id);
+	    void BindSampler(GLuint sampler = 0);
+	    /**
+	     * @brief Directly enables a texture on the specified unit
+	     *
+	     * This is a more efficient version of the standard activeTexture -> Enable since it does not cause an
+	     * OpenGL call if the texture is already set correctly
+	     *
+	     * @warning This may not actually set the active texture unit to the specified value! If you require that then
+	     * you need to call SetActiveUnit!
+	     *
+	     * @param unit The texture unit to use
+	     * @param tex_target The texture target of the texture id
+	     * @param tex_id The ID of the texture to enable
+	     * @param sampler_id The ID of the sampler object to use with the specified texture
+	     */
+	    void Enable(GLuint unit, GLenum tex_target, GLuint tex_id, GLuint sampler_id);
+	    void Delete(GLuint tex_id);
 		
 		inline GLenum GetTarget();
 		inline void SetShaderMode(GLboolean mode);

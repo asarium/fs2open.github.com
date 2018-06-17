@@ -45,8 +45,8 @@
 
 #include <glad/glad.h>
 
-// minimum GL version we can reliably support is 3.2
-static const int MIN_REQUIRED_GL_VERSION = 32;
+// minimum GL version we can reliably support is 3.3
+static const int MIN_REQUIRED_GL_VERSION = 33;
 
 // minimum GLSL version we can reliably support is 110
 static const int MIN_REQUIRED_GLSL_VERSION = 150;
@@ -1118,7 +1118,6 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_pop_texture_matrix			= gr_opengl_pop_texture_matrix;
 	gr_screen.gf_translate_texture_matrix	= gr_opengl_translate_texture_matrix;
 
-	gr_screen.gf_set_texture_addressing	= gr_opengl_set_texture_addressing;
 	gr_screen.gf_zbias					= gr_opengl_zbias;
 	gr_screen.gf_set_fill_mode			= gr_opengl_set_fill_mode;
 
@@ -1133,7 +1132,6 @@ void opengl_setup_function_pointers()
 	gr_screen.gf_post_process_set_effect	= gr_opengl_post_process_set_effect;
 	gr_screen.gf_post_process_set_defaults	= gr_opengl_post_process_set_defaults;
 
-	gr_screen.gf_post_process_begin		= gr_opengl_post_process_begin;
 	gr_screen.gf_post_process_end		= gr_opengl_post_process_end;
 	gr_screen.gf_post_process_save_zbuffer	= gr_opengl_post_process_save_zbuffer;
 	gr_screen.gf_post_process_restore_zbuffer	= gr_opengl_post_process_restore_zbuffer;
