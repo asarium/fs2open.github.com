@@ -45,6 +45,96 @@
 #define DIR_SEPARATOR_STR  "/"
 #endif
 
+#include "osapi/dialogs.h"
+
+extern int Global_warning_count;
+extern int Global_error_count;
+
+#include "osapi/outwnd.h"
+
+// To debug printf do this:
+// mprintf(( "Error opening %s\n", filename ));
+#ifndef NDEBUG
+#define mprintf(args) outwnd_printf2 args
+#define nprintf(args) outwnd_printf args
+#else
+#define mprintf(args)
+#define nprintf(args)
+#endif
+
+#define LOCATION __FILE__, __LINE__
+
+// To flag an error, you can do this:
+// Error( __FILE__, __LINE__, "Error opening %s", filename );
+// or,
+// Error( LOCATION, "Error opening %s", filename );
+
+/*******************NEVER UNCOMMENT Assert ************************************************/
+// Please never uncomment the functionality of Assert in debug
+// The code, as with all development like this is littered with Asserts which are designed to throw
+// up an error message if variables are out of range.
+// Disabling this functionality is dangerous, crazy values can run rampent unchecked and the longer its disabled
+// the more likely you are to have problems getting it working again.
+#if defined(NDEBUG)
+#define Assert(expr)                                                                                                   \
+	do {                                                                                                               \
+		ASSUME(expr);                                                                                                  \
+	} while (false)
+#else
+#define Assert(expr)                                                                                                   \
+	do {                                                                                                               \
+		if (!(expr)) {                                                                                                 \
+			os::dialogs::AssertMessage(#expr, __FILE__, __LINE__);                                                     \
+		}                                                                                                              \
+		ASSUME(expr);                                                                                                  \
+	} while (false)
+#endif
+/*******************NEVER COMMENT Assert ************************************************/
+
+// Goober5000 - define Verify for use in both release and debug mode
+#define Verify(x)                                                                                                      \
+	do {                                                                                                               \
+		if (!(x)) {                                                                                                    \
+			Error(LOCATION, "Verify failure: %s\n", #x);                                                               \
+		}                                                                                                              \
+		ASSUME(x);                                                                                                     \
+	} while (0)
+
+// VerifyEx
+#ifndef _MSC_VER // non MS compilers
+#define VerifyEx(x, y, ...)                                                                                            \
+	do {                                                                                                               \
+		if (!(x)) {                                                                                                    \
+			Error(LOCATION, "Verify failure: %s with help text " #y "\n", #x, ##__VA_ARGS__);                          \
+		}                                                                                                              \
+		ASSUME(x);                                                                                                     \
+	} while (0)
+#else
+#if _MSC_VER >= 1400 // VC 2005 or greater
+#define VerifyEx(x, y, ...)                                                                                            \
+	do {                                                                                                               \
+		if (!(x)) {                                                                                                    \
+			Error(LOCATION, "Verify failure: %s with help text " #y "\n", #x, __VA_ARGS__);                            \
+		}                                                                                                              \
+		ASSUME(x);                                                                                                     \
+	} while (0)
+#else // everything else
+#define VerifyEx(x, y) Verify(x)
+#endif
+#endif
+
+#if defined(NDEBUG)
+// No debug version of Int3
+#define Int3()                                                                                                         \
+	do {                                                                                                               \
+	} while (0)
+#else
+void debug_int3(const char* file, int line);
+
+// Debug version of Int3
+#define Int3() debug_int3(__FILE__, __LINE__)
+#endif // NDEBUG
+
 typedef std::int32_t _fs_time_t;  // time_t here is 64-bit and we need 32-bit
 typedef std::int32_t fix;
 
@@ -91,17 +181,54 @@ struct ivec2 {
 	int x, y;
 };
 
-/** Represents a point in 3d space.
-
-Note: this is a struct, not a class, so no member functions. */
-typedef struct vec3d {
+/** Represents a point in 3d space. */
+struct vec3d {
 	union {
 		struct {
 			float x,y,z;
 		} xyz;
 		float a1d[3];
 	};
-} vec3d;
+
+	inline vec3d()
+	{
+		xyz.x = 0.0f;
+		xyz.y = 0.0f;
+		xyz.z = 0.0f;
+	}
+
+	inline explicit vec3d(float val)
+	{
+		xyz.x = val;
+		xyz.y = val;
+		xyz.z = val;
+	}
+
+	inline vec3d(float x, float y, float z)
+	{
+		xyz.x = x;
+		xyz.y = y;
+		xyz.z = z;
+	}
+
+	inline vec3d& operator=(std::initializer_list<float> vals)
+	{
+		Assertion(vals.size() == 3, "Initializer list must have a size of 3!");
+
+		auto iter = vals.begin();
+		xyz.x     = *iter++;
+		xyz.y     = *iter++;
+		xyz.z     = *iter;
+
+		return *this;
+	}
+
+	inline float& operator[](size_t n)
+	{
+		Assertion(n < 3, "Invalid index in vector access!");
+		return a1d[n];
+	}
+};
 
 /** Compares two vec3ds */
 inline bool operator==(const vec3d &self, const vec3d &other)
@@ -117,15 +244,15 @@ inline bool operator!=(const vec3d &self, const vec3d &other)
 	return !(self == other);
 }
 
-typedef struct vec2d {
+struct vec2d {
 	float x, y;
-} vec2d;
+};
 
-typedef struct angles {
+struct angles {
 	float	p, b, h;
-} angles_t;
+};
 
-typedef struct matrix {
+struct matrix {
 	union {
 		struct {
 			vec3d	rvec, uvec, fvec;
@@ -133,9 +260,9 @@ typedef struct matrix {
 		float a2d[3][3];
 		float a1d[9];
 	};
-} matrix;
+};
 
-typedef struct matrix4 {
+struct matrix4 {
 	union {
 		struct {
 			vec4 rvec, uvec, fvec, pos;
@@ -143,11 +270,11 @@ typedef struct matrix4 {
 		float a2d[4][4];
 		float a1d[16];
 	};
-} matrix4;
+};
 
-typedef struct uv_pair {
+struct uv_pair {
 	float u,v;
-} uv_pair;
+};
 
 /** Compares two uv_pairs */
 inline bool operator==(const uv_pair &left, const uv_pair &right)
@@ -160,7 +287,7 @@ inline bool operator==(const uv_pair &left, const uv_pair &right)
 Like vec3d but for screens.
 
 Note: this is a struct, not a class, so no member functions. */
-typedef struct screen3d
+struct screen3d
 {
 	union {
 		struct {
@@ -168,7 +295,7 @@ typedef struct screen3d
 		} xyw;
 		float a1d[3];
 	};
-} screen3d;
+};
 
 /** Compares two screen3ds */
 inline bool operator==(const screen3d &self, const screen3d &other)
@@ -182,7 +309,7 @@ inline bool operator==(const screen3d &self, const screen3d &other)
 /** Used to store rotated points for mines. Has flag to indicate if projected.
 
 Note: this is a struct, not a class, so no memeber functions. */
-typedef struct vertex {
+struct vertex {
 	vec3d		world;				// world space position
 	screen3d	screen;				// screen space position (sw == 1/z)
 	uv_pair		texture_position;	// texture position
@@ -190,14 +317,14 @@ typedef struct vertex {
 	ubyte		codes;				// what sides of view pyramid this point is on/off.  0 = Inside view pyramid.
 	ubyte		flags;				// Projection flags.  Indicates whether it is projected or not or if projection overflowed.
 	ubyte		pad[2];				// pad structure to be 4 byte aligned.
-} vertex;
+};
 
-typedef struct effect_vertex {
+struct effect_vertex {
 	vec3d position;
 	uv_pair tex_coord;
 	float radius;
 	ubyte r, g, b, a;
-} effect_vertex;
+};
 
 struct particle_pnt {
 	vec3d position;
@@ -221,80 +348,14 @@ struct flag_def_list_new {
 };
 
 // weapon count list (mainly for pilot files)
-typedef struct wep_t {
+struct wep_t {
 	int index;
 	int count;
-} wep_t;
+};
 
-typedef struct coord2d {
+struct coord2d {
 	int x,y;
-} coord2d;
-
-#include "osapi/dialogs.h"
-
-extern int Global_warning_count;
-extern int Global_error_count;
-
-#include "osapi/outwnd.h"
-
-// To debug printf do this:
-// mprintf(( "Error opening %s\n", filename ));
-#ifndef NDEBUG
-#define mprintf(args) outwnd_printf2 args
-#define nprintf(args) outwnd_printf args
-#else
-#define mprintf(args)
-#define nprintf(args)
-#endif
-
-#define LOCATION __FILE__,__LINE__
-
-// To flag an error, you can do this:
-// Error( __FILE__, __LINE__, "Error opening %s", filename );
-// or,
-// Error( LOCATION, "Error opening %s", filename );
-
-/*******************NEVER UNCOMMENT Assert ************************************************/
-// Please never uncomment the functionality of Assert in debug
-// The code, as with all development like this is littered with Asserts which are designed to throw
-// up an error message if variables are out of range.
-// Disabling this functionality is dangerous, crazy values can run rampent unchecked and the longer its disabled
-// the more likely you are to have problems getting it working again.
-#if defined(NDEBUG)
-#	define Assert(expr) do { ASSUME(expr); } while (false)
-#else
-#	define Assert(expr) do {\
-		if (!(expr)) {\
-			os::dialogs::AssertMessage(#expr,__FILE__,__LINE__);\
-		}\
-		ASSUME( expr );\
-	} while (false)
-#endif
-/*******************NEVER COMMENT Assert ************************************************/
-
-// Goober5000 - define Verify for use in both release and debug mode
-#define Verify(x) do { if (!(x)){ Error(LOCATION, "Verify failure: %s\n", #x); } ASSUME(x); } while(0)
-
-// VerifyEx
-#ifndef _MSC_VER   // non MS compilers
-#	define VerifyEx(x, y, ...) do { if (!(x)) { Error(LOCATION, "Verify failure: %s with help text " #y "\n", #x, ##__VA_ARGS__); } ASSUME(x); } while(0)
-#else
-#	if _MSC_VER >= 1400	// VC 2005 or greater
-#		define VerifyEx(x, y, ...) do { if (!(x)) { Error(LOCATION, "Verify failure: %s with help text " #y "\n", #x, __VA_ARGS__); } ASSUME(x); } while(0)
-#	else // everything else
-#		define VerifyEx(x, y) Verify(x)
-#	endif
-#endif
-
-#if defined(NDEBUG)
-	// No debug version of Int3
-	#define Int3() do { } while (0)
-#else
-	void debug_int3(const char *file, int line);
-
-	// Debug version of Int3
-	#define Int3() debug_int3(__FILE__, __LINE__)
-#endif	// NDEBUG
+};
 
 #ifndef MIN
 #define MIN(a,b) (((a) < (b)) ? (a) : (b))

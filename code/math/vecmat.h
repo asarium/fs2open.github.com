@@ -58,12 +58,12 @@ extern matrix vmd_identity_matrix;
 
 //Here's a handy constant
 
-#define ZERO_VECTOR { { { 0.0f, 0.0f, 0.0f } } }
-#define SCALE_IDENTITY_VECTOR { { { 1.0f, 1.0f, 1.0f } } }
+#define ZERO_VECTOR { 0.0f, 0.0f, 0.0f }
+#define SCALE_IDENTITY_VECTOR { 1.0f, 1.0f, 1.0f }
 //#define IDENTITY_MATRIX {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f}
 // first set of inside braces is for union, second set is for inside union, then for a2d[3][3] (some compiler warning messages just suck)
 //#define IDENTITY_MATRIX { { { {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f} } } }
-#define IDENTITY_MATRIX { { { { { { 1.0f, 0.0f, 0.0f } } }, { { { 0.0f, 1.0f, 0.0f } } }, { { { 0.0f, 0.0f, 1.0f } } } } } }
+#define IDENTITY_MATRIX { { { { 1.0f, 0.0f, 0.0f  }, { 0.0f, 1.0f, 0.0f }, { 0.0f, 0.0f, 1.0f } } } }
 
 //fills in fields of an angle vector
 #define vm_angvec_make(v,_p,_b,_h) (((v)->p=(_p), (v)->b=(_b), (v)->h=(_h)), (v))
