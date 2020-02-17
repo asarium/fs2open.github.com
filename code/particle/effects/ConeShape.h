@@ -3,6 +3,9 @@
 #pragma once
 
 #include "globalincs/pstypes.h"
+#include "math/vecmat.h"
+#include "particle/ParticleEffect.h"
+#include "particle/ParticleManager.h"
 #include "utils/RandomRange.h"
 
 namespace particle {
@@ -13,7 +16,8 @@ namespace effects {
  */
 class ConeShape {
 	::util::NormalFloatRange m_normalDeviation;
- public:
+
+  public:
 	ConeShape() {}
 
 	matrix getDisplacementMatrix() {
@@ -35,6 +39,12 @@ class ConeShape {
 		if (internal::required_string_if_new("+Deviation:", nocreate)) {
 			float deviation;
 			stuff_float(&deviation);
+
+			if (deviation < 0.001f) {
+				error_display(0, "A standard deviation of %f is not valid. Must be greater than 0. Defaulting to 1.",
+							  deviation);
+				deviation = 1.0f;
+			}
 
 			m_normalDeviation = ::util::NormalFloatRange(0.0, fl_radians(deviation));
 		}
