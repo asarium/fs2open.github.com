@@ -90,7 +90,7 @@ MACRO(COPY_FILES_TO_TARGET _target)
 			COMMENT "Creating '$<TARGET_FILE_DIR:${_target}>/${LIBRAY_DESTINATION}/'..."
 		)
 	endif()
-	
+
 	FOREACH(file IN LISTS TARGET_COPY_FILES)
 		COPY_FILE_TO_TARGET("${_target}" "${file}")
 	ENDFOREACH(file)
