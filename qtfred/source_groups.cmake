@@ -56,8 +56,6 @@ add_file_folder("Source/Mission/Dialogs"
 	src/mission/dialogs/SelectionDialogModel.h
 	src/mission/dialogs/ShieldSystemDialogModel.cpp
 	src/mission/dialogs/ShieldSystemDialogModel.h
-	src/mission/dialogs/ShipEditorDialogModel.cpp
-	src/mission/dialogs/ShipEditorDialogModel.h
 	src/mission/dialogs/WaypointEditorDialogModel.cpp
 	src/mission/dialogs/WaypointEditorDialogModel.h
 )

@@ -69,6 +69,15 @@ class Editor: public QObject {
 
 	void setActiveViewport(EditorViewport* viewport);
 
+	FLAG_LIST(ShipListFilter) {
+		Special = 0,
+		AllShips = 1 ,
+		DockingBayOnly = 2,
+		NUM_VALUES,
+	};
+
+	SCP_vector<std::tuple<SCP_string, int>> get_ship_name_list(flagset<ShipListFilter> flags);
+
 	///! Non-copyable.
 	Editor(const Editor&) = delete;
 	///! Non-copyable.

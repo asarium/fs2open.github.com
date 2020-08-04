@@ -28,8 +28,7 @@ class AbstractDialogModel: public QObject {
  public:
 	AbstractDialogModel(QObject* parent, EditorViewport* viewport);
 
-	~AbstractDialogModel() override {
-	}
+	~AbstractDialogModel() override = default;
 
 	/**
 	 * @brief Apply the changes currently stored in this model

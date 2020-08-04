@@ -1,39 +1,39 @@
 #include "Editor.h"
 
-#include <array>
-#include <vector>
-#include <stdexcept>
-#include <clocale>
-
-#include <SDL.h>
-#include <sound/audiostr.h>
-#include <parse/parselo.h>
-#include <missionui/fictionviewer.h>
-#include <mission/missiongoals.h>
-#include <asteroid/asteroid.h>
-#include <jumpnode/jumpnode.h>
-#include <util.h>
-#include <mission/missionmessage.h>
-#include <gamesnd/eventmusic.h>
-#include <starfield/nebula.h>
-#include <object/objectdock.h>
-#include <ai/aigoals.h>
-#include <localization/fhash.h>
-
-#include "iff_defs/iff_defs.h" // iff_init
-#include "object/object.h" // obj_init
-#include "species_defs/species_defs.h" // species_init
-#include "weapon/weapon.h" // weapon_init
-#include "nebula/neb.h" // neb2_init
-#include "starfield/starfield.h" // stars_init, stars_pre_level_init, stars_post_level_init
-#include "hud/hudsquadmsg.h"
 #include "globalincs/linklist.h"
 
-#include "ui/QtGraphicsOperations.h"
-
-#include "object.h"
-#include "management.h"
 #include "FredApplication.h"
+#include "management.h"
+#include "object.h"
+#include "util.h"
+
+#include "ai/aigoals.h"
+#include "asteroid/asteroid.h"
+#include "gamesnd/eventmusic.h"
+#include "hud/hudsquadmsg.h"
+#include "iff_defs/iff_defs.h" // iff_init
+#include "jumpnode/jumpnode.h"
+#include "localization/fhash.h"
+#include "mission/missiongoals.h"
+#include "mission/missionmessage.h"
+#include "missionui/fictionviewer.h"
+#include "nebula/neb.h"    // neb2_init
+#include "object/object.h" // obj_init
+#include "object/objectdock.h"
+#include "parse/parselo.h"
+#include "sound/audiostr.h"
+#include "species_defs/species_defs.h" // species_init
+#include "starfield/nebula.h"
+#include "starfield/starfield.h" // stars_init, stars_pre_level_init, stars_post_level_init
+#include "ui/QtGraphicsOperations.h"
+#include "weapon/weapon.h" // weapon_init
+
+#include <SDL.h>
+
+#include <array>
+#include <clocale>
+#include <stdexcept>
+#include <vector>
 
 namespace {
 
@@ -3198,6 +3198,50 @@ void Editor::pad_with_newline(SCP_string& str, size_t max_size) {
 	}
 }
 
+SCP_vector<std::tuple<SCP_string, int>> Editor::get_ship_name_list(flagset<Editor::ShipListFilter> flags)
+{
+	SCP_vector<std::tuple<SCP_string, int>> outList;
+
+	// add the "special" targets, i.e. any friendly, any hostile, etc.
+	if (flags[ShipListFilter::Special]) {
+		for (auto restrict_to_players = 0; restrict_to_players < 2; restrict_to_players++) {
+			for (int i = 0; i < Num_iffs; i++) {
+				char tmp[NAME_LENGTH + 15];
+				stuff_special_arrival_anchor_name(tmp, i, restrict_to_players, 0);
+
+				outList.emplace_back(tmp, get_special_anchor(tmp));
+			}
+		}
+	}
+
+	// either add all ships to the list, or only add ships with docking bays.
+	if (flags[ShipListFilter::AllShips]) {
+		for (auto objp = GET_FIRST(&obj_used_list); objp != END_OF_LIST(&obj_used_list); objp = GET_NEXT(objp)) {
+			if (((objp->type == OBJ_SHIP) || (objp->type == OBJ_START)) &&
+				!(objp->flags[Object::Object_Flags::Marked])) {
+				const auto shipId = get_ship_from_obj(objp);
+				outList.emplace_back(Ships[shipId].ship_name, shipId);
+			}
+		}
+	} else if (flags[ShipListFilter::DockingBayOnly]) {
+		for (auto objp = GET_FIRST(&obj_used_list); objp != END_OF_LIST(&obj_used_list); objp = GET_NEXT(objp)) {
+			if (((objp->type == OBJ_SHIP) || (objp->type == OBJ_START)) &&
+				!(objp->flags[Object::Object_Flags::Marked])) {
+				polymodel* pm;
+
+				// determine if this ship has a docking bay
+				pm = model_get(Ship_info[Ships[objp->instance].ship_info_index].model_num);
+				Assert(pm);
+				if (pm->ship_bay && (pm->ship_bay->num_paths > 0)) {
+					const auto shipId = get_ship_from_obj(objp);
+					outList.emplace_back(Ships[shipId].ship_name, shipId);
+				}
+			}
+		}
+	}
+
+	return outList;
+}
 
 } // namespace fred
 } // namespace fso
