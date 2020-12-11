@@ -875,7 +875,7 @@ void gr_opengl_render_rocket_primitives(interface_material* material_info,
 		opengl_buffer_get_id(GL_ARRAY_BUFFER, vertex_buffer),
 		opengl_buffer_get_id(GL_ELEMENT_ARRAY_BUFFER, index_buffer));
 
-	glDrawElements(opengl_primitive_type(prim_type), n_indices, GL_UNSIGNED_INT, nullptr);
+	glDrawElements(opengl_primitive_type(prim_type), n_indices, GL_UNSIGNED_INT, NULL);
 
 	gr_end_2d_matrix();
 }
