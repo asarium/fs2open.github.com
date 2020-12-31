@@ -1,6 +1,6 @@
 name: Check a pull request
 
-on: [pull_request]
+on: [push]
 
 env:
   QT_VERSION: 5.12.9
@@ -72,7 +72,7 @@ jobs:
     strategy:
       matrix:
         configuration: [Debug, Release]
-        compiler: [MSVC]
+        compiler: [MSVC, MinGW]
         arch: [Win32, x64]
     name: Windows
     runs-on: windows-2019
