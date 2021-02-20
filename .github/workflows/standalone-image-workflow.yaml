@@ -2,8 +2,6 @@ name: Publish Standalone docker image
 
 on:
   push:
-    branches:
-      - '*'
     tags:
     - 'nightly_*'
     - 'release_*'
@@ -15,13 +13,9 @@ jobs:
         configuration: [FastDebug, Release]
         include:
         - configuration: FastDebug
-          latest_tag: latest_debug
-          nightly_tag: nightly_debug
-          release_tag: release_debug
+          tag_suffix: -debug
         - configuration: Release
-          latest_tag: latest
-          nightly_tag: nightly
-          release_tag: release
+          tag_suffix: ""
       fail-fast: false
     runs-on: ubuntu-latest
     steps:
@@ -37,7 +31,6 @@ jobs:
       uses: crazy-max/ghaction-docker-meta@v1
       with:
         images: ghcr.io/scp-fs2open/standalone_server
-        tag-sha: true
         tag-latest: false
 
     - name: Login to GitHub Docker Registry
@@ -53,7 +46,7 @@ jobs:
         context: .
         file: ./docker/standalone/Dockerfile
         push: true
-        tags: ${{ steps.docker_meta.outputs.tags }}
+        tags: ${{ steps.docker_meta.outputs.tags }}${{ matrix.tag_suffix }}
         labels: ${{ steps.docker_meta.outputs.labels }}
         build-args: |
           build_type=${{ matrix.configuration }}
